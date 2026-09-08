@@ -2,60 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { LinhaConvidado } from "./page";
 import type { Presente } from "@/lib/tipos";
-import { ROTULOS_RSVP } from "@/lib/tipos";
 import { formatarPreco, linkSeguro } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
-
-type Aba = "presentes" | "convidados";
-
-export function PainelAdmin({
-  presentes,
-  convidados,
-}: {
-  presentes: Presente[];
-  convidados: LinhaConvidado[];
-}) {
-  const [aba, setAba] = useState<Aba>("presentes");
-
-  return (
-    <div>
-      <div className="mb-10 flex justify-center gap-2">
-        {(
-          [
-            ["presentes", `Presentes (${presentes.length})`],
-            ["convidados", `Convidados (${convidados.length})`],
-          ] as const
-        ).map(([valor, rotulo]) => (
-          <button
-            key={valor}
-            type="button"
-            onClick={() => setAba(valor)}
-            aria-pressed={aba === valor}
-            className={`versalete titulo-serif rounded-sm border px-5 py-2.5 text-[0.62rem] transition-colors ${
-              aba === valor
-                ? "border-oliva bg-oliva text-creme-claro"
-                : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
-            }`}
-          >
-            {rotulo}
-          </button>
-        ))}
-      </div>
-
-      {aba === "presentes" ? (
-        <AbaPresentes presentes={presentes} />
-      ) : (
-        <AbaConvidados convidados={convidados} />
-      )}
-    </div>
-  );
-}
-
-/* ===================== Presentes ===================== */
+import { Bloco, Vazio } from "@/components/painel";
 
 const VAZIO = {
   title: "",
@@ -66,7 +18,7 @@ const VAZIO = {
   category: "Casa",
 };
 
-function AbaPresentes({ presentes }: { presentes: Presente[] }) {
+export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
   const [editando, setEditando] = useState<string | null>(null);
@@ -269,10 +221,12 @@ function AbaPresentes({ presentes }: { presentes: Presente[] }) {
         </div>
       </form>
 
-      <div>
-        <h3 className="titulo-serif mb-6 text-2xl text-oliva">Presentes cadastrados</h3>
+      <Bloco
+        titulo="Presentes cadastrados"
+        descricao="O botão Presentear leva o convidado direto para o link de cada item."
+      >
         {presentes.length === 0 ? (
-          <p className="titulo-serif text-terra italic">Nenhum presente cadastrado ainda.</p>
+          <Vazio>Nenhum presente cadastrado ainda.</Vazio>
         ) : (
           <ul className="space-y-3">
             {presentes.map((presente) => (
@@ -285,16 +239,16 @@ function AbaPresentes({ presentes }: { presentes: Presente[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="titulo-serif text-lg text-oliva">
                     {presente.title}
-                    <span className="versalete ml-3 text-[0.55rem] text-terra">
+                    <span className="versalete ml-3 text-xs text-terra">
                       {presente.category}
                     </span>
                   </p>
-                  <p className="mt-1 truncate text-xs text-terra">
+                  <p className="mt-1.5 truncate text-sm text-terra">
                     {formatarPreco(presente.price_cents) ?? "Valor livre"} ·{" "}
                     <span className="break-all">{presente.gift_url}</span>
                   </p>
                 </div>
-                <div className="flex shrink-0 gap-4 text-[0.62rem]">
+                <div className="flex shrink-0 gap-4">
                   <button
                     type="button"
                     onClick={() => editar(presente)}
@@ -321,165 +275,8 @@ function AbaPresentes({ presentes }: { presentes: Presente[] }) {
             ))}
           </ul>
         )}
-      </div>
+      </Bloco>
     </div>
   );
 }
 
-/* ===================== Convidados ===================== */
-
-function AbaConvidados({ convidados }: { convidados: LinhaConvidado[] }) {
-  const [busca, setBusca] = useState("");
-
-  const resumo = useMemo(() => {
-    let confirmados = 0;
-    let talvez = 0;
-    let naoVao = 0;
-    let pessoas = 0;
-
-    for (const c of convidados) {
-      const r = c.rsvps;
-      if (!r) continue;
-      if (r.status === "confirmado") {
-        confirmados += 1;
-        pessoas += 1 + r.companions;
-      } else if (r.status === "talvez") {
-        talvez += 1;
-      } else {
-        naoVao += 1;
-      }
-    }
-    return { confirmados, talvez, naoVao, pessoas, semResposta: convidados.length - confirmados - talvez - naoVao };
-  }, [convidados]);
-
-  const filtrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return convidados;
-    return convidados.filter((c) => c.full_name.toLowerCase().includes(termo));
-  }, [busca, convidados]);
-
-  function baixarCsv() {
-    const cabecalho = [
-      "Nome",
-      "WhatsApp",
-      "Resposta",
-      "Acompanhantes",
-      "Nomes dos acompanhantes",
-      "Restrições",
-      "Recado",
-      "Cadastro",
-    ];
-    const linhas = convidados.map((c) => [
-      c.full_name,
-      c.phone ?? "",
-      c.rsvps ? ROTULOS_RSVP[c.rsvps.status] : "Sem resposta",
-      c.rsvps ? String(c.rsvps.companions) : "",
-      c.rsvps?.companion_names ?? "",
-      c.rsvps?.dietary_notes ?? "",
-      c.rsvps?.message ?? "",
-      new Date(c.created_at).toLocaleDateString("pt-BR"),
-    ]);
-
-    const csv = [cabecalho, ...linhas]
-      .map((linha) => linha.map((campo) => `"${campo.replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    // BOM para o Excel abrir os acentos corretamente.
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "convidados.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const cartoes = [
-    { rotulo: "Confirmados", valor: resumo.confirmados },
-    { rotulo: "Total de pessoas", valor: resumo.pessoas },
-    { rotulo: "Talvez", valor: resumo.talvez },
-    { rotulo: "Não vão", valor: resumo.naoVao },
-    { rotulo: "Sem resposta", valor: resumo.semResposta },
-  ];
-
-  return (
-    <div className="space-y-10">
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {cartoes.map((cartao) => (
-          <li
-            key={cartao.rotulo}
-            className="rounded-sm border border-terra/20 bg-creme-claro px-4 py-5 text-center"
-          >
-            <span className="titulo-serif block text-3xl text-oliva tabular-nums">
-              {cartao.valor}
-            </span>
-            <span className="versalete mt-2 block text-[0.55rem] text-terra">
-              {cartao.rotulo}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-60 flex-1">
-          <Rotulo htmlFor="busca">Buscar convidado</Rotulo>
-          <input
-            id="busca"
-            className="campo"
-            placeholder="Digite um nome"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-          />
-        </div>
-        <Botao type="button" variante="contorno" onClick={baixarCsv}>
-          Baixar CSV
-        </Botao>
-      </div>
-
-      {filtrados.length === 0 ? (
-        <p className="titulo-serif text-terra italic">Nenhum convidado encontrado.</p>
-      ) : (
-        <ul className="space-y-3">
-          {filtrados.map((c) => (
-            <li
-              key={c.id}
-              className="rounded-sm border border-terra/20 bg-creme-claro px-5 py-4"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <p className="titulo-serif text-lg text-oliva">{c.full_name}</p>
-                <span
-                  className={`versalete rounded-sm px-3 py-1 text-[0.55rem] ${
-                    !c.rsvps
-                      ? "bg-terra/15 text-terra"
-                      : c.rsvps.status === "confirmado"
-                        ? "bg-oliva text-creme-claro"
-                        : c.rsvps.status === "talvez"
-                          ? "bg-lavanda text-creme-claro"
-                          : "bg-terra/25 text-terra"
-                  }`}
-                >
-                  {c.rsvps ? ROTULOS_RSVP[c.rsvps.status] : "Sem resposta"}
-                </span>
-              </div>
-
-              <div className="mt-2 space-y-1 text-xs text-terra">
-                {c.phone && <p>WhatsApp: {c.phone}</p>}
-                {c.rsvps && c.rsvps.companions > 0 && (
-                  <p>
-                    {c.rsvps.companions} acompanhante
-                    {c.rsvps.companions > 1 ? "s" : ""}
-                    {c.rsvps.companion_names ? `: ${c.rsvps.companion_names}` : ""}
-                  </p>
-                )}
-                {c.rsvps?.dietary_notes && <p>Restrições: {c.rsvps.dietary_notes}</p>}
-                {c.rsvps?.message && (
-                  <p className="titulo-serif pt-1 text-sm italic">“{c.rsvps.message}”</p>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}

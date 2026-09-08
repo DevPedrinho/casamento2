@@ -86,7 +86,7 @@ export function FormRsvp({ nome, rsvpInicial }: { nome: string; rsvpInicial: Rsv
         {salvo && <Aviso tipo="ok">Resposta salva! Obrigado por avisar. 💜</Aviso>}
 
         <fieldset>
-          <legend className="versalete mb-3 block text-[0.65rem] text-terra">Você vem?</legend>
+          <legend className="versalete mb-3 block text-xs text-terra">Você vem?</legend>
           <div className="grid gap-2 sm:grid-cols-3">
             {OPCOES.map((opcao) => (
               <label

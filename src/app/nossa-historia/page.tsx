@@ -111,9 +111,9 @@ export default function NossaHistoria() {
                 <Coracao className="w-2.5 text-lavanda" />
               </span>
 
-              <p className="versalete titulo-serif text-[0.65rem] text-lavanda">{cap.marco}</p>
+              <p className="versalete titulo-serif text-xs text-lavanda">{cap.marco}</p>
               <h3 className="titulo-serif mt-2 text-2xl text-oliva sm:text-3xl">{cap.titulo}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-terra sm:text-base">{cap.texto}</p>
+              <p className="mt-3 text-base leading-relaxed text-terra sm:text-lg">{cap.texto}</p>
             </li>
           ))}
         </ol>
@@ -126,7 +126,7 @@ export default function NossaHistoria() {
             <article key={valor.titulo} className="text-center">
               <Coracao className="mx-auto w-4 text-lavanda-claro" />
               <h3 className="titulo-serif mt-5 text-2xl text-creme-claro">{valor.titulo}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-creme/75">{valor.texto}</p>
+              <p className="mt-3 text-base leading-relaxed text-creme/75">{valor.texto}</p>
             </article>
           ))}
         </div>

@@ -85,14 +85,14 @@ export function Cabecalho() {
             ) : logado ? (
               <Link
                 href={admin ? "/admin" : "/area-do-convidado"}
-                className="titulo-serif versalete rounded-sm border border-oliva/40 px-4 py-2 text-[0.65rem] text-oliva transition-colors hover:bg-oliva hover:text-creme-claro"
+                className="titulo-serif versalete rounded-sm border border-oliva/40 px-4 py-2 text-xs text-oliva transition-colors hover:bg-oliva hover:text-creme-claro"
               >
                 {admin ? "Painel" : "Minha área"}
               </Link>
             ) : (
               <Link
                 href="/entrar"
-                className="titulo-serif versalete rounded-sm border border-oliva/40 px-4 py-2 text-[0.65rem] text-oliva transition-colors hover:bg-oliva hover:text-creme-claro"
+                className="titulo-serif versalete rounded-sm border border-oliva/40 px-4 py-2 text-xs text-oliva transition-colors hover:bg-oliva hover:text-creme-claro"
               >
                 Entrar
               </Link>

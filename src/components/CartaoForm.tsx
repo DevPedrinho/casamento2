@@ -33,12 +33,12 @@ export function CartaoForm({
       >
         <div className="text-center">
           {sobretitulo && (
-            <p className="versalete titulo-serif text-[0.65rem] text-terra">{sobretitulo}</p>
+            <p className="versalete titulo-serif text-xs text-terra">{sobretitulo}</p>
           )}
           <h1 className="titulo-serif mt-3 text-3xl text-oliva sm:text-4xl">{titulo}</h1>
           <Divisor className="mt-6" />
           {descricao && (
-            <p className="mt-6 text-sm leading-relaxed text-terra">{descricao}</p>
+            <p className="mt-6 text-base leading-relaxed text-terra">{descricao}</p>
           )}
         </div>
 
@@ -72,7 +72,7 @@ export function Aviso({ tipo, children }: { tipo: "erro" | "ok"; children: React
 
 export function Rotulo({ htmlFor, children }: { htmlFor: string; children: ReactNode }) {
   return (
-    <label htmlFor={htmlFor} className="versalete mb-2 block text-[0.65rem] text-terra">
+    <label htmlFor={htmlFor} className="versalete mb-2 block text-xs text-terra">
       {children}
     </label>
   );

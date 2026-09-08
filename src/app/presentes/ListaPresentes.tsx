@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Presente } from "@/lib/tipos";
 import { formatarPreco, linkSeguro } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
@@ -25,9 +25,18 @@ export function ListaPresentes({
   }, [presentes]);
 
   const [categoria, setCategoria] = useState(TODAS);
+  const [detalhe, setDetalhe] = useState<Presente | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const visiveis =
     categoria === TODAS ? presentes : presentes.filter((p) => p.category === categoria);
+
+  // O aviso de "obrigado" some sozinho depois de alguns segundos.
+  useEffect(() => {
+    if (!aviso) return;
+    const id = setTimeout(() => setAviso(null), 4000);
+    return () => clearTimeout(id);
+  }, [aviso]);
 
   if (presentes.length === 0) {
     return (
@@ -40,128 +49,294 @@ export function ListaPresentes({
   return (
     <>
       {categorias.length > 2 && (
-        <div className="mb-12 flex flex-wrap items-center justify-center gap-2">
-          {categorias.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setCategoria(cat)}
-              aria-pressed={categoria === cat}
-              className={`versalete titulo-serif rounded-sm border px-4 py-2 text-[0.62rem] transition-colors ${
-                categoria === cat
-                  ? "border-oliva bg-oliva text-creme-claro"
-                  : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="mb-12 flex flex-wrap items-center justify-center gap-2.5">
+          {categorias.map((cat) => {
+            const ativa = categoria === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategoria(cat)}
+                aria-pressed={ativa}
+                className={`versalete titulo-serif rounded-full border px-5 py-2.5 text-xs transition-colors ${
+                  ativa
+                    ? "border-oliva bg-oliva text-creme-claro"
+                    : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
+                }`}
+              >
+                {cat}
+              </button>
+            );
+          })}
         </div>
       )}
 
       <ul className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
         {visiveis.map((presente) => (
-          <CartaoPresente key={presente.id} presente={presente} logado={logado} />
+          <CartaoPresente
+            key={presente.id}
+            presente={presente}
+            logado={logado}
+            aoAbrirDetalhe={() => setDetalhe(presente)}
+            aoPresentear={() => setAviso(presente.title)}
+          />
         ))}
       </ul>
+
+      {detalhe && (
+        <ModalPresente
+          presente={detalhe}
+          logado={logado}
+          aoFechar={() => setDetalhe(null)}
+          aoPresentear={() => setAviso(detalhe.title)}
+        />
+      )}
+
+      {aviso && (
+        <div
+          role="status"
+          className="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-md rounded-sm border border-oliva/30 bg-creme-claro px-6 py-4 text-center shadow-lg sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
+        >
+          <p className="titulo-serif text-base text-oliva">
+            Obrigado pelo carinho com <strong className="font-medium">{aviso}</strong>! 💜
+          </p>
+        </div>
+      )}
     </>
   );
 }
 
-function CartaoPresente({ presente, logado }: { presente: Presente; logado: boolean }) {
-  const [registrado, setRegistrado] = useState(false);
-  const preco = formatarPreco(presente.price_cents);
-  const destino = linkSeguro(presente.gift_url);
+/** Registra a intenção antes de abrir o link, para os noivos agradecerem.
+ *  Nunca bloqueia o clique: se falhar, o link abre do mesmo jeito. */
+async function registrarPresente(presenteId: string) {
+  try {
+    const supabase = criarClienteNavegador();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) return;
+    await supabase.from("gift_claims").insert({
+      gift_id: presenteId,
+      guest_id: data.user.id,
+    });
+  } catch {
+    // Silencioso de propósito: o presente é mais importante que o registro.
+  }
+}
+
+function Imagem({ presente, tamanho }: { presente: Presente; tamanho: "card" | "modal" }) {
   const imagem = linkSeguro(presente.image_url);
 
-  /**
-   * Registra a intenção antes de abrir o link, para os noivos saberem
-   * quem presenteou. Nunca bloqueia o clique: se falhar, o link abre igual.
-   */
-  async function registrar() {
-    if (!logado || registrado) return;
-    setRegistrado(true);
-    try {
-      const supabase = criarClienteNavegador();
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) return;
-      await supabase.from("gift_claims").insert({
-        gift_id: presente.id,
-        guest_id: data.user.id,
-      });
-    } catch {
-      // Silencioso de propósito: o presente é mais importante que o registro.
-    }
+  if (imagem) {
+    return (
+      <Image
+        src={imagem}
+        alt={presente.title}
+        fill
+        sizes={tamanho === "card" ? "(min-width: 1024px) 24rem, (min-width: 640px) 45vw, 90vw" : "30rem"}
+        className="object-cover"
+      />
+    );
   }
 
+  // Sem foto, o ramo da IDV preenche o espaço em vez de um vazio cinza.
+  // A variação vem do id: sem ela, uma lista inteira sem foto vira papel de
+  // parede, com o mesmo ramo repetido em todos os cards.
+  const semente = presente.id.charCodeAt(0) + presente.id.charCodeAt(presente.id.length - 1);
+  const espelhado = semente % 2 === 1;
+  const giro = [-8, -3, 4, 9][semente % 4];
+  const escala = [0.68, 0.76, 0.82][semente % 3];
+
   return (
-    <li className="flex flex-col overflow-hidden rounded-sm border border-terra/20 bg-creme transition-shadow duration-300 hover:shadow-md">
-      <div className="relative aspect-4/3 w-full overflow-hidden bg-creme-escuro">
-        {imagem ? (
-          <Image
-            src={imagem}
-            alt={presente.title}
-            fill
-            sizes="(min-width: 1024px) 22rem, (min-width: 640px) 45vw, 90vw"
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Image
-              src="/img/ramo-floral.png"
-              alt=""
-              width={490}
-              height={786}
-              aria-hidden="true"
-              className="h-3/4 w-auto opacity-35"
-            />
-          </div>
-        )}
-        <span className="versalete absolute left-0 top-3 bg-oliva/90 px-3 py-1.5 text-[0.55rem] text-creme-claro">
+    <div className="flex h-full items-center justify-center overflow-hidden bg-creme-escuro">
+      <Image
+        src={espelhado ? "/img/ramo-floral-espelhado.png" : "/img/ramo-floral.png"}
+        alt=""
+        width={490}
+        height={786}
+        aria-hidden="true"
+        className="w-auto opacity-35"
+        style={{ height: `${escala * 100}%`, transform: `rotate(${giro}deg)` }}
+      />
+    </div>
+  );
+}
+
+function CartaoPresente({
+  presente,
+  logado,
+  aoAbrirDetalhe,
+  aoPresentear,
+}: {
+  presente: Presente;
+  logado: boolean;
+  aoAbrirDetalhe: () => void;
+  aoPresentear: () => void;
+}) {
+  const preco = formatarPreco(presente.price_cents);
+  const destino = linkSeguro(presente.gift_url);
+
+  return (
+    <li className="group flex flex-col overflow-hidden rounded-sm border border-terra/20 bg-creme transition-all duration-300 hover:-translate-y-1.5 hover:border-oliva/35 hover:shadow-xl">
+      <div className="relative aspect-square w-full overflow-hidden">
+        <Imagem presente={presente} tamanho="card" />
+
+        <span className="versalete absolute left-0 top-4 bg-oliva/90 px-3.5 py-1.5 text-xs text-creme-claro">
           {presente.category}
         </span>
+
+        {presente.description && (
+          <button
+            type="button"
+            onClick={aoAbrirDetalhe}
+            aria-label={`Ver detalhes de ${presente.title}`}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-creme-claro/95 text-oliva shadow-sm transition-transform hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oliva"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <circle cx="11" cy="11" r="7" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col p-6">
         <h3 className="titulo-serif text-xl text-oliva">{presente.title}</h3>
+
         {presente.description && (
-          <p className="mt-2 flex-1 text-sm leading-relaxed text-terra">{presente.description}</p>
+          <p className="mt-2 line-clamp-2 text-base leading-relaxed text-terra">
+            {presente.description}
+          </p>
         )}
 
-        <p className="titulo-serif mt-5 text-2xl text-oliva">
-          {preco ?? <span className="text-lg italic text-terra">Valor livre</span>}
+        <p className="titulo-serif mt-5 mb-6 text-3xl text-oliva tabular-nums lining-nums">
+          {preco ?? <span className="text-xl text-terra italic">Valor livre</span>}
         </p>
 
-        <div className="mt-6">
+        <div className="mt-auto">
           {destino ? (
             <BotaoExterno
               href={destino}
               variante="lavanda"
-              onClick={registrar}
+              onClick={() => {
+                if (logado) void registrarPresente(presente.id);
+                aoPresentear();
+              }}
               className="w-full"
             >
-              <Coracao className="w-3" />
+              <Coracao className="w-3.5" />
               Presentear
             </BotaoExterno>
           ) : (
-            <p className="rounded-sm border border-terra/25 px-4 py-3 text-center text-xs text-terra">
+            <p className="rounded-sm border border-terra/25 px-4 py-3.5 text-center text-sm text-terra">
               Link ainda não cadastrado
             </p>
           )}
-        </div>
 
-        {!logado && destino && (
-          <p className="mt-3 text-center text-xs text-terra/80">
+          {!logado && destino && (
             <BotaoLink
               href="/cadastrar?proximo=/presentes"
               variante="contorno"
-              className="w-full border-none px-0 py-1 text-[0.6rem] hover:bg-transparent hover:text-oliva"
+              className="mt-2 w-full border-none px-0 py-1 text-xs normal-case tracking-normal hover:bg-transparent hover:text-oliva"
             >
               Cadastre-se para a gente saber quem foi
             </BotaoLink>
-          </p>
-        )}
+          )}
+        </div>
       </div>
     </li>
+  );
+}
+
+function ModalPresente({
+  presente,
+  logado,
+  aoFechar,
+  aoPresentear,
+}: {
+  presente: Presente;
+  logado: boolean;
+  aoFechar: () => void;
+  aoPresentear: () => void;
+}) {
+  const preco = formatarPreco(presente.price_cents);
+  const destino = linkSeguro(presente.gift_url);
+  const fecharRef = useRef<HTMLButtonElement>(null);
+
+  // Fecha no Esc, tranca a rolagem do fundo e leva o foco para o botão fechar.
+  useEffect(() => {
+    fecharRef.current?.focus();
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function aoTeclar(evento: KeyboardEvent) {
+      if (evento.key === "Escape") aoFechar();
+    }
+    document.addEventListener("keydown", aoTeclar);
+
+    return () => {
+      document.body.style.overflow = original;
+      document.removeEventListener("keydown", aoTeclar);
+    };
+  }, [aoFechar]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-oliva-escuro/50 p-5"
+      onClick={aoFechar}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-presente"
+        onClick={(e) => e.stopPropagation()}
+        className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-sm border border-terra/25 bg-creme-claro shadow-2xl sm:grid sm:grid-cols-2"
+      >
+        <button
+          ref={fecharRef}
+          type="button"
+          onClick={aoFechar}
+          aria-label="Fechar"
+          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-creme-claro/95 text-oliva shadow-sm transition-colors hover:bg-creme-escuro"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+
+        <div className="relative aspect-square w-full overflow-hidden">
+          <Imagem presente={presente} tamanho="modal" />
+        </div>
+
+        <div className="flex flex-col p-8">
+          <span className="versalete text-xs text-terra">{presente.category}</span>
+          <h2 id="titulo-presente" className="titulo-serif mt-3 text-3xl text-oliva">
+            {presente.title}
+          </h2>
+
+          {presente.description && (
+            <p className="mt-4 text-base leading-relaxed text-terra">{presente.description}</p>
+          )}
+
+          <p className="titulo-serif mt-6 text-4xl text-oliva tabular-nums lining-nums">
+            {preco ?? <span className="text-2xl text-terra italic">Valor livre</span>}
+          </p>
+
+          {destino && (
+            <BotaoExterno
+              href={destino}
+              variante="lavanda"
+              onClick={() => {
+                if (logado) void registrarPresente(presente.id);
+                aoPresentear();
+                aoFechar();
+              }}
+              className="mt-8 w-full"
+            >
+              <Coracao className="w-3.5" />
+              Presentear
+            </BotaoExterno>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

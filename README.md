@@ -19,7 +19,51 @@ leva para o seu próprio link de pagamento.
 | Confirmar Presença | `/confirmar` | RSVP com acompanhantes, restrições e recado |
 | Entrar / Cadastrar | `/entrar`, `/cadastrar` | Login e cadastro do convidado |
 | Minha área | `/area-do-convidado` | O convidado revê e altera a própria resposta |
-| Painel dos noivos | `/admin` | Cadastro de presentes e lista de convidados (só admin) |
+| Painel dos noivos | `/admin` | Visão geral: contagem, andamento e o que pede atenção |
+| Checklist | `/admin/checklist` | 59 tarefas por fase, do "12 meses antes" ao "depois" |
+| Fornecedores | `/admin/fornecedores` | CRM em funil, do primeiro contato ao contrato |
+| Financeiro | `/admin/financeiro` | Orçamento por categoria, contratos e parcelas pagas |
+| Presentes (admin) | `/admin/presentes` | Cadastro dos itens e dos links de pagamento |
+| Convidados (admin) | `/admin/convidados` | Lista de confirmações, com busca e exportação em CSV |
+
+> As seções sob `/admin` são visíveis **só para quem tem `is_admin`**. Convidado
+> comum e visitante anônimo não leem nem escrevem nada de checklist,
+> fornecedores ou financeiro — isso é garantido por RLS no banco, não só pela
+> interface.
+
+---
+
+## O painel de planejamento
+
+### Checklist
+
+Vem preenchido com um levantamento de **59 tarefas** organizadas por fase:
+*12+ meses antes*, *9 a 12*, *6 a 9*, *3 a 6*, *1 a 3*, *último mês*, *última
+semana*, *no dia* e *depois do casamento*. Cada tarefa tem categoria,
+responsável, prazo e observação.
+
+Clicar no selo de status avança a tarefa: a fazer → em andamento → concluído.
+Tarefas com prazo vencido aparecem em vermelho.
+
+### Fornecedores (CRM)
+
+Funil com seis etapas: *a pesquisar*, *contatado*, *orçamento recebido*,
+*negociando*, *contratado* e *descartado*. Cada fornecedor guarda contato,
+Instagram, site, o valor do orçamento recebido, o valor fechado e qual é o
+próximo passo com data — o painel destaca quem precisa de retorno em até
+7 dias.
+
+O telefone vira link de WhatsApp e o Instagram vira link do perfil.
+
+### Financeiro
+
+Três valores acompanham cada item: **previsto** (a estimativa), **contratado**
+(o que foi fechado) e **pago** (a soma das parcelas lançadas). O painel mostra
+quanto do orçamento total já está comprometido e avisa quando passa do limite.
+
+Cada item aceita vários pagamentos, porque casamento quase sempre é parcelado.
+A estrutura já vem com 19 categorias típicas e as notas de quanto se costuma
+reservar para cada frente.
 
 ---
 

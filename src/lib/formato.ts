@@ -32,3 +32,40 @@ export function formatarDataHora(iso: string): string {
     minute: "2-digit",
   });
 }
+
+/** Converte "1.234,56" ou "1234.56" em centavos. null quando vazio. */
+export function paraCentavos(valor: string): number | null {
+  const limpo = valor.trim();
+  if (!limpo) return null;
+  const numero = Number(limpo.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(numero) && numero >= 0 ? Math.round(numero * 100) : null;
+}
+
+/** Centavos -> texto editável no formulário ("" quando não há valor). */
+export function paraCampo(centavos: number | null | undefined): string {
+  return centavos === null || centavos === undefined ? "" : (centavos / 100).toString();
+}
+
+/** Sempre devolve um valor em reais, mesmo quando é zero. */
+export function reais(centavos: number): string {
+  return (centavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export function formatarData(iso: string | null): string | null {
+  if (!iso) return null;
+  // Datas vêm como "2027-05-22"; montamos local para não cair no dia anterior.
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  if (!ano || !mes || !dia) return null;
+  return new Date(ano, mes - 1, dia).toLocaleDateString("pt-BR");
+}
+
+/** Dias até a data (negativo = já passou). null quando não há data. */
+export function diasAte(iso: string | null): number | null {
+  if (!iso) return null;
+  const [ano, mes, dia] = iso.split("-").map(Number);
+  if (!ano || !mes || !dia) return null;
+  const alvo = new Date(ano, mes - 1, dia);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000);
+}

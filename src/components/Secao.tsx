@@ -58,7 +58,7 @@ export function Secao({
           <header className="mb-12 text-center sm:mb-16">
             {sobretitulo && (
               <p
-                className={`versalete titulo-serif mb-4 text-[0.7rem] sm:text-xs ${
+                className={`versalete titulo-serif mb-4 text-sm sm:text-xs ${
                   fundo === "oliva" ? "text-creme/70" : "text-terra"
                 }`}
               >

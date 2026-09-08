@@ -34,7 +34,7 @@ export default async function AreaDoConvidado() {
     >
       <div className="mx-auto max-w-xl">
         <div className="rounded-sm border border-terra/20 bg-creme-claro p-8 text-center">
-          <p className="versalete text-[0.65rem] text-terra">Sua resposta</p>
+          <p className="versalete text-xs text-terra">Sua resposta</p>
 
           {resposta ? (
             <>
@@ -69,7 +69,7 @@ export default async function AreaDoConvidado() {
         </div>
 
         <div className="mt-8 rounded-sm border border-terra/20 bg-creme-claro p-8 text-center">
-          <p className="versalete text-[0.65rem] text-terra">O grande dia</p>
+          <p className="versalete text-xs text-terra">O grande dia</p>
           <p className="titulo-serif mt-4 text-2xl text-oliva">{CASAMENTO.dataExtenso}</p>
           <p className="mt-2 text-sm text-terra">
             Cerimônia às {CASAMENTO.horaCerimonia} · {CASAMENTO.local.nome}

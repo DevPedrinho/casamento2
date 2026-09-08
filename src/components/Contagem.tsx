@@ -58,10 +58,10 @@ export function Contagem() {
         <div key={bloco.rotulo} className="flex items-start gap-3 sm:gap-8">
           {i > 0 && <span className="titulo-serif mt-1 text-2xl text-terra/40 sm:text-3xl">·</span>}
           <div className="min-w-14 text-center sm:min-w-20">
-            <span className="titulo-serif block text-3xl leading-none text-oliva tabular-nums sm:text-5xl">
+            <span className="titulo-serif block text-3xl leading-none text-oliva tabular-nums lining-nums sm:text-5xl">
               {String(bloco.valor).padStart(2, "0")}
             </span>
-            <span className="versalete mt-2 block text-[0.6rem] text-terra sm:text-xs">
+            <span className="versalete mt-2 block text-xs text-terra sm:text-xs">
               {bloco.rotulo}
             </span>
           </div>

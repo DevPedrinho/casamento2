@@ -141,7 +141,7 @@ export default function Home() {
         <div className="grid gap-8 md:grid-cols-2">
           <article className="rounded-sm border border-terra/20 bg-creme p-9 text-center">
             <h3 className="titulo-serif text-2xl text-oliva">Confirme sua presença</h3>
-            <p className="mt-4 text-sm leading-relaxed text-terra">
+            <p className="mt-4 text-base leading-relaxed text-terra">
               Faça seu cadastro no site, diga se vem e quem vem com você. Assim a
               gente organiza tudo com carinho e ninguém fica sem lugar.
             </p>
@@ -152,7 +152,7 @@ export default function Home() {
 
           <article className="rounded-sm border border-terra/20 bg-creme p-9 text-center">
             <h3 className="titulo-serif text-2xl text-oliva">Nos presenteie</h3>
-            <p className="mt-4 text-sm leading-relaxed text-terra">
+            <p className="mt-4 text-base leading-relaxed text-terra">
               Sua presença já é o maior presente. Mas se quiser nos ajudar a montar
               esse novo começo, escolha um item da lista — é rapidinho.
             </p>
