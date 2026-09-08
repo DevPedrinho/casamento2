@@ -1,5 +1,7 @@
 # Casamento Deysiane & Pedro — 22.05.2027
 
+**No ar:** https://casamento-deysiane-pedro.vercel.app
+
 Site do casamento, construído a partir da identidade visual oficial
 (*Amor que acolhe*). Tem cadastro e login de convidados, confirmação de
 presença, a nossa história e um marketplace de presentes em que cada item
@@ -109,7 +111,19 @@ Os textos da linha do tempo ficam em
 [`src/app/nossa-historia/page.tsx`](src/app/nossa-historia/page.tsx), na
 constante `CAPITULOS`.
 
-### 4. Confirmação de e-mail (opcional)
+### 4. Apontar o Supabase para o endereço do site
+
+Os e-mails de confirmação de cadastro levam o convidado de volta para o
+site. Por padrão esse endereço é `localhost:3000`, que não funciona para
+quem está de fora. No painel do Supabase, em *Authentication → URL
+Configuration*, preencha:
+
+- **Site URL:** `https://casamento-deysiane-pedro.vercel.app`
+- **Redirect URLs:** adicione o mesmo endereço
+
+Sem isso, o link do e-mail de confirmação não abre o site.
+
+### 5. Confirmação de e-mail (opcional)
 
 Por padrão o Supabase pede confirmação de e-mail no cadastro. Se vocês
 preferirem que o convidado entre na hora, desliguem em
@@ -182,8 +196,16 @@ visitante anônimo direto no banco.
 
 ---
 
-## Publicando
+## Publicação
 
-O jeito mais simples é a [Vercel](https://vercel.com): importe o
-repositório, cadastre as três variáveis de ambiente e pronto. O projeto
-Supabase já está no ar e não precisa de nada.
+O site já está publicado na [Vercel](https://vercel.com), ligado a este
+repositório:
+
+- **Endereço:** https://casamento-deysiane-pedro.vercel.app
+- **Branch de produção:** `claude/wedding-site-login-marketplace-bhncuw`
+
+Todo push nesse branch publica sozinho — não precisa fazer mais nada.
+
+As chaves públicas do Supabase ficam em `.env.production`, versionado
+junto do código. Se preferirem gerenciá-las pelo painel da Vercel,
+cadastrem as mesmas variáveis lá e apaguem o arquivo.
