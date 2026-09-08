@@ -1,26 +1,37 @@
 import Image from "next/image";
 import { CASAMENTO } from "@/lib/config";
+import { criarClienteServidor } from "@/lib/supabase/servidor";
+import { ROTULOS_LOCAL, type LocalEvento } from "@/lib/tipos";
 import { Secao } from "@/components/Secao";
 import { BotaoLink } from "@/components/Botao";
 import { Contagem } from "@/components/Contagem";
 import { Divisor, FaixaVersalete } from "@/components/Ornamentos";
 
-const DETALHES = [
-  {
-    titulo: "Cerimônia",
-    linhas: [CASAMENTO.dataExtenso, `às ${CASAMENTO.horaCerimonia}`, CASAMENTO.local.nome],
-  },
-  {
-    titulo: "Recepção",
-    linhas: ["Logo após a cerimônia", `a partir das ${CASAMENTO.horaRecepcao}`, "No mesmo local"],
-  },
-  {
-    titulo: "Traje",
-    linhas: [CASAMENTO.trajes, "Venha confortável —", "a festa é longa"],
-  },
-];
+// Os locais vêm do banco: os noivos editam em /admin/locais.
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await criarClienteServidor();
+  const { data } = await supabase.from("event_venues").select("*").order("sort_order");
+  const locais = (data ?? []) as LocalEvento[];
+
+  const detalhes = [
+    ...locais.map((local) => ({
+      titulo: ROTULOS_LOCAL[local.kind],
+      linhas: [
+        local.starts_at ? `às ${local.starts_at}` : CASAMENTO.dataExtenso,
+        local.name,
+        [local.address, local.city].filter(Boolean).join(" — ") || "Endereço a confirmar",
+      ],
+      mapsUrl: local.maps_url,
+    })),
+    {
+      titulo: "Traje",
+      linhas: [CASAMENTO.trajes, "Venha confortável —", "a festa é longa"],
+      mapsUrl: null,
+    },
+  ];
+
   return (
     <>
       {/* ---------- Hero ---------- */}
@@ -107,7 +118,7 @@ export default function Home() {
       {/* ---------- Detalhes do dia ---------- */}
       <Secao fundo="oliva" sobretitulo="Anote na agenda" titulo="O grande dia">
         <div className="grid gap-10 sm:grid-cols-3">
-          {DETALHES.map((item) => (
+          {detalhes.map((item) => (
             <div key={item.titulo} className="text-center">
               <h3 className="versalete titulo-serif text-xs text-creme/70">{item.titulo}</h3>
               <span className="mx-auto mt-4 block h-px w-10 bg-creme/30" />
@@ -118,22 +129,19 @@ export default function Home() {
                   </p>
                 ))}
               </div>
+              {item.mapsUrl && (
+                <a
+                  href={item.mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="versalete titulo-serif mt-4 inline-block border-b border-creme/40 pb-1 text-xs text-creme-claro transition-colors hover:border-creme"
+                >
+                  Ver no mapa
+                </a>
+              )}
             </div>
           ))}
         </div>
-
-        {CASAMENTO.local.mapsUrl && (
-          <div className="mt-14 text-center">
-            <a
-              href={CASAMENTO.local.mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="versalete titulo-serif border-b border-creme/40 pb-1 text-xs text-creme-claro transition-colors hover:border-creme"
-            >
-              Ver no mapa
-            </a>
-          </div>
-        )}
       </Secao>
 
       {/* ---------- Chamadas finais ---------- */}

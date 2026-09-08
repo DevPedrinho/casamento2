@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Jost } from "next/font/google";
 import { CASAMENTO } from "@/lib/config";
 import { Cabecalho } from "@/components/Cabecalho";
 import { Rodape } from "@/components/Rodape";
+import { SomenteNoSite } from "@/components/CasulaSite";
 import "./globals.css";
 
 // Serifada de traço fino e elegante, no espírito do monograma da IDV.
@@ -66,7 +67,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-screen flex-col">
         <Cabecalho />
         <main className="flex-1">{children}</main>
-        <Rodape />
+        <SomenteNoSite>
+          <Rodape />
+        </SomenteNoSite>
       </body>
     </html>
   );

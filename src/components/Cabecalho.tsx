@@ -50,6 +50,9 @@ export function Cabecalho() {
   // Fecha o menu mobile ao trocar de página.
   useEffect(() => setAberto(false), [caminho]);
 
+  // O painel tem sidebar própria; o cabeçalho do site não aparece lá.
+  if (caminho.startsWith("/admin")) return null;
+
   return (
     <header className="sticky top-0 z-50 border-b border-terra/15 bg-creme/92 backdrop-blur-sm">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3">

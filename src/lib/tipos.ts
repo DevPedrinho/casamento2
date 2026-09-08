@@ -197,3 +197,98 @@ export type Denuncia = {
 
 /** Quanto tempo um story fica no ar. */
 export const HORAS_DO_STORY = 24;
+
+/* ===================== Convidados (lista completa) ===================== */
+
+/** O funil do convite. É o mesmo dado no gerenciador e no CRM. */
+export type StatusConvite =
+  | "nao_contatado"
+  | "convite_enviado"
+  | "visualizou"
+  | "aguardando"
+  | "confirmado"
+  | "nao_vai"
+  | "follow_up";
+
+export const ETAPAS_CONVITE: StatusConvite[] = [
+  "nao_contatado",
+  "convite_enviado",
+  "visualizou",
+  "aguardando",
+  "confirmado",
+  "nao_vai",
+  "follow_up",
+];
+
+export const ROTULOS_CONVITE: Record<StatusConvite, string> = {
+  nao_contatado: "Não contatado",
+  convite_enviado: "Convite enviado",
+  visualizou: "Visualizou",
+  aguardando: "Aguardando",
+  confirmado: "Confirmado",
+  nao_vai: "Não irá",
+  follow_up: "Follow-up",
+};
+
+export type GrupoConvidados = {
+  id: string;
+  name: string;
+  side: string | null;
+  notes: string | null;
+};
+
+export type ConvidadoCompleto = {
+  id: string;
+  user_id: string | null;
+  full_name: string;
+  phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  is_admin: boolean;
+  group_id: string | null;
+  side: "noivo" | "noiva" | null;
+  relationship: string | null;
+  ceremony_role: string | null;
+  attends: string | null;
+  gender: "masculino" | "feminino" | "outro" | null;
+  age: number | null;
+  age_range: string | null;
+  favor_type: string | null;
+  invite_status: StatusConvite;
+  confirmed_at: string | null;
+  companions_planned: number;
+  table_number: string | null;
+  dietary_notes: string | null;
+  notes: string | null;
+  last_contact_at: string | null;
+  next_action: string | null;
+  next_action_at: string | null;
+  extra: Record<string, string>;
+  created_at: string;
+  grupo: GrupoConvidados | null;
+};
+
+/* ===================== Locais do evento ===================== */
+
+export type TipoLocal = "cerimonia" | "recepcao";
+
+export type LocalEvento = {
+  id: string;
+  kind: TipoLocal;
+  name: string;
+  address: string | null;
+  city: string | null;
+  maps_url: string | null;
+  instagram: string | null;
+  phone: string | null;
+  contact_name: string | null;
+  starts_at: string | null;
+  notes: string | null;
+  guest_info: string | null;
+  sort_order: number;
+};
+
+export const ROTULOS_LOCAL: Record<TipoLocal, string> = {
+  cerimonia: "Cerimônia",
+  recepcao: "Recepção",
+};

@@ -144,3 +144,81 @@ export function LinhaValor({
 export function Vazio({ children }: { children: ReactNode }) {
   return <p className="titulo-serif py-8 text-center text-base text-terra italic">{children}</p>;
 }
+
+/** Barra horizontal comparando fatias — usada em "gastos por categoria". */
+export function BarrasCategoria({
+  itens,
+  formatar,
+}: {
+  itens: { rotulo: string; valor: number; secundario?: number }[];
+  formatar: (v: number) => string;
+}) {
+  const maior = Math.max(1, ...itens.map((i) => Math.max(i.valor, i.secundario ?? 0)));
+
+  return (
+    <ul className="space-y-4">
+      {itens.map((item) => (
+        <li key={item.rotulo}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <span className="text-sm text-terra">{item.rotulo}</span>
+            <span className="titulo-serif text-base text-oliva tabular-nums lining-nums">
+              {formatar(item.valor)}
+            </span>
+          </div>
+          <div className="relative h-2.5 overflow-hidden rounded-full bg-creme-escuro">
+            {/* A barra clara é o previsto; a escura, o realizado por cima. */}
+            {item.secundario !== undefined && (
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-lavanda/40"
+                style={{ width: `${(item.secundario / maior) * 100}%` }}
+              />
+            )}
+            <div
+              className="absolute inset-y-0 left-0 rounded-full bg-oliva"
+              style={{ width: `${(item.valor / maior) * 100}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Anel de proporção — leitura rápida de "quanto do total já foi". */
+export function Anel({
+  valor,
+  total,
+  rotulo,
+  legenda,
+}: {
+  valor: number;
+  total: number;
+  rotulo: string;
+  legenda?: string;
+}) {
+  const pct = total > 0 ? Math.min(100, Math.round((valor / total) * 100)) : 0;
+  const raio = 42;
+  const circunferencia = 2 * Math.PI * raio;
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative">
+        <svg viewBox="0 0 100 100" className="h-32 w-32 -rotate-90" aria-hidden="true">
+          <circle cx="50" cy="50" r={raio} fill="none" strokeWidth="9"
+            className="stroke-creme-escuro" />
+          <circle
+            cx="50" cy="50" r={raio} fill="none" strokeWidth="9" strokeLinecap="round"
+            className="stroke-oliva transition-[stroke-dashoffset] duration-700"
+            strokeDasharray={circunferencia}
+            strokeDashoffset={circunferencia - (circunferencia * pct) / 100}
+          />
+        </svg>
+        <span className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="titulo-serif text-3xl text-oliva tabular-nums lining-nums">{pct}%</span>
+        </span>
+      </div>
+      <p className="versalete mt-3 text-xs text-terra">{rotulo}</p>
+      {legenda && <p className="mt-1 text-sm text-terra/85">{legenda}</p>}
+    </div>
+  );
+}
