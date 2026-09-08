@@ -1,0 +1,116 @@
+@import "tailwindcss";
+
+/* =========================================================
+   Identidade visual — Deysiane & Pedro
+   Cores amostradas direto do PDF da IDV oficial.
+   ========================================================= */
+@theme {
+  --color-creme: #f0e7da;
+  --color-creme-claro: #f7f1e8;
+  --color-creme-escuro: #e6dacb;
+  --color-oliva: #666a46;
+  --color-oliva-claro: #7d8159;
+  --color-oliva-escuro: #4c4f33;
+  --color-lavanda: #9581a6;
+  --color-lavanda-claro: #b7a8c4;
+  --color-terra: #876f58;
+  --color-terra-claro: #a58a71;
+
+  --font-titulo: var(--fonte-titulo);
+  --font-corpo: var(--fonte-corpo);
+  --font-manuscrito: var(--fonte-manuscrito);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-creme);
+  color: var(--color-oliva-escuro);
+  font-family: var(--fonte-corpo), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Espaçamento largo das versaletes da IDV ("AMOR QUE ACOLHE") */
+@utility versalete {
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+}
+
+@utility titulo-serif {
+  font-family: var(--fonte-titulo), ui-serif, Georgia, serif;
+  font-weight: 400;
+}
+
+/* -------- Entrada suave das seções conforme aparecem na tela --------
+   O conteúdo só começa escondido quando o JavaScript confirma que está
+   rodando (classe .js-ativo). Sem JS — ou se o script falhar — o site
+   aparece normalmente, em vez de ficar uma página em branco. */
+.revelar {
+  transition:
+    opacity 0.7s ease-out,
+    transform 0.7s ease-out;
+}
+
+.js-ativo .revelar {
+  opacity: 0;
+  transform: translateY(1.25rem);
+}
+
+.js-ativo .revelar.revelado {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js-ativo .revelar {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Campo de formulário padrão do site */
+@utility campo {
+  width: 100%;
+  border-radius: 0.125rem;
+  border: 1px solid color-mix(in srgb, var(--color-terra) 35%, transparent);
+  background-color: var(--color-creme-claro);
+  padding: 0.75rem 1rem;
+  color: var(--color-oliva-escuro);
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+@utility campo {
+  &::placeholder {
+    color: color-mix(in srgb, var(--color-terra) 65%, transparent);
+  }
+  &:focus {
+    border-color: var(--color-oliva);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-oliva) 18%, transparent);
+  }
+}
+
+::selection {
+  background-color: var(--color-lavanda);
+  color: var(--color-creme-claro);
+}
