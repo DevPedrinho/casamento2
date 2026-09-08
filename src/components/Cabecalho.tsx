@@ -10,6 +10,7 @@ import { CASAMENTO } from "@/lib/config";
 const LINKS = [
   { href: "/", rotulo: "Início" },
   { href: "/nossa-historia", rotulo: "Nossa História" },
+  { href: "/mural", rotulo: "Mural" },
   { href: "/presentes", rotulo: "Presentes" },
   { href: "/confirmar", rotulo: "Confirmar Presença" },
 ];
@@ -66,12 +67,12 @@ export function Cabecalho() {
           </span>
         </Link>
 
-        <ul className="hidden items-center gap-7 md:flex">
+        <ul className="hidden items-center gap-5 lg:gap-7 md:flex">
           {LINKS.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className={`titulo-serif text-sm tracking-wide transition-colors hover:text-oliva ${
+                className={`titulo-serif whitespace-nowrap text-sm transition-colors hover:text-oliva ${
                   caminho === link.href ? "text-oliva" : "text-terra"
                 }`}
               >

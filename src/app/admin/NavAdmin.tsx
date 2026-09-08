@@ -8,6 +8,7 @@ const SECOES = [
   { href: "/admin/checklist", rotulo: "Checklist" },
   { href: "/admin/fornecedores", rotulo: "Fornecedores" },
   { href: "/admin/financeiro", rotulo: "Financeiro" },
+  { href: "/admin/mural", rotulo: "Mural" },
   { href: "/admin/presentes", rotulo: "Presentes" },
   { href: "/admin/convidados", rotulo: "Convidados" },
 ];

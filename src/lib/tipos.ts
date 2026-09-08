@@ -140,3 +140,60 @@ export type LinhaConvidado = {
     message: string | null;
   } | null;
 };
+
+/* ===================== Mural (rede social) ===================== */
+
+export type TipoPost = "feed" | "story";
+
+export type Autor = {
+  id: string;
+  full_name: string;
+};
+
+export type Comentario = {
+  id: string;
+  post_id: string;
+  guest_id: string;
+  body: string;
+  is_hidden: boolean;
+  created_at: string;
+  autor: Autor | null;
+};
+
+export type Publicacao = {
+  id: string;
+  author_id: string;
+  kind: TipoPost;
+  caption: string | null;
+  image_path: string | null;
+  is_hidden: boolean;
+  hidden_reason: string | null;
+  expires_at: string | null;
+  created_at: string;
+  autor: Autor | null;
+  /** URL assinada gerada no servidor; null quando o post é só texto. */
+  imagem_url: string | null;
+  curtidas: number;
+  eu_curti: boolean;
+  comentarios: Comentario[];
+};
+
+/** Stories de um mesmo convidado, agrupados como na barra do topo. */
+export type GrupoStory = {
+  autor: Autor;
+  stories: Publicacao[];
+  todos_vistos: boolean;
+};
+
+export type Denuncia = {
+  id: string;
+  post_id: string | null;
+  comment_id: string | null;
+  reporter_id: string | null;
+  reason: string | null;
+  created_at: string;
+  denunciante: Autor | null;
+};
+
+/** Quanto tempo um story fica no ar. */
+export const HORAS_DO_STORY = 24;

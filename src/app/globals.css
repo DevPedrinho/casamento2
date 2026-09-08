@@ -139,3 +139,9 @@ body {
   background-color: var(--color-lavanda);
   color: var(--color-creme-claro);
 }
+
+/* Preenchimento da barrinha de progresso dos stories. */
+@keyframes crescer {
+  from { width: 0%; }
+  to   { width: 100%; }
+}

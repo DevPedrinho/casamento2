@@ -15,6 +15,7 @@ leva para o seu próprio link de pagamento.
 | --- | --- | --- |
 | Início | `/` | Monograma, contagem regressiva, resumo da história e detalhes do dia |
 | Nossa História | `/nossa-historia` | Linha do tempo do casal, capítulo por capítulo |
+| Mural | `/mural` | Rede social dos convidados: stories, feed, curtidas e comentários |
 | Presentes | `/presentes` | Marketplace com o botão **Presentear** por item |
 | Confirmar Presença | `/confirmar` | RSVP com acompanhantes, restrições e recado |
 | Entrar / Cadastrar | `/entrar`, `/cadastrar` | Login e cadastro do convidado |
@@ -25,11 +26,55 @@ leva para o seu próprio link de pagamento.
 | Financeiro | `/admin/financeiro` | Orçamento por categoria, contratos e parcelas pagas |
 | Presentes (admin) | `/admin/presentes` | Cadastro dos itens e dos links de pagamento |
 | Convidados (admin) | `/admin/convidados` | Lista de confirmações, com busca e exportação em CSV |
+| Mural (admin) | `/admin/mural` | Moderação: ocultar, apagar e revisar denúncias |
 
 > As seções sob `/admin` são visíveis **só para quem tem `is_admin`**. Convidado
 > comum e visitante anônimo não leem nem escrevem nada de checklist,
 > fornecedores ou financeiro — isso é garantido por RLS no banco, não só pela
 > interface.
+
+---
+
+## O mural
+
+A rede social dos convidados. **É privado**: quem não está logado não vê nada,
+nem por link direto. Cada convidado publica em nome próprio e não consegue
+editar, apagar ou curtir pelos outros.
+
+### Como funciona
+
+- **Stories** somem sozinhos em 24 horas. A barra do topo mostra um anel cheio
+  em quem tem story que você ainda não viu, e o visualizador passa sozinho a
+  cada 5 segundos (toque à esquerda volta, à direita avança, Esc fecha).
+- **Feed** aceita foto com legenda, ou só recado. Fica para sempre.
+- **Curtidas e comentários** em qualquer publicação do feed.
+- **Quem viu meu story**: só o autor do story enxerga a audiência. Os outros
+  convidados veem apenas a própria visualização.
+- **Denunciar** manda a publicação para a fila de revisão dos noivos.
+
+### Moderação
+
+Em `/admin/mural` vocês veem tudo — inclusive o que ocultaram. Duas ações:
+
+- **Ocultar** tira do mural sem apagar. Reversível, e o autor continua vendo o
+  próprio post.
+- **Apagar** remove de vez, junto com a foto no Storage.
+
+Publicações entram no ar direto, sem aprovação prévia — para uma festa entre
+família e amigos, esperar aprovação mataria o clima. A moderação é reativa.
+
+### As fotos
+
+O bucket é **privado**. As imagens só chegam ao navegador por URL assinada,
+gerada no servidor e válida por uma hora — não há link público permanente.
+Cada convidado só escreve dentro da própria pasta.
+
+Antes de subir, a foto é **redimensionada e recomprimida no próprio navegador**
+(lado maior de 1600px, JPEG a 82%). Uma foto de celular de 8 MB vira algo em
+torno de 300 KB. Isso importa por dois motivos: a cota gratuita do Supabase
+Storage é de 1 GB — o que dá para uns 3 mil posts assim, mas acabaria em cerca
+de 120 fotos sem compressão — e o mural precisa carregar no 4G lotado de um
+salão de festas.
 
 ---
 

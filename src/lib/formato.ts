@@ -69,3 +69,31 @@ export function diasAte(iso: string | null): number | null {
   hoje.setHours(0, 0, 0, 0);
   return Math.round((alvo.getTime() - hoje.getTime()) / 86_400_000);
 }
+
+/** "agora", "há 5 min", "há 3 h", "ontem", ou a data cheia. */
+export function tempoRelativo(iso: string): string {
+  const minutos = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+
+  if (minutos < 1) return "agora";
+  if (minutos < 60) return `há ${minutos} min`;
+
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `há ${horas} h`;
+
+  const dias = Math.floor(horas / 24);
+  if (dias === 1) return "ontem";
+  if (dias < 7) return `há ${dias} dias`;
+
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+/** Quanto tempo falta para o story sumir. */
+export function tempoRestante(iso: string): string {
+  const minutos = Math.floor((new Date(iso).getTime() - Date.now()) / 60_000);
+  if (minutos <= 0) return "expirando";
+  if (minutos < 60) return `${minutos} min`;
+  return `${Math.floor(minutos / 60)} h`;
+}
