@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
+  CATEGORIAS_FORNECEDOR,
   ETAPAS_FUNIL,
   ROTULOS_FORNECEDOR,
   type Fornecedor,
@@ -26,6 +27,9 @@ const TOM_ETAPA: Record<StatusFornecedor, "neutro" | "oliva" | "lavanda" | "apag
 
 const VAZIO = {
   name: "",
+  company: "",
+  contract_url: "",
+  paid: "",
   category: "",
   status: "prospecto" as StatusFornecedor,
   contact_name: "",
@@ -87,6 +91,9 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
     setErro(null);
     setForm({
       name: f.name,
+      company: f.company ?? "",
+      contract_url: f.contract_url ?? "",
+      paid: paraCampo(f.paid_cents ?? null),
       category: f.category,
       status: f.status,
       contact_name: f.contact_name ?? "",
@@ -128,6 +135,9 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
     const supabase = criarClienteNavegador();
     const dados = {
       name: form.name.trim(),
+      company: form.company.trim() || null,
+      contract_url: form.contract_url.trim() || null,
+      paid_cents: paraCentavos(form.paid),
       category: form.category.trim() || "Geral",
       status: form.status,
       contact_name: form.contact_name.trim() || null,
@@ -222,7 +232,11 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
               </div>
               <div>
                 <Rotulo htmlFor="f-cat">Categoria</Rotulo>
-                <input id="f-cat" className="campo" placeholder="Buffet, Foto, Decoração…" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+                <select id="f-cat" className="campo" value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                  <option value="">—</option>
+                  {CATEGORIAS_FORNECEDOR.map((c) => <option key={c}>{c}</option>)}
+                </select>
               </div>
               <div>
                 <Rotulo htmlFor="f-status">Etapa</Rotulo>
@@ -262,12 +276,31 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
+                <Rotulo htmlFor="f-empresa">Empresa / razão social</Rotulo>
+                <input id="f-empresa" className="campo" value={form.company}
+                  onChange={(e) => setForm({ ...form, company: e.target.value })} />
+              </div>
+              <div>
+                <Rotulo htmlFor="f-contrato">Link do contrato</Rotulo>
+                <input id="f-contrato" type="url" className="campo" placeholder="https://…"
+                  value={form.contract_url}
+                  onChange={(e) => setForm({ ...form, contract_url: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-3">
+              <div>
                 <Rotulo htmlFor="f-orc">Orçamento recebido (R$)</Rotulo>
                 <input id="f-orc" inputMode="decimal" className="campo" placeholder="12000,00" value={form.quoted} onChange={(e) => setForm({ ...form, quoted: e.target.value })} />
               </div>
               <div>
                 <Rotulo htmlFor="f-fech">Valor fechado (R$)</Rotulo>
                 <input id="f-fech" inputMode="decimal" className="campo" placeholder="Só quando contratar" value={form.agreed} onChange={(e) => setForm({ ...form, agreed: e.target.value })} />
+              </div>
+              <div>
+                <Rotulo htmlFor="f-pago">Já pago (R$)</Rotulo>
+                <input id="f-pago" inputMode="decimal" className="campo" value={form.paid}
+                  onChange={(e) => setForm({ ...form, paid: e.target.value })} />
               </div>
             </div>
 
@@ -389,7 +422,9 @@ function CartaoFornecedor({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h4 className="titulo-serif text-xl text-oliva">{f.name}</h4>
-          <p className="mt-1 text-sm text-terra">{f.category}</p>
+          <p className="mt-1 text-sm text-terra">
+            {[f.category, f.company].filter(Boolean).join(" · ")}
+          </p>
         </div>
         <Selo tom={TOM_ETAPA[f.status]}>{ROTULOS_FORNECEDOR[f.status]}</Selo>
       </div>
@@ -444,7 +479,25 @@ function CartaoFornecedor({
               Fechado: <span className="tabular-nums lining-nums">{reais(f.agreed_cents)}</span>
             </p>
           )}
+          {f.agreed_cents !== null && (f.paid_cents ?? 0) > 0 && (
+            <p className="text-sm text-terra">
+              Pago: <span className="tabular-nums lining-nums">{reais(f.paid_cents ?? 0)}</span>
+              {" · saldo "}
+              <span className="tabular-nums lining-nums">
+                {reais(Math.max(0, f.agreed_cents - (f.paid_cents ?? 0)))}
+              </span>
+            </p>
+          )}
         </div>
+      )}
+
+      {linkSeguro(f.contract_url ?? null) && (
+        <p className="mt-2">
+          <a href={linkSeguro(f.contract_url ?? null)!} target="_blank" rel="noopener noreferrer"
+            className="versalete text-xs text-oliva underline underline-offset-4">
+            Ver contrato
+          </a>
+        </p>
       )}
 
       {f.next_action && (

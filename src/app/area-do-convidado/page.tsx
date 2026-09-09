@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
+import { meuConvidado } from "@/lib/convidado";
 import { ROTULOS_RSVP, type Rsvp } from "@/lib/tipos";
 import { CASAMENTO } from "@/lib/config";
 import { Secao } from "@/components/Secao";
@@ -13,16 +14,16 @@ export const dynamic = "force-dynamic";
 
 export default async function AreaDoConvidado() {
   const supabase = await criarClienteServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const eu = await meuConvidado();
 
-  if (!user) redirect("/entrar?proximo=/area-do-convidado");
+  if (!eu) redirect("/entrar?proximo=/area-do-convidado");
 
-  const [{ data: perfil }, { data: rsvp }] = await Promise.all([
-    supabase.from("guests").select("full_name, is_admin").eq("id", user.id).maybeSingle(),
-    supabase.from("rsvps").select("*").eq("guest_id", user.id).maybeSingle(),
-  ]);
+  const { data: rsvp } = await supabase
+    .from("rsvps")
+    .select("*")
+    .eq("guest_id", eu.id)
+    .maybeSingle();
+  const perfil = eu;
 
   const resposta = rsvp as Rsvp | null;
   const primeiroNome = (perfil?.full_name ?? "").trim().split(" ")[0];

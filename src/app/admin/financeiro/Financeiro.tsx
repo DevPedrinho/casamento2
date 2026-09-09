@@ -2,12 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
-import type { Despesa, Fornecedor } from "@/lib/tipos";
+import { ROTULOS_DESPESA, type Despesa, type Fornecedor, type StatusDespesa } from "@/lib/tipos";
 import { diasAte, formatarData, paraCampo, paraCentavos, reais } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
-import { Bloco, Indicador, LinhaValor, Progresso, Selo, Vazio } from "@/components/painel";
+import { Bloco, BarrasCategoria, Indicador, LinhaValor, Progresso, Selo, Vazio } from "@/components/painel";
 
 /** Soma dos pagamentos já lançados em uma despesa. */
 function totalPago(despesa: Despesa): number {
@@ -27,6 +27,30 @@ const VAZIO = {
   contracted: "",
   due_date: "",
   notes: "",
+  status: "previsto" as StatusDespesa,
+  payment_method: "",
+  installments: "1",
+};
+
+/** O status guardado, corrigido pela realidade: quitado é pago; vencido e
+ *  não quitado é atrasado. Evita depender de alguém lembrar de atualizar. */
+function statusReal(despesa: Despesa): StatusDespesa {
+  if (despesa.status === "cancelado") return "cancelado";
+  const pago = totalPago(despesa);
+  const referencia = valorDeReferencia(despesa);
+  if (referencia > 0 && pago >= referencia) return "pago";
+  const dias = diasAte(despesa.due_date);
+  if (dias !== null && dias < 0) return "atrasado";
+  if (despesa.contracted_cents !== null) return "a_pagar";
+  return "previsto";
+}
+
+const TOM_DESPESA: Record<StatusDespesa, "neutro" | "oliva" | "lavanda" | "alerta" | "apagado"> = {
+  previsto: "neutro",
+  a_pagar: "lavanda",
+  pago: "oliva",
+  atrasado: "alerta",
+  cancelado: "apagado",
 };
 
 export function Financeiro({
@@ -89,6 +113,9 @@ export function Financeiro({
       contracted: paraCampo(d.contracted_cents),
       due_date: d.due_date ?? "",
       notes: d.notes ?? "",
+      status: d.status,
+      payment_method: d.payment_method ?? "",
+      installments: String(d.installments ?? 1),
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -121,6 +148,9 @@ export function Financeiro({
       contracted_cents: paraCentavos(form.contracted),
       due_date: form.due_date || null,
       notes: form.notes.trim() || null,
+      status: form.status,
+      payment_method: form.payment_method.trim() || null,
+      installments: Math.max(1, Number(form.installments) || 1),
     };
 
     const { error } = editando
@@ -158,6 +188,8 @@ export function Financeiro({
           detalhe={resumo.vencendo > 0 ? `${resumo.vencendo} vencendo em 30 dias` : undefined}
         />
       </div>
+
+      <AlertasEGraficos despesas={despesas} />
 
       <OrcamentoTotal
         total={orcamentoTotal}
@@ -212,6 +244,29 @@ export function Financeiro({
               <div>
                 <Rotulo htmlFor="d-venc">Vencimento</Rotulo>
                 <input id="d-venc" type="date" className="campo" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-3">
+              <div>
+                <Rotulo htmlFor="d-status">Status</Rotulo>
+                <select id="d-status" className="campo" value={form.status}
+                  onChange={(e) => setForm({ ...form, status: e.target.value as StatusDespesa })}>
+                  {(Object.keys(ROTULOS_DESPESA) as StatusDespesa[]).map((st) => (
+                    <option key={st} value={st}>{ROTULOS_DESPESA[st]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Rotulo htmlFor="d-forma">Forma de pagamento</Rotulo>
+                <input id="d-forma" className="campo" placeholder="Pix, cartão, boleto…"
+                  value={form.payment_method}
+                  onChange={(e) => setForm({ ...form, payment_method: e.target.value })} />
+              </div>
+              <div>
+                <Rotulo htmlFor="d-parc">Parcelas</Rotulo>
+                <input id="d-parc" inputMode="numeric" className="campo" value={form.installments}
+                  onChange={(e) => setForm({ ...form, installments: e.target.value })} />
               </div>
             </div>
 
@@ -281,6 +336,106 @@ export function Financeiro({
           </div>
         )}
       </Bloco>
+    </div>
+  );
+}
+
+/** Alertas de vencimento e os dois gráficos do financeiro. */
+function AlertasEGraficos({ despesas }: { despesas: Despesa[] }) {
+  const atrasadas = despesas.filter((d) => statusReal(d) === "atrasado");
+  const proximas = despesas.filter((d) => {
+    const dias = diasAte(d.due_date);
+    return dias !== null && dias >= 0 && dias <= 30 && statusReal(d) !== "pago";
+  });
+
+  const porCategoria = [...despesas.reduce((mapa, d) => {
+    const atual = mapa.get(d.category) ?? { previsto: 0, pago: 0 };
+    mapa.set(d.category, {
+      previsto: atual.previsto + d.estimated_cents,
+      pago: atual.pago + totalPago(d),
+    });
+    return mapa;
+  }, new Map<string, { previsto: number; pago: number }>())]
+    .filter(([, v]) => v.previsto > 0 || v.pago > 0)
+    .sort((a, b) => b[1].previsto - a[1].previsto)
+    .map(([rotulo, v]) => ({ rotulo, valor: v.pago, secundario: v.previsto }));
+
+  // Evolução: pagamentos acumulados mês a mês.
+  const evolucao = (() => {
+    const pagamentos = despesas
+      .flatMap((d) => d.payments ?? [])
+      .sort((a, b) => a.paid_at.localeCompare(b.paid_at));
+    let acumulado = 0;
+    const meses = new Map<string, number>();
+    for (const p of pagamentos) {
+      acumulado += p.amount_cents;
+      meses.set(p.paid_at.slice(0, 7), acumulado);
+    }
+    return [...meses.entries()].map(([mes, valor]) => ({
+      rotulo: new Date(`${mes}-02`).toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      valor,
+    }));
+  })();
+
+  if (atrasadas.length === 0 && proximas.length === 0 && porCategoria.length === 0) return null;
+
+  return (
+    <div className="space-y-6">
+      {(atrasadas.length > 0 || proximas.length > 0) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {atrasadas.length > 0 && (
+            <div className="rounded-sm border border-red-800/30 bg-red-50/60 px-6 py-5">
+              <p className="versalete text-xs text-red-900">
+                {atrasadas.length} conta{atrasadas.length > 1 ? "s" : ""} em atraso
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {atrasadas.slice(0, 4).map((d) => (
+                  <li key={d.id} className="flex justify-between gap-4 text-sm text-terra">
+                    <span className="min-w-0 truncate">{d.description}</span>
+                    <span className="shrink-0 tabular-nums lining-nums">
+                      {reais(valorDeReferencia(d) - totalPago(d))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {proximas.length > 0 && (
+            <div className="rounded-sm border border-lavanda/40 bg-lavanda/10 px-6 py-5">
+              <p className="versalete text-xs text-lavanda">
+                {proximas.length} vencendo em 30 dias
+              </p>
+              <ul className="mt-3 space-y-1.5">
+                {proximas.slice(0, 4).map((d) => (
+                  <li key={d.id} className="flex justify-between gap-4 text-sm text-terra">
+                    <span className="min-w-0 truncate">{d.description}</span>
+                    <span className="shrink-0 tabular-nums lining-nums">
+                      {formatarData(d.due_date)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {porCategoria.length > 0 && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Bloco titulo="Planejado × realizado" descricao="Barra cheia é o pago; a clara, o previsto.">
+            <BarrasCategoria itens={porCategoria} formatar={reais} />
+          </Bloco>
+
+          <Bloco titulo="Evolução dos pagamentos" descricao="Quanto já saiu do bolso, acumulado por mês.">
+            {evolucao.length === 0 ? (
+              <Vazio>Nenhum pagamento lançado ainda.</Vazio>
+            ) : (
+              <BarrasCategoria itens={evolucao} formatar={reais} />
+            )}
+          </Bloco>
+        </div>
+      )}
     </div>
   );
 }
@@ -417,11 +572,13 @@ function LinhaDespesa({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <h4 className="titulo-serif text-lg text-oliva">{despesa.description}</h4>
-            {quitado ? (
-              <Selo tom="oliva">Quitado</Selo>
-            ) : pago > 0 ? (
-              <Selo tom="lavanda">Parcial</Selo>
-            ) : null}
+            <Selo tom={TOM_DESPESA[statusReal(despesa)]}>
+              {ROTULOS_DESPESA[statusReal(despesa)]}
+            </Selo>
+            {!quitado && pago > 0 && <Selo tom="lavanda">parcial</Selo>}
+            {despesa.installments > 1 && (
+              <Selo>{despesa.payments.length}/{despesa.installments} parcelas</Selo>
+            )}
           </div>
 
           {fornecedor && <p className="mt-1.5 text-sm text-terra">{fornecedor.name}</p>}

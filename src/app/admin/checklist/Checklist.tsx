@@ -19,9 +19,24 @@ const PROXIMO: Record<StatusTarefa, StatusTarefa> = {
 const FILTROS = ["Tudo", "A fazer", "Em andamento", "Concluído"] as const;
 type Filtro = (typeof FILTROS)[number];
 
+const PRAZOS = ["Qualquer prazo", "Hoje", "Esta semana", "Atrasadas", "Próximas"] as const;
+type Prazo = (typeof PRAZOS)[number];
+
+/** Aplica o filtro de prazo sobre uma tarefa. */
+function noPrazo(tarefa: Tarefa, prazo: Prazo): boolean {
+  if (prazo === "Qualquer prazo") return true;
+  const dias = diasAte(tarefa.due_date);
+  if (dias === null) return false;
+  if (prazo === "Hoje") return dias === 0;
+  if (prazo === "Esta semana") return dias >= 0 && dias <= 7;
+  if (prazo === "Atrasadas") return dias < 0 && tarefa.status !== "feito";
+  return dias > 0;
+}
+
 export function Checklist({ tarefas }: { tarefas: Tarefa[] }) {
   const router = useRouter();
   const [filtro, setFiltro] = useState<Filtro>("Tudo");
+  const [prazo, setPrazo] = useState<Prazo>("Qualquer prazo");
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [novaAberta, setNovaAberta] = useState(false);
 
@@ -37,11 +52,15 @@ export function Checklist({ tarefas }: { tarefas: Tarefa[] }) {
   }, [tarefas]);
 
   const visiveis = useMemo(() => {
-    if (filtro === "Tudo") return tarefas;
-    const alvo: StatusTarefa =
-      filtro === "A fazer" ? "pendente" : filtro === "Em andamento" ? "fazendo" : "feito";
-    return tarefas.filter((t) => t.status === alvo);
-  }, [filtro, tarefas]);
+    const alvo: StatusTarefa | null =
+      filtro === "Tudo" ? null
+      : filtro === "A fazer" ? "pendente"
+      : filtro === "Em andamento" ? "fazendo" : "feito";
+
+    return tarefas.filter(
+      (t) => (alvo === null || t.status === alvo) && noPrazo(t, prazo),
+    );
+  }, [filtro, prazo, tarefas]);
 
   // Agrupa por fase preservando a ordem cronológica que veio do banco.
   const fases = useMemo(() => {
@@ -107,6 +126,24 @@ export function Checklist({ tarefas }: { tarefas: Tarefa[] }) {
             }}
           />
         )}
+
+        <div className="mb-4 flex flex-wrap gap-2.5">
+          {PRAZOS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPrazo(p)}
+              aria-pressed={prazo === p}
+              className={`versalete titulo-serif rounded-full border px-4 py-2 text-xs transition-colors ${
+                prazo === p
+                  ? "border-lavanda bg-lavanda text-creme-claro"
+                  : "border-terra/30 text-terra hover:border-lavanda hover:text-lavanda"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
 
         <div className="mb-7 flex flex-wrap gap-2.5">
           {FILTROS.map((f) => (
@@ -196,6 +233,8 @@ function LinhaTarefa({
 
         {tarefa.notes && <p className="mt-2 text-sm leading-relaxed text-terra">{tarefa.notes}</p>}
 
+        <SubTarefas tarefa={tarefa} />
+
         <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-terra/85">
           <span>{tarefa.category}</span>
           {tarefa.owner && <span>· {tarefa.owner}</span>}
@@ -216,6 +255,111 @@ function LinhaTarefa({
         Remover
       </button>
     </li>
+  );
+}
+
+/** Checklist interno da tarefa, com progresso. */
+function SubTarefas({ tarefa }: { tarefa: Tarefa }) {
+  const [itens, setItens] = useState(tarefa.itens ?? []);
+  const [novo, setNovo] = useState("");
+  const [abrindo, setAbrindo] = useState(false);
+
+  const feitos = itens.filter((i) => i.done).length;
+
+  async function alternar(id: string, done: boolean) {
+    setItens((l) => l.map((i) => (i.id === id ? { ...i, done: !done } : i)));
+    const supabase = criarClienteNavegador();
+    await supabase.from("task_items").update({ done: !done }).eq("id", id);
+  }
+
+  async function adicionar() {
+    const titulo = novo.trim();
+    if (!titulo) return;
+    const supabase = criarClienteNavegador();
+    const { data } = await supabase
+      .from("task_items")
+      .insert({ task_id: tarefa.id, title: titulo, sort_order: itens.length + 1 })
+      .select()
+      .single();
+    if (data) setItens((l) => [...l, data]);
+    setNovo("");
+  }
+
+  async function remover(id: string) {
+    setItens((l) => l.filter((i) => i.id !== id));
+    const supabase = criarClienteNavegador();
+    await supabase.from("task_items").delete().eq("id", id);
+  }
+
+  if (itens.length === 0 && !abrindo) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbrindo(true)}
+        className="versalete mt-2 text-xs text-terra/70 underline underline-offset-4 hover:text-oliva"
+      >
+        + subtarefa
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-sm border border-terra/15 bg-creme-claro/60 p-3.5">
+      {itens.length > 0 && (
+        <p className="versalete mb-2.5 text-xs text-terra">
+          {feitos} de {itens.length} concluídas ·{" "}
+          {Math.round((feitos / itens.length) * 100)}%
+        </p>
+      )}
+
+      <ul className="space-y-1.5">
+        {itens.map((item) => (
+          <li key={item.id} className="flex items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={item.done}
+              onChange={() => alternar(item.id, item.done)}
+              className="h-4 w-4 shrink-0 accent-[var(--color-oliva)]"
+              aria-label={item.title}
+            />
+            <span className={`min-w-0 flex-1 text-sm ${item.done ? "text-terra/60 line-through" : "text-terra"}`}>
+              {item.title}
+            </span>
+            <button
+              type="button"
+              onClick={() => remover(item.id)}
+              aria-label={`Remover ${item.title}`}
+              className="versalete shrink-0 text-xs text-terra/50 hover:text-red-800"
+            >
+              ×
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-2.5 flex gap-2">
+        <input
+          className="campo py-1.5 text-sm"
+          placeholder="Nova subtarefa…"
+          value={novo}
+          onChange={(e) => setNovo(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void adicionar();
+            }
+          }}
+          aria-label="Nova subtarefa"
+        />
+        <button
+          type="button"
+          onClick={adicionar}
+          className="versalete titulo-serif shrink-0 rounded-sm border border-oliva/40 px-3 text-xs text-oliva"
+        >
+          Add
+        </button>
+      </div>
+    </div>
   );
 }
 

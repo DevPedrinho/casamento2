@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
+import { meuConvidado } from "@/lib/convidado";
 import type { Rsvp } from "@/lib/tipos";
 import { CartaoForm } from "@/components/CartaoForm";
 import { BotaoLink } from "@/components/Botao";
@@ -15,12 +16,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Confirmar() {
   const supabase = await criarClienteServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const eu = await meuConvidado();
 
   // Visitante sem cadastro: convite para criar a conta primeiro.
-  if (!user) {
+  if (!eu) {
     return (
       <CartaoForm
         sobretitulo="Confirmação de presença"
@@ -42,14 +41,15 @@ export default async function Confirmar() {
     );
   }
 
-  const [{ data: perfil }, { data: rsvp }] = await Promise.all([
-    supabase.from("guests").select("full_name").eq("id", user.id).maybeSingle(),
-    supabase.from("rsvps").select("*").eq("guest_id", user.id).maybeSingle(),
-  ]);
+  const { data: rsvp } = await supabase
+    .from("rsvps")
+    .select("*")
+    .eq("guest_id", eu.id)
+    .maybeSingle();
 
   return (
     <FormRsvp
-      nome={perfil?.full_name ?? ""}
+      nome={eu.full_name}
       rsvpInicial={(rsvp as Rsvp | null) ?? null}
     />
   );

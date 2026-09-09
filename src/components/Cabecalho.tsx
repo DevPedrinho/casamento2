@@ -34,7 +34,7 @@ export function Cabecalho() {
       const { data } = await supabase
         .from("guests")
         .select("is_admin")
-        .eq("id", userId)
+        .eq("user_id", userId)
         .maybeSingle();
       setAdmin(Boolean(data?.is_admin));
     }

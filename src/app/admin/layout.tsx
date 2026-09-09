@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
-import { Sidebar, type Pendencias } from "./Sidebar";
+import { BarraTopo, type Pendencias } from "./BarraTopo";
 
 export const metadata: Metadata = { title: "Painel dos noivos" };
 
@@ -28,9 +28,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const pendencias = await carregarPendencias(supabase);
 
   return (
-    <div className="flex min-h-screen bg-creme lg:gap-0">
-      <Sidebar nome={perfil.full_name ?? ""} pendencias={pendencias} />
-      <main className="min-w-0 flex-1 px-4 py-8 sm:px-8 sm:py-10">{children}</main>
+    <div className="min-h-screen bg-creme">
+      <BarraTopo nome={perfil.full_name ?? ""} pendencias={pendencias} />
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
     </div>
   );
 }

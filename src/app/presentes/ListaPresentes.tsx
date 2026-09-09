@@ -4,7 +4,9 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Presente } from "@/lib/tipos";
 import { formatarPreco, linkSeguro } from "@/lib/formato";
+import { urlDoSite } from "@/components/UploadImagem";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { meuGuestId } from "@/lib/convidadoCliente";
 import { BotaoExterno, BotaoLink } from "@/components/Botao";
 import { Coracao } from "@/components/Ornamentos";
 
@@ -110,12 +112,12 @@ export function ListaPresentes({
  *  Nunca bloqueia o clique: se falhar, o link abre do mesmo jeito. */
 async function registrarPresente(presenteId: string) {
   try {
+    const guestId = await meuGuestId();
+    if (!guestId) return;
     const supabase = criarClienteNavegador();
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) return;
     await supabase.from("gift_claims").insert({
       gift_id: presenteId,
-      guest_id: data.user.id,
+      guest_id: guestId,
     });
   } catch {
     // Silencioso de propósito: o presente é mais importante que o registro.
@@ -123,7 +125,8 @@ async function registrarPresente(presenteId: string) {
 }
 
 function Imagem({ presente, tamanho }: { presente: Presente; tamanho: "card" | "modal" }) {
-  const imagem = linkSeguro(presente.image_url);
+  // O upload tem prioridade; a URL externa fica como herança do cadastro antigo.
+  const imagem = urlDoSite(presente.image_path) ?? linkSeguro(presente.image_url);
 
   if (imagem) {
     return (

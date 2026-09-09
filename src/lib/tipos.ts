@@ -23,9 +23,13 @@ export type Presente = {
   title: string;
   description: string | null;
   price_cents: number | null;
+  /** URL externa antiga; mantida para não perder o que já estava cadastrado. */
   image_url: string | null;
+  /** Arquivo no bucket "site" — o caminho novo, via upload. */
+  image_path: string | null;
   gift_url: string;
   category: string;
+  quantity: number;
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -52,6 +56,10 @@ export type Tarefa = {
   owner: string | null;
   due_date: string | null;
   sort_order: number;
+  priority?: "baixa" | "media" | "alta";
+  vendor_id?: string | null;
+  /** Subtarefas; vem vazio quando a consulta não pede o embed. */
+  itens?: { id: string; task_id: string; title: string; done: boolean; sort_order: number }[];
 };
 
 export const ROTULOS_TAREFA: Record<StatusTarefa, string> = {
@@ -84,7 +92,16 @@ export type Fornecedor = {
   next_action: string | null;
   next_action_at: string | null;
   notes: string | null;
+  company?: string | null;
+  contract_url?: string | null;
+  paid_cents?: number | null;
 };
+
+/** Categorias usadas no cadastro de fornecedor. */
+export const CATEGORIAS_FORNECEDOR = [
+  "Buffet", "Decoração", "Fotografia", "Filmagem", "Música", "Cerimonial",
+  "Convites", "Doces", "Bolo", "Roupa", "Beleza", "Transporte", "Outros",
+];
 
 /** As etapas do funil, na ordem em que acontecem. */
 export const ETAPAS_FUNIL: StatusFornecedor[] = [
@@ -112,6 +129,8 @@ export type Pagamento = {
   paid_at: string;
   method: string | null;
   notes: string | null;
+  installment_no: number | null;
+  due_date: string | null;
 };
 
 export type Despesa = {
@@ -123,6 +142,9 @@ export type Despesa = {
   contracted_cents: number | null;
   due_date: string | null;
   notes: string | null;
+  status: StatusDespesa;
+  payment_method: string | null;
+  installments: number;
   payments: Pagamento[];
 };
 
@@ -160,6 +182,23 @@ export type Comentario = {
   autor: Autor | null;
 };
 
+export const EMOJIS_REACAO = ["❤️", "😍", "🥹", "👏", "🎉", "😂"];
+
+export type ReacaoStory = {
+  post_id: string;
+  guest_id: string;
+  emoji: string;
+  created_at: string;
+  autor: Autor | null;
+};
+
+export type VisualizacaoStory = {
+  post_id: string;
+  guest_id: string;
+  viewed_at: string;
+  autor: Autor | null;
+};
+
 export type Publicacao = {
   id: string;
   author_id: string;
@@ -175,7 +214,12 @@ export type Publicacao = {
   imagem_url: string | null;
   curtidas: number;
   eu_curti: boolean;
+  /** Nomes de quem curtiu, para a lista "Curtido por". */
+  quem_curtiu: Autor[];
   comentarios: Comentario[];
+  /** Só preenchidos em stories, e só para quem pode ver (autor e noivos). */
+  visualizacoes?: VisualizacaoStory[];
+  reacoes?: ReacaoStory[];
 };
 
 /** Stories de um mesmo convidado, agrupados como na barra do topo. */
@@ -292,3 +336,107 @@ export const ROTULOS_LOCAL: Record<TipoLocal, string> = {
   cerimonia: "Cerimônia",
   recepcao: "Recepção",
 };
+
+/* ===================== Kanban e tarefas ===================== */
+
+export type Prioridade = "baixa" | "media" | "alta";
+
+export const ROTULOS_PRIORIDADE: Record<Prioridade, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+};
+
+export type SubTarefa = {
+  id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  sort_order: number;
+};
+
+export type ColunaKanban = {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_done: boolean;
+};
+
+export type ItemCard = {
+  id: string;
+  card_id: string;
+  title: string;
+  done: boolean;
+  sort_order: number;
+};
+
+export type CardKanban = {
+  id: string;
+  column_id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  owner: string | null;
+  vendor_id: string | null;
+  priority: Prioridade;
+  due_date: string | null;
+  sort_order: number;
+  itens: ItemCard[];
+};
+
+export const CATEGORIAS_KANBAN = [
+  "Cerimônia", "Buffet", "Decoração", "Fotografia", "Música",
+  "Documentação", "Convidados", "Lua de Mel", "Financeiro", "Outros",
+];
+
+/* ===================== Financeiro ===================== */
+
+export type StatusDespesa = "previsto" | "a_pagar" | "pago" | "atrasado" | "cancelado";
+
+export const ROTULOS_DESPESA: Record<StatusDespesa, string> = {
+  previsto: "Previsto",
+  a_pagar: "A pagar",
+  pago: "Pago",
+  atrasado: "Atrasado",
+  cancelado: "Cancelado",
+};
+
+/* ===================== Timeline ===================== */
+
+export type FotoTimeline = {
+  id: string;
+  chapter_id: string;
+  image_path: string;
+  caption: string | null;
+  is_cover: boolean;
+  sort_order: number;
+  /** URL pública montada no servidor. */
+  url: string;
+};
+
+export type CapituloTimeline = {
+  id: string;
+  period: string;
+  title: string;
+  summary: string | null;
+  body: string | null;
+  sort_order: number;
+  fotos: FotoTimeline[];
+};
+
+/* ===================== Arquivos ===================== */
+
+export type Arquivo = {
+  id: string;
+  name: string;
+  file_path: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  category: string;
+  vendor_id: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+/* ===================== Reações de story ===================== */
+

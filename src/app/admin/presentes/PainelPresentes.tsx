@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { Presente } from "@/lib/tipos";
 import { formatarPreco, linkSeguro } from "@/lib/formato";
+import { UploadImagem, urlDoSite } from "@/components/UploadImagem";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
@@ -13,9 +14,10 @@ const VAZIO = {
   title: "",
   description: "",
   preco: "",
-  image_url: "",
+  image_path: "",
   gift_url: "",
   category: "Casa",
+  quantity: "1",
 };
 
 export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
@@ -40,9 +42,10 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
       title: presente.title,
       description: presente.description ?? "",
       preco: presente.price_cents === null ? "" : (presente.price_cents / 100).toString(),
-      image_url: presente.image_url ?? "",
+      image_path: presente.image_path ?? "",
       gift_url: presente.gift_url,
       category: presente.category,
+      quantity: String(presente.quantity ?? 1),
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -60,11 +63,6 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
       setErro("O link do presente precisa ser um endereço válido começando com https://");
       return;
     }
-    if (form.image_url.trim() && !linkSeguro(form.image_url)) {
-      setErro("O link da imagem precisa começar com https://");
-      return;
-    }
-
     const precoNumero = form.preco.trim()
       ? Number(form.preco.replace(",", "."))
       : null;
@@ -79,9 +77,10 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
       title: form.title.trim(),
       description: form.description.trim() || null,
       price_cents: precoNumero === null ? null : Math.round(precoNumero * 100),
-      image_url: form.image_url.trim() || null,
+      image_path: form.image_path || null,
       gift_url: form.gift_url.trim(),
       category: form.category.trim() || "Casa",
+      quantity: Math.max(1, Number(form.quantity) || 1),
     };
 
     const { error } = editando
@@ -183,17 +182,25 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
               />
             </div>
             <div>
-              <Rotulo htmlFor="g-img">Link da imagem (opcional)</Rotulo>
+              <Rotulo htmlFor="g-qtd">Quantidade</Rotulo>
               <input
-                id="g-img"
-                type="url"
+                id="g-qtd"
+                inputMode="numeric"
                 className="campo"
-                placeholder="https://…/foto.jpg"
-                value={form.image_url}
-                onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                value={form.quantity}
+                onChange={(e) => setForm({ ...form, quantity: e.target.value })}
               />
             </div>
           </div>
+
+          <UploadImagem
+            pasta="presentes"
+            caminhoAtual={form.image_path || null}
+            urlAtual={urlDoSite(form.image_path || null)}
+            aoEnviar={(caminho) => setForm((f) => ({ ...f, image_path: caminho }))}
+            aoRemover={() => setForm((f) => ({ ...f, image_path: "" }))}
+            rotulo="Foto do presente"
+          />
 
           <div>
             <Rotulo htmlFor="g-link">Link do botão Presentear</Rotulo>

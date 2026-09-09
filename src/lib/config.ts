@@ -21,6 +21,15 @@ export const CASAMENTO = {
   },
   trajes: "Esporte fino",
   contatoEmail: "",
+  /**
+   * Música da timeline. Coloque o arquivo em public/audio/ e aponte aqui.
+   * Vazio = o player nem aparece, em vez de quebrar.
+   */
+  musica: {
+    arquivo: "",
+    titulo: "",
+    artista: "",
+  },
 } as const;
 
 /** Data do casamento como objeto Date, usada na contagem regressiva. */

@@ -1,7 +1,13 @@
 import "server-only";
 
 import { criarClienteServidor } from "@/lib/supabase/servidor";
-import type { Comentario, GrupoStory, Publicacao } from "@/lib/tipos";
+import type {
+  Comentario,
+  GrupoStory,
+  Publicacao,
+  ReacaoStory,
+  VisualizacaoStory,
+} from "@/lib/tipos";
 
 /** Validade das URLs assinadas das fotos. O mural é server-rendered a cada
  *  visita, então uma hora sobra — e limita o estrago se um link vazar. */
@@ -20,7 +26,7 @@ type LinhaBruta = {
   expires_at: string | null;
   created_at: string;
   guests: { id: string; full_name: string } | { id: string; full_name: string }[] | null;
-  post_likes: { guest_id: string }[] | null;
+  post_likes: { guest_id: string; guests: { id: string; full_name: string } | { id: string; full_name: string }[] | null }[] | null;
   post_comments:
     | (Omit<Comentario, "autor"> & {
         guests: { id: string; full_name: string } | { id: string; full_name: string }[] | null;
@@ -37,7 +43,7 @@ function primeiro<T>(valor: T | T[] | null): T | null {
 const SELECT_POST = `
   id, author_id, kind, caption, image_path, is_hidden, hidden_reason, expires_at, created_at,
   guests!posts_author_id_fkey ( id, full_name ),
-  post_likes ( guest_id ),
+  post_likes ( guest_id, guests!post_likes_guest_id_fkey ( id, full_name ) ),
   post_comments ( id, post_id, guest_id, body, is_hidden, created_at,
                   guests!post_comments_guest_id_fkey ( id, full_name ) )
 `;
@@ -96,6 +102,9 @@ function montarPublicacao(
     imagem_url: linha.image_path ? (urls.get(linha.image_path) ?? null) : null,
     curtidas: curtidas.length,
     eu_curti: curtidas.some((c) => c.guest_id === meuId),
+    quem_curtiu: curtidas
+      .map((c) => primeiro(c.guests))
+      .filter((a): a is { id: string; full_name: string } => Boolean(a)),
     comentarios,
   };
 }
@@ -141,9 +150,45 @@ export async function carregarStories(meuId: string): Promise<GrupoStory[]> {
   );
   const jaVistos = new Set((vistos ?? []).map((v) => v.post_id));
 
+  // Audiência e reações. O RLS entrega só o que o autor pode ver, então
+  // esta consulta já volta filtrada — não precisamos filtrar de novo aqui.
+  const ids = linhas.map((l) => l.id);
+  const [{ data: audiencia }, { data: reacoes }] = ids.length
+    ? await Promise.all([
+        supabase
+          .from("story_views")
+          .select("post_id, guest_id, viewed_at, guests!story_views_guest_id_fkey ( id, full_name )")
+          .in("post_id", ids)
+          .order("viewed_at", { ascending: false }),
+        supabase
+          .from("story_reactions")
+          .select("post_id, guest_id, emoji, created_at, guests!story_reactions_guest_id_fkey ( id, full_name )")
+          .in("post_id", ids),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  type ComAutor = { guests: { id: string; full_name: string } | { id: string; full_name: string }[] | null };
+  const vistasPorPost = new Map<string, VisualizacaoStory[]>();
+  for (const v of (audiencia ?? []) as unknown as (VisualizacaoStory & ComAutor)[]) {
+    const lista = vistasPorPost.get(v.post_id) ?? [];
+    lista.push({ ...v, autor: primeiro(v.guests) });
+    vistasPorPost.set(v.post_id, lista);
+  }
+
+  const reacoesPorPost = new Map<string, ReacaoStory[]>();
+  for (const r of (reacoes ?? []) as unknown as (ReacaoStory & ComAutor)[]) {
+    const lista = reacoesPorPost.get(r.post_id) ?? [];
+    lista.push({ ...r, autor: primeiro(r.guests) });
+    reacoesPorPost.set(r.post_id, lista);
+  }
+
   const porAutor = new Map<string, GrupoStory>();
   for (const linha of linhas) {
-    const publicacao = montarPublicacao(linha, urls, meuId);
+    const publicacao: Publicacao = {
+      ...montarPublicacao(linha, urls, meuId),
+      visualizacoes: vistasPorPost.get(linha.id) ?? [],
+      reacoes: reacoesPorPost.get(linha.id) ?? [],
+    };
     const autor = publicacao.autor;
     if (!autor) continue;
 

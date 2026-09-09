@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { Publicacao } from "@/lib/tipos";
-import { tempoRelativo } from "@/lib/formato";
+import { formatarDataHora, tempoRelativo } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
+import { Icone } from "@/components/Icones";
 import { Coracao } from "@/components/Ornamentos";
 
 export function Feed({
@@ -57,6 +58,7 @@ function CartaoPost({
   const [total, setTotal] = useState(post.curtidas);
   const [comentando, setComentando] = useState(false);
   const [denunciado, setDenunciado] = useState(false);
+  const [vendoCurtidas, setVendoCurtidas] = useState(false);
 
   const meu = post.author_id === meuId;
   const nome = post.autor?.full_name ?? "Convidado";
@@ -139,22 +141,41 @@ function CartaoPost({
           type="button"
           onClick={alternarCurtida}
           aria-pressed={curti}
-          className={`inline-flex items-center gap-2 text-sm transition-colors ${
+          className={`inline-flex items-center gap-2 text-base transition-colors ${
             curti ? "text-lavanda" : "text-terra hover:text-lavanda"
           }`}
         >
           <Coracao className={`w-4 ${curti ? "" : "opacity-45"}`} />
-          {total > 0 ? total : ""} {total === 1 ? "curtida" : total > 1 ? "curtidas" : "Curtir"}
+          <span className="tabular-nums lining-nums">{total > 0 ? total : ""}</span>
+          {total === 1 ? "curtida" : total > 1 ? "curtidas" : "Curtir"}
         </button>
+
+        {total > 0 && post.quem_curtiu.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setVendoCurtidas(true)}
+            className="text-sm text-terra underline underline-offset-4 transition-colors hover:text-lavanda"
+          >
+            ver quem curtiu
+          </button>
+        )}
 
         <button
           type="button"
           onClick={() => setComentando((v) => !v)}
-          className="text-sm text-terra transition-colors hover:text-oliva"
+          className="inline-flex items-center gap-2 text-base text-terra transition-colors hover:text-oliva"
         >
-          {post.comentarios.length > 0
-            ? `${post.comentarios.length} ${post.comentarios.length === 1 ? "comentário" : "comentários"}`
-            : "Comentar"}
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.7A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
+          </svg>
+          <span className="tabular-nums lining-nums">
+            {post.comentarios.length > 0 ? post.comentarios.length : ""}
+          </span>
+          {post.comentarios.length === 1
+            ? "comentário"
+            : post.comentarios.length > 1
+              ? "comentários"
+              : "Comentar"}
         </button>
 
         <div className="ml-auto flex items-center gap-4">
@@ -180,6 +201,14 @@ function CartaoPost({
         </div>
       </div>
 
+      {vendoCurtidas && (
+        <ListaDePessoas
+          titulo="Curtido por"
+          pessoas={post.quem_curtiu.map((a) => ({ id: a.id, nome: a.full_name }))}
+          aoFechar={() => setVendoCurtidas(false)}
+        />
+      )}
+
       {(comentando || post.comentarios.length > 0) && (
         <Comentarios
           post={post}
@@ -190,6 +219,71 @@ function CartaoPost({
         />
       )}
     </li>
+  );
+}
+
+/** Modal reaproveitável: "Curtido por", "Visualizado por", "Reagiram". */
+export function ListaDePessoas({
+  titulo,
+  pessoas,
+  aoFechar,
+}: {
+  titulo: string;
+  pessoas: { id: string; nome: string; detalhe?: string; emoji?: string }[];
+  aoFechar: () => void;
+}) {
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.key === "Escape") aoFechar();
+    }
+    document.addEventListener("keydown", aoTeclar);
+    return () => {
+      document.body.style.overflow = original;
+      document.removeEventListener("keydown", aoTeclar);
+    };
+  }, [aoFechar]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-oliva-escuro/50 sm:items-center"
+      onClick={aoFechar}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[70vh] w-full max-w-md overflow-y-auto rounded-t-sm border border-terra/25 bg-creme-claro shadow-2xl sm:rounded-sm"
+      >
+        <header className="sticky top-0 flex items-center justify-between gap-4 border-b border-terra/20 bg-creme-claro px-6 py-4">
+          <h3 className="titulo-serif text-xl text-oliva">
+            {titulo}
+            <span className="ml-2 text-base text-terra tabular-nums lining-nums">
+              {pessoas.length}
+            </span>
+          </h3>
+          <button type="button" onClick={aoFechar} aria-label="Fechar"
+            className="p-1.5 text-terra transition-colors hover:text-oliva">
+            <Icone nome="fechar" className="h-5 w-5" />
+          </button>
+        </header>
+
+        <ul className="divide-y divide-terra/10">
+          {pessoas.map((p) => (
+            <li key={p.id} className="flex items-center gap-3.5 px-6 py-3.5">
+              <Avatar nome={p.nome} tamanho="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="titulo-serif truncate text-base text-oliva">{p.nome}</p>
+                {p.detalhe && <p className="text-sm text-terra">{p.detalhe}</p>}
+              </div>
+              {p.emoji && <span className="shrink-0 text-xl">{p.emoji}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
 

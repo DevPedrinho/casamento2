@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GrupoStory } from "@/lib/tipos";
-import { tempoRestante } from "@/lib/formato";
+import { tempoRelativo, tempoRestante } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { EMOJIS_REACAO } from "@/lib/tipos";
 import { Avatar } from "@/components/Avatar";
+import { ListaDePessoas } from "./Feed";
 
 /** Quanto tempo cada story fica na tela antes de passar sozinho. */
 const DURACAO_MS = 5000;
@@ -73,6 +75,8 @@ export function VisualizadorStories({
   const [indiceGrupo, setIndiceGrupo] = useState(indiceInicial);
   const [indiceStory, setIndiceStory] = useState(0);
   const [pausado, setPausado] = useState(false);
+  const [painel, setPainel] = useState<"vistas" | "reacoes" | null>(null);
+  const [minhaReacao, setMinhaReacao] = useState<string | null>(null);
   const fecharRef = useRef<HTMLButtonElement>(null);
 
   const grupo = grupos[indiceGrupo];
@@ -113,10 +117,40 @@ export function VisualizadorStories({
 
   // Avanço automático, pausado enquanto o dedo está na tela.
   useEffect(() => {
-    if (pausado || !story) return;
+    if (pausado || painel || !story) return;
     const id = setTimeout(avancar, DURACAO_MS);
     return () => clearTimeout(id);
-  }, [avancar, pausado, story]);
+  }, [avancar, painel, pausado, story]);
+
+  // Ao trocar de story, recarrega qual foi a minha reação nele.
+  useEffect(() => {
+    setPainel(null);
+    setMinhaReacao(
+      story?.reacoes?.find((r) => r.guest_id === meuId)?.emoji ?? null,
+    );
+  }, [meuId, story]);
+
+  async function reagir(emoji: string) {
+    if (!story) return;
+    const novo = minhaReacao === emoji ? null : emoji;
+    setMinhaReacao(novo);
+
+    const supabase = criarClienteNavegador();
+    if (novo === null) {
+      await supabase
+        .from("story_reactions")
+        .delete()
+        .eq("post_id", story.id)
+        .eq("guest_id", meuId);
+    } else {
+      await supabase
+        .from("story_reactions")
+        .upsert(
+          { post_id: story.id, guest_id: meuId, emoji: novo },
+          { onConflict: "post_id,guest_id" },
+        );
+    }
+  }
 
   // Teclado, foco e trava de rolagem.
   useEffect(() => {
@@ -232,8 +266,44 @@ export function VisualizadorStories({
           />
         </div>
 
+        {/* Quem assiste reage; o autor vê quem viu e quem reagiu. */}
+        {!meu && (
+          <div className="mt-4 flex items-center justify-center gap-2">
+            {EMOJIS_REACAO.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => reagir(emoji)}
+                aria-label={`Reagir com ${emoji}`}
+                aria-pressed={minhaReacao === emoji}
+                className={`flex h-11 w-11 items-center justify-center rounded-full text-xl transition-transform hover:scale-125 ${
+                  minhaReacao === emoji ? "scale-125 bg-creme/20" : ""
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
         {(meu || souAdmin) && (
-          <div className="mt-4 text-center">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <button
+              type="button"
+              onClick={() => setPainel("vistas")}
+              className="versalete text-xs text-creme-claro underline underline-offset-4"
+            >
+              Visualizado por {story.visualizacoes?.length ?? 0}
+            </button>
+            {(story.reacoes?.length ?? 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => setPainel("reacoes")}
+                className="versalete text-xs text-creme-claro underline underline-offset-4"
+              >
+                {story.reacoes?.length} reaç{(story.reacoes?.length ?? 0) === 1 ? "ão" : "ões"}
+              </button>
+            )}
             <button
               type="button"
               onClick={apagar}
@@ -242,6 +312,31 @@ export function VisualizadorStories({
               Apagar story
             </button>
           </div>
+        )}
+
+        {painel === "vistas" && (
+          <ListaDePessoas
+            titulo="Visualizado por"
+            pessoas={(story.visualizacoes ?? []).map((v) => ({
+              id: v.guest_id,
+              nome: v.autor?.full_name ?? "Convidado",
+              detalhe: tempoRelativo(v.viewed_at),
+            }))}
+            aoFechar={() => setPainel(null)}
+          />
+        )}
+
+        {painel === "reacoes" && (
+          <ListaDePessoas
+            titulo="Reagiram"
+            pessoas={(story.reacoes ?? []).map((r) => ({
+              id: r.guest_id,
+              nome: r.autor?.full_name ?? "Convidado",
+              detalhe: tempoRelativo(r.created_at),
+              emoji: r.emoji,
+            }))}
+            aoFechar={() => setPainel(null)}
+          />
         )}
       </div>
     </div>

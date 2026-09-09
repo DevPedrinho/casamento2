@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { meuGuestId } from "@/lib/convidadoCliente";
 import { ROTULOS_RSVP, type Rsvp, type StatusRsvp } from "@/lib/tipos";
 import { CartaoForm, Aviso, Rotulo } from "@/components/CartaoForm";
 import { Botao, BotaoLink } from "@/components/Botao";
@@ -33,15 +34,15 @@ export function FormRsvp({ nome, rsvpInicial }: { nome: string; rsvpInicial: Rsv
     setEnviando(true);
 
     const supabase = criarClienteNavegador();
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) {
+    const guestId = await meuGuestId();
+    if (!guestId) {
       router.push("/entrar?proximo=/confirmar");
       return;
     }
 
     const { error } = await supabase.from("rsvps").upsert(
       {
-        guest_id: data.user.id,
+        guest_id: guestId,
         status,
         // Quem não vai não leva acompanhante.
         companions: vai ? acompanhantes : 0,

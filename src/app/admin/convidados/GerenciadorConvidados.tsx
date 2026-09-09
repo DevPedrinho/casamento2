@@ -12,7 +12,7 @@ import {
 import { formatarData } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
-import { Botao } from "@/components/Botao";
+import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
@@ -152,6 +152,9 @@ export function GerenciadorConvidados({
           <h1 className="titulo-serif mt-2 text-4xl text-oliva">Convidados</h1>
         </div>
         <div className="flex flex-wrap gap-3">
+          <BotaoLink href="/admin/convidados/importar" variante="contorno">
+            Importar planilha
+          </BotaoLink>
           <Botao type="button" variante="contorno" onClick={baixarCsv}>
             Baixar CSV
           </Botao>

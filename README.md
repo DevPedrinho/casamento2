@@ -27,11 +27,44 @@ leva para o seu próprio link de pagamento.
 | Presentes (admin) | `/admin/presentes` | Cadastro dos itens e dos links de pagamento |
 | Convidados (admin) | `/admin/convidados` | Lista de confirmações, com busca e exportação em CSV |
 | Mural (admin) | `/admin/mural` | Moderação: ocultar, apagar e revisar denúncias |
+| Kanban | `/admin/kanban` | Quadro do projeto, com checklist por card |
+| Timeline (admin) | `/admin/timeline` | Capítulos e galeria da história do casal |
+| Importar | `/admin/convidados/importar` | Assistente de importação em 6 etapas |
 
 > As seções sob `/admin` são visíveis **só para quem tem `is_admin`**. Convidado
 > comum e visitante anônimo não leem nem escrevem nada de checklist,
 > fornecedores ou financeiro — isso é garantido por RLS no banco, não só pela
 > interface.
+
+---
+
+## Como a navegação funciona
+
+O painel tem uma **barra fixa no topo**, com a marca no canto superior
+esquerdo. Os seis módulos mais usados ficam à vista; o resto entra no menu
+**Mais** — onze itens inline cortariam os nomes. Abaixo de 1024px a barra vira
+marca + conta + menu, e continua fixa: ela não some ao entrar num módulo.
+
+Os badges saem do banco, não são fixos: convidados sem convite, follow-ups
+pendentes, tarefas atrasadas, contas a vencer e denúncias no mural.
+
+---
+
+## Importar convidados
+
+`/admin/convidados/importar` tem seis etapas: arquivo, prévia, mapeamento de
+colunas, duplicidades, confirmação e resumo.
+
+O assistente lê **CSV** — no Excel e no Google Sheets é "Salvar como" /
+"Baixar como" → CSV. Não usamos a biblioteca de XLSX de propósito: a única
+versão publicada no npm tem vulnerabilidades altas conhecidas (prototype
+pollution e ReDoS), e o assistente lê arquivo escolhido pelo usuário. O leitor
+de CSV é próprio, sem dependência, e trata acento, aspas e ponto e vírgula.
+
+A deduplicação compara o nome sem acento e sem maiúscula: quem já existe é
+**atualizado**, não duplicado. Colunas sem campo correspondente no sistema são
+guardadas no campo `extra` e aparecem na ficha do convidado — nada da planilha
+se perde.
 
 ---
 
