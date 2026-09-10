@@ -49,11 +49,14 @@ export default async function NossaHistoria() {
     };
   });
 
-  // A música vem do painel; o config continua valendo como reserva.
+  // A música enviada pelo painel manda. Sem ela, toca a provisória do
+  // config — e aí o nome mostrado é o dela, não o que está no banco
+  // esperando o arquivo definitivo.
   const musica = linhaMusica as MusicaDoSite | null;
-  const arquivoMusica = urlDoSite(musica?.file_path ?? null) ?? CASAMENTO.musica.arquivo;
-  const tituloMusica = musica?.title || CASAMENTO.musica.titulo;
-  const artistaMusica = musica?.artist || CASAMENTO.musica.artista;
+  const enviada = urlDoSite(musica?.file_path ?? null);
+  const arquivoMusica = enviada ?? CASAMENTO.musica.arquivo;
+  const tituloMusica = enviada ? musica?.title || "Nossa música" : CASAMENTO.musica.titulo;
+  const artistaMusica = enviada ? (musica?.artist ?? undefined) : CASAMENTO.musica.artista;
 
   return (
     <ProvedorMusica

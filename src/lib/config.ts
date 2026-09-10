@@ -22,14 +22,17 @@ export const CASAMENTO = {
   trajes: "Esporte fino",
   contatoEmail: "",
   /**
-   * Reserva da música da timeline. O caminho normal é enviar o arquivo
-   * pelo painel (Timeline do casal → Nossa música); isto aqui só vale
-   * se o banco estiver sem música. Vazio = o player nem aparece.
+   * Música que toca enquanto os noivos não enviam a definitiva pelo
+   * painel (Timeline do casal → Nossa música). Assim que houver um
+   * arquivo lá, ele manda e esta some. Vazio = o player nem aparece.
+   *
+   * A melodia de teste é instrumental e foi feita para o site — está
+   * aqui só para vocês verem o player funcionando.
    */
   musica: {
-    arquivo: "",
-    titulo: "A Thousand Years",
-    artista: "Christina Perri",
+    arquivo: "/audio/melodia-de-teste.wav",
+    titulo: "Melodia de teste",
+    artista: "Instrumental provisório",
   },
 } as const;
 
