@@ -50,6 +50,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#f0e7da",
+  // Deixa a página ocupar a tela inteira do celular; as áreas seguras
+  // são devolvidas com env(safe-area-inset-*) onde precisa.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

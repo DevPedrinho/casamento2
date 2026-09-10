@@ -252,7 +252,7 @@ export function BarraTopo({ nome, pendencias }: { nome: string; pendencias: Pend
           aria-expanded={menuAberto}
           aria-controls="menu-modulos"
           aria-label={menuAberto ? "Fechar menu" : "Abrir menu"}
-          className="shrink-0 p-2 text-oliva lg:hidden"
+          className="-mr-1.5 flex h-11 w-11 shrink-0 items-center justify-center text-oliva lg:hidden"
         >
           <Icone nome={menuAberto ? "fechar" : "menu"} className="h-6 w-6" />
         </button>
@@ -260,7 +260,7 @@ export function BarraTopo({ nome, pendencias }: { nome: string; pendencias: Pend
 
       {/* Painel de módulos no compacto: some ao navegar, mas a barra fica. */}
       <div id="menu-modulos" hidden={!menuAberto} className="border-t border-terra/15 lg:hidden">
-        <ul className="grid grid-cols-2 gap-1 px-3 py-3 sm:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-1 px-3 py-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
           {ITENS.map((item) => {
             const ativo = estaAtivo(caminho, item.href);
             const badge = item.chave ? pendencias[item.chave] : undefined;

@@ -52,6 +52,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* Impede o Safari de inflar o texto quando o celular vira de lado. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -59,6 +62,11 @@ body {
   color: var(--color-oliva-escuro);
   font-family: var(--fonte-corpo), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Rede de segurança: nenhum enfeite fora da margem faz o celular
+     rolar de lado. É "clip", não "hidden", para não quebrar o
+     cabeçalho grudado no topo. */
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -150,4 +158,9 @@ body {
 @keyframes surgir {
   from { opacity: 0; transform: translateY(0.75rem); }
   to   { opacity: 1; transform: none; }
+}
+
+/* Respiro para a barra de gestos do iPhone em elementos presos embaixo. */
+@utility base-segura {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }

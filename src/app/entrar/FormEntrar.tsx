@@ -50,7 +50,7 @@ export function FormEntrar() {
       rodape={
         <>
           Ainda não tem cadastro?{" "}
-          <Link href="/cadastrar" className="text-oliva underline underline-offset-4">
+          <Link href="/cadastrar" className="inline-block py-2 text-oliva underline underline-offset-4">
             Criar meu cadastro
           </Link>
         </>

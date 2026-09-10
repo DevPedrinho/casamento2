@@ -189,7 +189,7 @@ export function VisualizadorStories({
       role="dialog"
       aria-modal="true"
       aria-label={`Story de ${grupo.autor.full_name}`}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-oliva-escuro p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-oliva-escuro p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
       <div className="relative flex h-full max-h-[90vh] w-full max-w-md flex-col">
         {/* Barrinhas de progresso, uma por story do autor */}

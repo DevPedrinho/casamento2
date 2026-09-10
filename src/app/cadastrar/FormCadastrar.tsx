@@ -81,7 +81,7 @@ export function FormCadastrar() {
       rodape={
         <>
           Já se cadastrou?{" "}
-          <Link href="/entrar" className="text-oliva underline underline-offset-4">
+          <Link href="/entrar" className="inline-block py-2 text-oliva underline underline-offset-4">
             Entrar
           </Link>
         </>

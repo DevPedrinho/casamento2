@@ -32,8 +32,8 @@ export function EditorTimeline({ capitulos }: { capitulos: CapituloTimeline[] })
           <p className="versalete titulo-serif text-xs text-terra">Nossa história</p>
           <h1 className="titulo-serif mt-2 text-4xl text-oliva">Timeline do casal</h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
-            Cada capítulo é um ano. O resumo aparece direto; o texto longo fica
-            atrás do &ldquo;Ver mais&rdquo;.
+            Cada capítulo é um ano. O resumo aparece direto; atrás do
+            &ldquo;Ver mais&rdquo; cabem até três parágrafos.
           </p>
         </div>
         <Botao type="button" onClick={novoCapitulo}>
@@ -151,7 +151,7 @@ function FormCapitulo({ capitulo }: { capitulo: CapituloTimeline }) {
           <div>
             <Rotulo htmlFor="t-corpo">Texto completo (atrás do &ldquo;Ver mais&rdquo;)</Rotulo>
             <textarea id="t-corpo" rows={8} className="campo resize-y"
-              placeholder="Separe os parágrafos com uma linha em branco."
+              placeholder="Separe os parágrafos com uma linha em branco (até três)."
               value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} />
           </div>
 

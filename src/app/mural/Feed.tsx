@@ -154,7 +154,7 @@ function CartaoPost({
           <button
             type="button"
             onClick={() => setVendoCurtidas(true)}
-            className="text-sm text-terra underline underline-offset-4 transition-colors hover:text-lavanda"
+            className="inline-block py-1.5 text-sm text-terra underline underline-offset-4 transition-colors hover:text-lavanda"
           >
             ver quem curtiu
           </button>
@@ -183,7 +183,7 @@ function CartaoPost({
             <button
               type="button"
               onClick={apagar}
-              className="versalete text-xs text-red-800 underline underline-offset-4"
+              className="versalete inline-block py-1.5 text-xs text-red-800 underline underline-offset-4"
             >
               Apagar
             </button>
@@ -193,7 +193,7 @@ function CartaoPost({
               type="button"
               onClick={denunciar}
               disabled={denunciado}
-              className="versalete text-xs text-terra/70 underline underline-offset-4 disabled:no-underline"
+              className="versalete inline-block py-1.5 text-xs text-terra/70 underline underline-offset-4 disabled:no-underline"
             >
               {denunciado ? "Denunciado" : "Denunciar"}
             </button>
@@ -255,7 +255,7 @@ export function ListaDePessoas({
         aria-modal="true"
         aria-label={titulo}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[70vh] w-full max-w-md overflow-y-auto rounded-t-sm border border-terra/25 bg-creme-claro shadow-2xl sm:rounded-sm"
+        className="max-h-[75vh] w-full max-w-md overflow-y-auto rounded-t-xl border border-terra/25 bg-creme-claro pb-[env(safe-area-inset-bottom)] shadow-2xl sm:max-h-[70vh] sm:rounded-sm sm:pb-0"
       >
         <header className="sticky top-0 flex items-center justify-between gap-4 border-b border-terra/20 bg-creme-claro px-6 py-4">
           <h3 className="titulo-serif text-xl text-oliva">

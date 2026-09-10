@@ -107,7 +107,7 @@ export function Cabecalho() {
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
-          className="p-2 text-oliva md:hidden"
+          className="-mr-2 flex h-11 w-11 items-center justify-center text-oliva md:hidden"
           aria-expanded={aberto}
           aria-controls="menu-mobile"
           aria-label={aberto ? "Fechar menu" : "Abrir menu"}

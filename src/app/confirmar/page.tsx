@@ -28,7 +28,7 @@ export default async function Confirmar() {
         rodape={
           <>
             Já tem cadastro?{" "}
-            <Link href="/entrar?proximo=/confirmar" className="text-oliva underline underline-offset-4">
+            <Link href="/entrar?proximo=/confirmar" className="inline-block py-2 text-oliva underline underline-offset-4">
               Entrar
             </Link>
           </>

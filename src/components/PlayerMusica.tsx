@@ -53,7 +53,7 @@ export function PlayerMusica({
   if (!arquivo) return null;
 
   return (
-    <div className="fixed bottom-5 left-1/2 z-40 -translate-x-1/2">
+    <div className="fixed bottom-5 left-1/2 z-40 mb-[env(safe-area-inset-bottom)] -translate-x-1/2">
       <audio
         ref={audioRef}
         src={arquivo}

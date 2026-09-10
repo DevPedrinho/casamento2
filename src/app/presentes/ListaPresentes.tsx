@@ -97,7 +97,7 @@ export function ListaPresentes({
       {aviso && (
         <div
           role="status"
-          className="fixed inset-x-4 bottom-6 z-50 mx-auto max-w-md rounded-sm border border-oliva/30 bg-creme-claro px-6 py-4 text-center shadow-lg sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
+          className="fixed inset-x-4 bottom-6 z-50 mx-auto mb-[env(safe-area-inset-bottom)] max-w-md rounded-sm border border-oliva/30 bg-creme-claro px-6 py-4 text-center shadow-lg sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2"
         >
           <p className="titulo-serif text-base text-oliva">
             Obrigado pelo carinho com <strong className="font-medium">{aviso}</strong>! 💜
@@ -179,7 +179,7 @@ function CartaoPresente({
 
   return (
     <li className="group flex flex-col overflow-hidden rounded-sm border border-terra/20 bg-creme transition-all duration-300 hover:-translate-y-1.5 hover:border-oliva/35 hover:shadow-xl">
-      <div className="relative aspect-square w-full overflow-hidden">
+      <div className="relative aspect-4/3 w-full overflow-hidden sm:aspect-square">
         <Imagem presente={presente} tamanho="card" />
 
         <span className="versalete absolute left-0 top-4 bg-oliva/90 px-3.5 py-1.5 text-xs text-creme-claro">
@@ -201,7 +201,7 @@ function CartaoPresente({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-6">
+      <div className="flex flex-1 flex-col p-5 sm:p-6">
         <h3 className="titulo-serif text-xl text-oliva">{presente.title}</h3>
 
         {presente.description && (
@@ -210,7 +210,7 @@ function CartaoPresente({
           </p>
         )}
 
-        <p className="titulo-serif mt-5 mb-6 text-3xl text-oliva tabular-nums lining-nums">
+        <p className="titulo-serif mt-4 mb-5 text-2xl text-oliva tabular-nums lining-nums sm:mt-5 sm:mb-6 sm:text-3xl">
           {preco ?? <span className="text-xl text-terra italic">Valor livre</span>}
         </p>
 
@@ -283,7 +283,7 @@ function ModalPresente({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-oliva-escuro/50 p-5"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-oliva-escuro/50 sm:items-center sm:p-5"
       onClick={aoFechar}
     >
       <div
@@ -291,7 +291,7 @@ function ModalPresente({
         aria-modal="true"
         aria-labelledby="titulo-presente"
         onClick={(e) => e.stopPropagation()}
-        className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-sm border border-terra/25 bg-creme-claro shadow-2xl sm:grid sm:grid-cols-2"
+        className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-xl border border-terra/25 bg-creme-claro shadow-2xl sm:max-h-[90vh] sm:grid sm:grid-cols-2 sm:rounded-sm"
       >
         <button
           ref={fecharRef}
@@ -305,11 +305,11 @@ function ModalPresente({
           </svg>
         </button>
 
-        <div className="relative aspect-square w-full overflow-hidden">
+        <div className="relative aspect-16/10 w-full overflow-hidden sm:aspect-square">
           <Imagem presente={presente} tamanho="modal" />
         </div>
 
-        <div className="flex flex-col p-8">
+        <div className="flex flex-col p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-8">
           <span className="versalete text-xs text-terra">{presente.category}</span>
           <h2 id="titulo-presente" className="titulo-serif mt-3 text-3xl text-oliva">
             {presente.title}

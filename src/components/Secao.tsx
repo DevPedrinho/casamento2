@@ -35,7 +35,11 @@ export function Secao({
           observador.disconnect();
         }
       },
-      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" },
+      // threshold precisa ser 0: uma fração exigiria que N% da seção coubesse
+      // na tela, e uma lista longa no celular passa de 7000px — 12% disso é
+      // mais alto que o aparelho, então o observador nunca disparava e o
+      // conteúdo ficava invisível. O rootMargin é que dá o respiro da entrada.
+      { threshold: 0, rootMargin: "0px 0px -60px 0px" },
     );
     observador.observe(el);
     return () => observador.disconnect();
