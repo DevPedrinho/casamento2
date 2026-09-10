@@ -8,15 +8,31 @@ import { Secao } from "@/components/Secao";
 import { BotaoLink } from "@/components/Botao";
 import { Divisor } from "@/components/Ornamentos";
 import { BotaoSair } from "@/components/BotaoSair";
+import { ResgatarCodigo } from "./ResgatarCodigo";
 
 export const metadata: Metadata = { title: "Minha área" };
 export const dynamic = "force-dynamic";
 
 export default async function AreaDoConvidado() {
   const supabase = await criarClienteServidor();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/entrar?proximo=/area-do-convidado");
+
   const eu = await meuConvidado();
 
-  if (!eu) redirect("/entrar?proximo=/area-do-convidado");
+  // Logado, mas a conta ainda não está ligada a ninguém da lista: em vez
+  // de devolver para o login (que daria a volta e voltaria para cá), pede
+  // o código do convite.
+  if (!eu) {
+    return (
+      <Secao sobretitulo="Área do convidado" titulo="Quase lá">
+        <ResgatarCodigo />
+      </Secao>
+    );
+  }
 
   const { data: rsvp } = await supabase
     .from("rsvps")

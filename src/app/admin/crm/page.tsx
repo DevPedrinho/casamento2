@@ -11,8 +11,9 @@ export default async function CrmPage() {
   const { data } = await supabase
     .from("guests")
     .select(
-      `id, full_name, phone, whatsapp, invite_status, companions_planned,
+      `id, user_id, full_name, phone, whatsapp, invite_status, companions_planned,
        last_contact_at, next_action, next_action_at, side, ceremony_role, group_id,
+       access_code, code_sent_at,
        grupo:guest_groups!guests_group_id_fkey ( id, name, side, notes )`,
     )
     .order("full_name", { ascending: true });

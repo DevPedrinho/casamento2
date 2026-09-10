@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { meuConvidado } from "@/lib/convidado";
@@ -18,6 +19,15 @@ export default async function MuralPage() {
   const supabase = await criarClienteServidor();
   const eu = await meuConvidado();
 
+  // Já entrou, mas a conta ainda não está ligada a ninguém da lista:
+  // o código do convite resolve isso na área do convidado.
+  if (!eu) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) redirect("/area-do-convidado");
+  }
+
   // O mural é privado: é o álbum dos convidados, não uma vitrine pública.
   if (!eu) {
     return (
@@ -28,7 +38,7 @@ export default async function MuralPage() {
         rodape={
           <>
             Ainda não tem cadastro?{" "}
-            <Link href="/cadastrar?proximo=/mural" className="inline-block py-2 text-oliva underline underline-offset-4">
+            <Link href="/cadastrar?proximo=/mural" className="inline-flex min-h-11 items-center text-oliva underline underline-offset-4">
               Criar meu cadastro
             </Link>
           </>

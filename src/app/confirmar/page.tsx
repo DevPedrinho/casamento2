@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { meuConvidado } from "@/lib/convidado";
@@ -18,6 +19,15 @@ export default async function Confirmar() {
   const supabase = await criarClienteServidor();
   const eu = await meuConvidado();
 
+  // Já entrou, mas a conta ainda não está ligada a ninguém da lista:
+  // o código do convite resolve isso na área do convidado.
+  if (!eu) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) redirect("/area-do-convidado");
+  }
+
   // Visitante sem cadastro: convite para criar a conta primeiro.
   if (!eu) {
     return (
@@ -28,7 +38,7 @@ export default async function Confirmar() {
         rodape={
           <>
             Já tem cadastro?{" "}
-            <Link href="/entrar?proximo=/confirmar" className="inline-block py-2 text-oliva underline underline-offset-4">
+            <Link href="/entrar?proximo=/confirmar" className="inline-flex min-h-11 items-center text-oliva underline underline-offset-4">
               Entrar
             </Link>
           </>

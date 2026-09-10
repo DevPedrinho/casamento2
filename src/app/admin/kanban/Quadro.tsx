@@ -223,7 +223,7 @@ function FiltroCat({
       type="button"
       onClick={onClick}
       aria-pressed={ativo}
-      className={`versalete titulo-serif rounded-full border px-4 py-2 text-xs transition-colors ${
+      className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
         ativo
           ? "border-oliva bg-oliva text-creme-claro"
           : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
@@ -299,7 +299,7 @@ function CartaoKanban({
         <select
           value={card.column_id}
           onChange={(e) => aoMover(e.target.value)}
-          className="mt-1 w-full rounded-sm border border-terra/30 bg-creme-claro px-2 py-1.5 text-sm normal-case tracking-normal text-oliva"
+          className="mt-1 min-h-11 w-full rounded-sm border border-terra/30 bg-creme-claro px-2 text-sm normal-case tracking-normal text-oliva"
         >
           {colunas.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>

@@ -391,7 +391,7 @@ function FiltroEtapa({
       type="button"
       onClick={onClick}
       aria-pressed={ativo}
-      className={`versalete titulo-serif rounded-full border px-4 py-2 text-xs transition-colors ${
+      className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
         ativo
           ? "border-oliva bg-oliva text-creme-claro"
           : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"

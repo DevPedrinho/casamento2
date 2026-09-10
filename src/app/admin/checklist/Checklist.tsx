@@ -134,7 +134,7 @@ export function Checklist({ tarefas }: { tarefas: Tarefa[] }) {
               type="button"
               onClick={() => setPrazo(p)}
               aria-pressed={prazo === p}
-              className={`versalete titulo-serif rounded-full border px-4 py-2 text-xs transition-colors ${
+              className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
                 prazo === p
                   ? "border-lavanda bg-lavanda text-creme-claro"
                   : "border-terra/30 text-terra hover:border-lavanda hover:text-lavanda"
@@ -152,7 +152,7 @@ export function Checklist({ tarefas }: { tarefas: Tarefa[] }) {
               type="button"
               onClick={() => setFiltro(f)}
               aria-pressed={filtro === f}
-              className={`versalete titulo-serif rounded-full border px-4 py-2 text-xs transition-colors ${
+              className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
                 filtro === f
                   ? "border-oliva bg-oliva text-creme-claro"
                   : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"

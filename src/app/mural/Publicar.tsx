@@ -160,7 +160,7 @@ export function Publicar({
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 disabled={preparando || enviando}
-                className="versalete titulo-serif inline-flex items-center gap-2 rounded-full border border-terra/30 px-4 py-2 text-xs text-terra transition-colors hover:border-oliva hover:text-oliva disabled:opacity-50"
+                className="versalete titulo-serif inline-flex min-h-11 items-center gap-2 rounded-full border border-terra/30 px-4 text-xs text-terra transition-colors hover:border-oliva hover:text-oliva disabled:opacity-50"
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <rect x="3" y="5" width="18" height="14" rx="2" />

@@ -10,6 +10,8 @@ import {
   type StatusConvite,
 } from "@/lib/tipos";
 import { formatarData } from "@/lib/formato";
+import { formatarCodigo } from "@/lib/codigo";
+import { linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
@@ -29,6 +31,7 @@ export const TOM_STATUS: Record<StatusConvite, "neutro" | "oliva" | "lavanda" | 
 };
 
 type Ordem = "nome" | "grupo" | "status" | "idade";
+type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado";
 
 export function GerenciadorConvidados({
   convidados,
@@ -43,6 +46,9 @@ export function GerenciadorConvidados({
   const [grupo, setGrupo] = useState<string>("todos");
   const [lado, setLado] = useState<"todos" | "noivo" | "noiva">("todos");
   const [ordem, setOrdem] = useState<Ordem>("nome");
+  const [filtroCodigo, setFiltroCodigo] = useState<FiltroCodigo>("todos");
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const [gerando, setGerando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [aberto, setAberto] = useState<ConvidadoCompleto | null>(null);
   const [novo, setNovo] = useState(false);
@@ -60,6 +66,9 @@ export function GerenciadorConvidados({
       semConvite: conta("nao_contatado"),
       followUp: conta("follow_up"),
       grupos: grupos.length,
+      semCodigo: convidados.filter((c) => !c.access_code).length,
+      codigoEnviado: convidados.filter((c) => c.code_sent_at).length,
+      jaEntraram: convidados.filter((c) => c.user_id).length,
     };
   }, [convidados, grupos]);
 
@@ -69,6 +78,9 @@ export function GerenciadorConvidados({
       if (status !== "todos" && c.invite_status !== status) return false;
       if (grupo !== "todos" && c.group_id !== grupo) return false;
       if (lado !== "todos" && c.side !== lado) return false;
+      if (filtroCodigo === "sem_codigo" && c.access_code) return false;
+      if (filtroCodigo === "nao_enviado" && (!c.access_code || c.code_sent_at)) return false;
+      if (filtroCodigo === "enviado" && !c.code_sent_at) return false;
       if (!termo) return true;
       return (
         c.full_name.toLowerCase().includes(termo) ||
@@ -91,7 +103,7 @@ export function GerenciadorConvidados({
       if (ordem === "idade") return (b.age ?? -1) - (a.age ?? -1);
       return a.full_name.localeCompare(b.full_name, "pt-BR");
     });
-  }, [busca, convidados, grupo, lado, ordem, status]);
+  }, [busca, convidados, filtroCodigo, grupo, lado, ordem, status]);
 
   function alternarSelecao(id: string) {
     setSelecionados((atual) => {
@@ -123,15 +135,59 @@ export function GerenciadorConvidados({
     router.refresh();
   }
 
+  /** Gera o código de um convidado só. */
+  async function gerarCodigo(id: string) {
+    setGerando(true);
+    const supabase = criarClienteNavegador();
+    await supabase.rpc("admin_gerar_codigo", { p_guest: id });
+    setGerando(false);
+    router.refresh();
+  }
+
+  /** Gera de uma vez para todo mundo que ainda está sem código. */
+  async function gerarCodigosFaltantes() {
+    setGerando(true);
+    const supabase = criarClienteNavegador();
+    await supabase.rpc("admin_gerar_codigos_faltantes");
+    setGerando(false);
+    router.refresh();
+  }
+
+  /** Marca (ou desmarca) que o código já foi entregue. */
+  async function marcarEnviado(ids: string[], enviado: boolean) {
+    if (ids.length === 0) return;
+    const supabase = criarClienteNavegador();
+    await supabase
+      .from("guests")
+      .update({ code_sent_at: enviado ? new Date().toISOString() : null })
+      .in("id", ids);
+    router.refresh();
+  }
+
+  async function copiarCodigo(convidado: ConvidadoCompleto) {
+    if (!convidado.access_code) return;
+    try {
+      await navigator.clipboard.writeText(formatarCodigo(convidado.access_code));
+      setCopiado(convidado.id);
+      setTimeout(() => setCopiado(null), 2000);
+    } catch {
+      // Navegador sem permissão de área de transferência: o código está
+      // na tela, dá para copiar na mão.
+    }
+  }
+
   function baixarCsv() {
     const alvo = selecionados.size > 0 ? visiveis.filter((c) => selecionados.has(c.id)) : visiveis;
     const cab = ["Nome","Grupo","Lado","Relação","Papel","Telefone","Idade","Faixa",
-                 "Lembrancinha","Status","Acompanhantes","Mesa","Observações"];
+                 "Lembrancinha","Status","Acompanhantes","Mesa","Observações",
+                 "Código","Código entregue","Já se cadastrou"];
     const linhas = alvo.map((c) => [
       c.full_name, c.grupo?.name ?? "", c.side ?? "", c.relationship ?? "",
       c.ceremony_role ?? "", c.phone ?? "", c.age?.toString() ?? "", c.age_range ?? "",
       c.favor_type ?? "", ROTULOS_CONVITE[c.invite_status],
       String(c.companions_planned), c.table_number ?? "", c.notes ?? "",
+      formatarCodigo(c.access_code), formatarData(c.code_sent_at?.slice(0, 10) ?? null) ?? "",
+      c.user_id ? "sim" : "não",
     ]);
     const csv = [cab, ...linhas]
       .map((l) => l.map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
@@ -174,9 +230,32 @@ export function GerenciadorConvidados({
         <Indicador rotulo="Famílias" valor={resumo.grupos} />
       </div>
 
+      <Bloco
+        titulo="Códigos do convite"
+        descricao="Cada convidado entra no site com o próprio código. Sem código, ninguém cria cadastro — é assim que vocês sabem para quem já mandaram convite."
+        acao={
+          resumo.semCodigo > 0 ? (
+            <Botao type="button" onClick={gerarCodigosFaltantes} disabled={gerando}>
+              {gerando ? "Gerando…" : `Gerar os ${resumo.semCodigo} que faltam`}
+            </Botao>
+          ) : undefined
+        }
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Indicador rotulo="Com código" valor={resumo.total - resumo.semCodigo} tom="oliva" />
+          <Indicador
+            rotulo="Sem código"
+            valor={resumo.semCodigo}
+            tom={resumo.semCodigo > 0 ? "alerta" : "oliva"}
+          />
+          <Indicador rotulo="Já entreguei" valor={resumo.codigoEnviado} tom="lavanda" />
+          <Indicador rotulo="Já se cadastraram" valor={resumo.jaEntraram} />
+        </div>
+      </Bloco>
+
       <Bloco titulo="Lista de convidados" descricao="Busque, filtre e edite. Clique em qualquer linha para abrir a ficha.">
         {/* ---------- Filtros ---------- */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <Rotulo htmlFor="busca">Buscar</Rotulo>
             <div className="relative">
@@ -209,6 +288,20 @@ export function GerenciadorConvidados({
             </select>
           </div>
           <div>
+            <Rotulo htmlFor="f-codigo">Código</Rotulo>
+            <select
+              id="f-codigo"
+              className="campo"
+              value={filtroCodigo}
+              onChange={(e) => setFiltroCodigo(e.target.value as FiltroCodigo)}
+            >
+              <option value="todos">Todos</option>
+              <option value="sem_codigo">Ainda sem código</option>
+              <option value="nao_enviado">Com código, não entregue</option>
+              <option value="enviado">Já entreguei</option>
+            </select>
+          </div>
+          <div>
             <Rotulo htmlFor="f-ordem">Ordenar por</Rotulo>
             <select id="f-ordem" className="campo" value={ordem} onChange={(e) => setOrdem(e.target.value as Ordem)}>
               <option value="nome">Nome</option>
@@ -226,7 +319,7 @@ export function GerenciadorConvidados({
               type="button"
               onClick={() => setLado(l)}
               aria-pressed={lado === l}
-              className={`versalete titulo-serif rounded-full border px-4 py-2 text-xs transition-colors ${
+              className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
                 lado === l
                   ? "border-oliva bg-oliva text-creme-claro"
                   : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
@@ -262,8 +355,15 @@ export function GerenciadorConvidados({
             </label>
             <button
               type="button"
+              onClick={() => marcarEnviado([...selecionados], true)}
+              className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4"
+            >
+              Marcar código como entregue
+            </button>
+            <button
+              type="button"
               onClick={() => setSelecionados(new Set())}
-              className="versalete text-xs text-terra underline underline-offset-4"
+              className="versalete inline-flex min-h-11 items-center text-xs text-terra underline underline-offset-4"
             >
               Limpar seleção
             </button>
@@ -276,59 +376,76 @@ export function GerenciadorConvidados({
         ) : (
           <>
             <div className="mb-3 flex items-center gap-3 px-1">
-              <input
-                type="checkbox"
-                checked={todosVisiveisSelecionados}
-                onChange={alternarTodos}
-                aria-label="Selecionar todos os visíveis"
-                className="h-4 w-4 accent-[var(--color-oliva)]"
-              />
-              <span className="versalete text-xs text-terra">Selecionar todos</span>
+              <label className="flex min-h-11 items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={todosVisiveisSelecionados}
+                  onChange={alternarTodos}
+                  aria-label="Selecionar todos os visíveis"
+                  className="h-5 w-5 accent-[var(--color-oliva)]"
+                />
+                <span className="versalete text-xs text-terra">Selecionar todos</span>
+              </label>
             </div>
 
             <ul className="space-y-2.5">
               {visiveis.map((c) => (
                 <li key={c.id}>
                   <div
-                    className={`flex items-center gap-4 rounded-sm border px-4 py-3.5 transition-colors ${
+                    className={`rounded-sm border transition-colors ${
                       selecionados.has(c.id)
                         ? "border-oliva/50 bg-oliva/5"
                         : "border-terra/20 bg-creme hover:border-oliva/30"
                     }`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={selecionados.has(c.id)}
-                      onChange={() => alternarSelecao(c.id)}
-                      aria-label={`Selecionar ${c.full_name}`}
-                      className="h-4 w-4 shrink-0 accent-[var(--color-oliva)]"
-                    />
+                    <div className="flex items-center gap-3 px-4 py-3.5 sm:gap-4">
+                      {/* O rótulo em volta dá área de toque à caixinha sem
+                          engordar o desenho da linha. */}
+                      <label className="-my-3 flex shrink-0 cursor-pointer items-center py-3">
+                        <input
+                          type="checkbox"
+                          checked={selecionados.has(c.id)}
+                          onChange={() => alternarSelecao(c.id)}
+                          aria-label={`Selecionar ${c.full_name}`}
+                          className="h-5 w-5 accent-[var(--color-oliva)]"
+                        />
+                      </label>
 
-                    <button
-                      type="button"
-                      onClick={() => setAberto(c)}
-                      className="flex min-w-0 flex-1 items-center gap-4 text-left"
-                    >
-                      <Avatar nome={c.full_name} tamanho="sm" />
-                      <span className="min-w-0 flex-1">
-                        <span className="titulo-serif block truncate text-lg text-oliva">
-                          {c.full_name}
-                          {c.ceremony_role && (
-                            <span className="versalete ml-2 text-xs text-lavanda">
-                              {c.ceremony_role}
-                            </span>
-                          )}
+                      <button
+                        type="button"
+                        onClick={() => setAberto(c)}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4"
+                      >
+                        <Avatar nome={c.full_name} tamanho="sm" />
+                        <span className="min-w-0 flex-1">
+                          <span className="titulo-serif block text-lg text-oliva sm:truncate">
+                            {c.full_name}
+                            {c.ceremony_role && (
+                              <span className="versalete ml-2 text-xs text-lavanda">
+                                {c.ceremony_role}
+                              </span>
+                            )}
+                          </span>
+                          <span className="block truncate text-sm text-terra">
+                            {[c.grupo?.name, c.relationship, c.phone].filter(Boolean).join(" · ") || "—"}
+                          </span>
                         </span>
-                        <span className="block truncate text-sm text-terra">
-                          {[c.grupo?.name, c.relationship, c.phone].filter(Boolean).join(" · ") || "—"}
+                        <span className="hidden shrink-0 sm:block">
+                          <Selo tom={TOM_STATUS[c.invite_status]}>
+                            {ROTULOS_CONVITE[c.invite_status]}
+                          </Selo>
                         </span>
-                      </span>
-                      <span className="hidden shrink-0 sm:block">
-                        <Selo tom={TOM_STATUS[c.invite_status]}>
-                          {ROTULOS_CONVITE[c.invite_status]}
-                        </Selo>
-                      </span>
-                    </button>
+                      </button>
+                    </div>
+
+                    <LinhaDoCodigo
+                      convidado={c}
+                      copiado={copiado === c.id}
+                      gerando={gerando}
+                      aoGerar={() => gerarCodigo(c.id)}
+                      aoCopiar={() => copiarCodigo(c)}
+                      aoMarcar={(enviado) => marcarEnviado([c.id], enviado)}
+                    />
                   </div>
                 </li>
               ))}
@@ -351,6 +468,104 @@ export function GerenciadorConvidados({
             router.refresh();
           }}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Segunda linha de cada convidado: o código do convite e o que dá para
+ * fazer com ele. Fica fora do botão que abre a ficha porque botão dentro
+ * de botão não existe — e assim cada ação tem a própria área de toque.
+ */
+function LinhaDoCodigo({
+  convidado,
+  copiado,
+  gerando,
+  aoGerar,
+  aoCopiar,
+  aoMarcar,
+}: {
+  convidado: ConvidadoCompleto;
+  copiado: boolean;
+  gerando: boolean;
+  aoGerar: () => void;
+  aoCopiar: () => void;
+  aoMarcar: (enviado: boolean) => void;
+}) {
+  const telefone = convidado.whatsapp ?? convidado.phone;
+  const zap = convidado.access_code
+    ? linkWhatsApp(telefone, mensagemDoConvite(convidado.full_name, convidado.access_code))
+    : null;
+
+  const acao =
+    "versalete inline-flex min-h-11 items-center gap-1.5 rounded-sm px-2.5 text-xs transition-colors";
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 border-t border-terra/15 px-3 py-1.5">
+      {convidado.access_code ? (
+        <>
+          <code className="rounded-sm bg-creme-escuro/60 px-2.5 py-1.5 font-mono text-sm tracking-widest text-oliva">
+            {formatarCodigo(convidado.access_code)}
+          </code>
+
+          <button type="button" onClick={aoCopiar} className={`${acao} text-terra hover:text-oliva`}>
+            {copiado ? "copiado!" : "copiar"}
+          </button>
+
+          {zap && (
+            <a
+              href={zap}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => aoMarcar(true)}
+              className={`${acao} text-terra hover:text-oliva`}
+            >
+              WhatsApp
+            </a>
+          )}
+
+          <button
+            type="button"
+            onClick={() => aoMarcar(!convidado.code_sent_at)}
+            className={`${acao} ${
+              convidado.code_sent_at ? "text-oliva" : "text-terra hover:text-oliva"
+            }`}
+            title={
+              convidado.code_sent_at
+                ? `Entregue em ${formatarData(convidado.code_sent_at.slice(0, 10))}`
+                : "Marcar que já entreguei este código"
+            }
+          >
+            {convidado.code_sent_at ? "✓ entregue" : "marcar entregue"}
+          </button>
+
+          <button
+            type="button"
+            onClick={aoGerar}
+            disabled={gerando}
+            className={`${acao} text-terra/70 hover:text-red-800`}
+            title="Sorteia outro código; o anterior deixa de valer"
+          >
+            trocar
+          </button>
+
+          {convidado.user_id && (
+            <span className="versalete ml-auto px-2 text-xs text-oliva">já se cadastrou</span>
+          )}
+        </>
+      ) : (
+        <>
+          <span className="versalete px-1 text-xs text-terra/70">sem código</span>
+          <button
+            type="button"
+            onClick={aoGerar}
+            disabled={gerando}
+            className={`${acao} text-oliva underline underline-offset-4`}
+          >
+            gerar código
+          </button>
+        </>
       )}
     </div>
   );

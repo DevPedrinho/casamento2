@@ -631,14 +631,14 @@ function LinhaDespesa({
       {pagando ? (
         <FormPagamento despesaId={despesa.id} sugestao={falta} aoSalvar={aoSalvarPagamento} aoCancelar={aoAbrirPagamento} />
       ) : (
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-terra/15 pt-4">
-          <button type="button" onClick={aoAbrirPagamento} className="versalete text-xs text-oliva underline underline-offset-4">
+        <div className="mt-2 flex flex-wrap items-center gap-x-5 border-t border-terra/15">
+          <button type="button" onClick={aoAbrirPagamento} className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4">
             Lançar pagamento
           </button>
-          <button type="button" onClick={aoEditar} className="versalete text-xs text-terra underline underline-offset-4">
+          <button type="button" onClick={aoEditar} className="versalete inline-flex min-h-11 items-center text-xs text-terra underline underline-offset-4">
             Editar
           </button>
-          <button type="button" onClick={aoRemover} className="versalete text-xs text-red-800 underline underline-offset-4">
+          <button type="button" onClick={aoRemover} className="versalete inline-flex min-h-11 items-center text-xs text-red-800 underline underline-offset-4">
             Remover
           </button>
         </div>

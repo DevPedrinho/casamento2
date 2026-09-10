@@ -307,6 +307,10 @@ export type ConvidadoCompleto = {
   last_contact_at: string | null;
   next_action: string | null;
   next_action_at: string | null;
+  /** Código do convite, gerado no painel. */
+  access_code: string | null;
+  /** Quando os noivos marcaram que entregaram o código. */
+  code_sent_at: string | null;
   extra: Record<string, string>;
   created_at: string;
   grupo: GrupoConvidados | null;

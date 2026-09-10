@@ -241,7 +241,7 @@ export function Importador({
         {ETAPAS.map((nome, i) => (
           <li key={nome} className="flex shrink-0 items-center gap-2">
             <span
-              className={`versalete flex items-center gap-2 rounded-full border px-4 py-2 text-xs ${
+              className={`versalete flex min-h-11 items-center gap-2 rounded-full border px-4 text-xs ${
                 i === etapa
                   ? "border-oliva bg-oliva text-creme-claro"
                   : i < etapa

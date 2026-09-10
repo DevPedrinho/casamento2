@@ -11,6 +11,7 @@ import {
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
+import { formatarCodigo } from "@/lib/codigo";
 import { Avatar } from "@/components/Avatar";
 import { Icone } from "@/components/Icones";
 
@@ -173,11 +174,23 @@ export function FichaConvidado({
             type="button"
             onClick={aoFechar}
             aria-label="Fechar"
-            className="p-2 text-terra transition-colors hover:text-oliva"
+            className="-mr-2 flex h-11 w-11 items-center justify-center text-terra transition-colors hover:text-oliva"
           >
             <Icone nome="fechar" />
           </button>
         </header>
+
+        {convidado?.access_code && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-terra/15 bg-creme px-6 py-4">
+            <span className="versalete text-xs text-terra">Código do convite</span>
+            <code className="rounded-sm bg-creme-escuro/60 px-2.5 py-1.5 font-mono text-base tracking-widest text-oliva">
+              {formatarCodigo(convidado.access_code)}
+            </code>
+            <span className="versalete ml-auto text-xs text-terra">
+              {convidado.code_sent_at ? "já entreguei" : "ainda não entreguei"}
+            </span>
+          </div>
+        )}
 
         <form onSubmit={salvar} className="flex-1 space-y-6 px-6 py-6">
           {erro && <Aviso tipo="erro">{erro}</Aviso>}

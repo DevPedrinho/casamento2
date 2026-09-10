@@ -60,7 +60,7 @@ export function ListaPresentes({
                 type="button"
                 onClick={() => setCategoria(cat)}
                 aria-pressed={ativa}
-                className={`versalete titulo-serif rounded-full border px-5 py-2.5 text-xs transition-colors ${
+                className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-5 text-xs transition-colors ${
                   ativa
                     ? "border-oliva bg-oliva text-creme-claro"
                     : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"

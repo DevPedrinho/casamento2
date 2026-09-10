@@ -8,7 +8,8 @@ const SELECT = `
   id, user_id, full_name, phone, whatsapp, email, is_admin, group_id, side,
   relationship, ceremony_role, attends, gender, age, age_range, favor_type,
   invite_status, confirmed_at, companions_planned, table_number, dietary_notes,
-  notes, last_contact_at, next_action, next_action_at, extra, created_at,
+  notes, last_contact_at, next_action, next_action_at, access_code, code_sent_at,
+  extra, created_at,
   grupo:guest_groups!guests_group_id_fkey ( id, name, side, notes )
 `;
 

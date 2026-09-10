@@ -57,7 +57,7 @@ export function ModeracaoMural({
               type="button"
               onClick={() => setAba(valor)}
               aria-pressed={aba === valor}
-              className={`versalete titulo-serif rounded-full border px-4 py-2 text-xs transition-colors ${
+              className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
                 aba === valor
                   ? "border-oliva bg-oliva text-creme-claro"
                   : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
