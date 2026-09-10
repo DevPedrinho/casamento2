@@ -71,8 +71,13 @@ export function EditorMusica({ musica }: { musica: MusicaDoSite }) {
       setCaminho(novo);
       setOk("Música enviada. Ela já está tocando na página Nossa História.");
       router.refresh();
-    } catch {
-      setErro("Não deu para enviar o arquivo. Tente de novo.");
+    } catch (e) {
+      const motivo = e instanceof Error ? e.message : "";
+      setErro(
+        motivo
+          ? `Não deu para enviar o arquivo: ${motivo}`
+          : "Não deu para enviar o arquivo. Tente de novo.",
+      );
     } finally {
       setEnviando(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -90,7 +95,7 @@ export function EditorMusica({ musica }: { musica: MusicaDoSite }) {
       .update({ file_path: null })
       .eq("id", true);
     if (error) {
-      setErro("Não deu para remover a música.");
+      setErro(`Não deu para remover a música: ${error.message}`);
       return;
     }
 
@@ -114,7 +119,7 @@ export function EditorMusica({ musica }: { musica: MusicaDoSite }) {
 
     setSalvando(false);
     if (error) {
-      setErro("Não deu para salvar.");
+      setErro(`Não deu para salvar: ${error.message}`);
       return;
     }
     setOk("Salvo.");

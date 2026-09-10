@@ -7,7 +7,7 @@ import { urlDoSite } from "@/lib/storage";
 import { Secao } from "@/components/Secao";
 import { BotaoLink } from "@/components/Botao";
 import { Coracao, Divisor, FaixaVersalete } from "@/components/Ornamentos";
-import { PlayerMusica } from "@/components/PlayerMusica";
+import { ControleMusica, ProvedorMusica } from "@/components/PlayerMusica";
 import { Timeline } from "./Timeline";
 
 export const metadata: Metadata = {
@@ -56,7 +56,11 @@ export default async function NossaHistoria() {
   const artistaMusica = musica?.artist || CASAMENTO.musica.artista;
 
   return (
-    <>
+    <ProvedorMusica
+      arquivo={arquivoMusica}
+      titulo={tituloMusica || "Nossa música"}
+      artista={artistaMusica}
+    >
       <section className="relative overflow-hidden bg-creme px-5 py-20 text-center sm:py-28">
         <Image
           src="/img/ramo-floral-espelhado.png"
@@ -73,6 +77,8 @@ export default async function NossaHistoria() {
           <p className="titulo-serif mt-8 text-lg text-terra italic sm:text-xl">
             {CASAMENTO.frase}
           </p>
+
+          <ControleMusica className="mt-10" />
         </div>
       </section>
 
@@ -105,13 +111,6 @@ export default async function NossaHistoria() {
         </div>
       </Secao>
 
-      {arquivoMusica && (
-        <PlayerMusica
-          arquivo={arquivoMusica}
-          titulo={tituloMusica || "Nossa música"}
-          artista={artistaMusica}
-        />
-      )}
-    </>
+    </ProvedorMusica>
   );
 }
