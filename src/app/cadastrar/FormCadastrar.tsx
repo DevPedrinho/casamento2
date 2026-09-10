@@ -165,7 +165,8 @@ export function FormCadastrar() {
             </p>
           ) : (
             <p className="mt-2 text-center text-sm text-terra">
-              Os noivos enviam esse código junto com o convite.
+              Os noivos enviam esse código junto com o convite. Ele é usado
+              uma vez só, aqui; depois você entra com e-mail e senha.
             </p>
           )}
         </div>

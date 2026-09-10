@@ -166,7 +166,7 @@ export function FichaConvidado({
               {convidado ? convidado.full_name : "Novo convidado"}
             </h2>
             {convidado?.user_id && (
-              <p className="text-sm text-terra">Tem conta no site</p>
+              <p className="text-sm text-terra">Cadastro ativo no site</p>
             )}
           </div>
           <button

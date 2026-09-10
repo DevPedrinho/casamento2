@@ -232,7 +232,7 @@ export function GerenciadorConvidados({
 
       <Bloco
         titulo="Códigos do convite"
-        descricao="Cada convidado entra no site com o próprio código. Sem código, ninguém cria cadastro — é assim que vocês sabem para quem já mandaram convite."
+        descricao="O código é usado uma vez, no cadastro: é ele que ativa o convidado no site e mostra para vocês quem já entrou. Depois disso a pessoa entra só com e-mail e senha."
         acao={
           resumo.semCodigo > 0 ? (
             <Botao type="button" onClick={gerarCodigosFaltantes} disabled={gerando}>
@@ -249,7 +249,7 @@ export function GerenciadorConvidados({
             tom={resumo.semCodigo > 0 ? "alerta" : "oliva"}
           />
           <Indicador rotulo="Já entreguei" valor={resumo.codigoEnviado} tom="lavanda" />
-          <Indicador rotulo="Já se cadastraram" valor={resumo.jaEntraram} />
+          <Indicador rotulo="Cadastros ativos" valor={resumo.jaEntraram} />
         </div>
       </Bloco>
 
@@ -551,7 +551,7 @@ function LinhaDoCodigo({
           </button>
 
           {convidado.user_id && (
-            <span className="versalete ml-auto px-2 text-xs text-oliva">já se cadastrou</span>
+            <span className="versalete ml-auto px-2 text-xs text-oliva">cadastro ativo</span>
           )}
         </>
       ) : (
