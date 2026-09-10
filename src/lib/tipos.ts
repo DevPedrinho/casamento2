@@ -414,6 +414,14 @@ export type FotoTimeline = {
   url: string;
 };
 
+/** Linha única com a música que toca na página Nossa História. */
+export type MusicaDoSite = {
+  id: boolean;
+  file_path: string | null;
+  title: string | null;
+  artist: string | null;
+};
+
 export type CapituloTimeline = {
   id: string;
   period: string;

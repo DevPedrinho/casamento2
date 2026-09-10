@@ -159,10 +159,3 @@ export function UploadImagem({
     </div>
   );
 }
-
-/** URL pública de um arquivo do bucket "site". */
-export function urlDoSite(caminho: string | null): string | null {
-  if (!caminho) return null;
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return base ? `${base}/storage/v1/object/public/site/${caminho}` : null;
-}

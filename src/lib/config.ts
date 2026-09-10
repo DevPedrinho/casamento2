@@ -22,13 +22,14 @@ export const CASAMENTO = {
   trajes: "Esporte fino",
   contatoEmail: "",
   /**
-   * Música da timeline. Coloque o arquivo em public/audio/ e aponte aqui.
-   * Vazio = o player nem aparece, em vez de quebrar.
+   * Reserva da música da timeline. O caminho normal é enviar o arquivo
+   * pelo painel (Timeline do casal → Nossa música); isto aqui só vale
+   * se o banco estiver sem música. Vazio = o player nem aparece.
    */
   musica: {
     arquivo: "",
-    titulo: "",
-    artista: "",
+    titulo: "A Thousand Years",
+    artista: "Christina Perri",
   },
 } as const;
 

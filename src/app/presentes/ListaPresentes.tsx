@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Presente } from "@/lib/tipos";
 import { formatarPreco, linkSeguro } from "@/lib/formato";
-import { urlDoSite } from "@/components/UploadImagem";
+import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { meuGuestId } from "@/lib/convidadoCliente";
 import { BotaoExterno, BotaoLink } from "@/components/Botao";

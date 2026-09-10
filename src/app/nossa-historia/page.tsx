@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { CASAMENTO } from "@/lib/config";
-import type { CapituloTimeline, FotoTimeline } from "@/lib/tipos";
-import { urlDoSite } from "@/components/UploadImagem";
+import type { CapituloTimeline, FotoTimeline, MusicaDoSite } from "@/lib/tipos";
+import { urlDoSite } from "@/lib/storage";
 import { Secao } from "@/components/Secao";
 import { BotaoLink } from "@/components/Botao";
 import { Coracao, Divisor, FaixaVersalete } from "@/components/Ornamentos";
@@ -34,10 +34,10 @@ const VALORES = [
 
 export default async function NossaHistoria() {
   const supabase = await criarClienteServidor();
-  const { data } = await supabase
-    .from("timeline_chapters")
-    .select("*, fotos:timeline_photos(*)")
-    .order("sort_order");
+  const [{ data }, { data: linhaMusica }] = await Promise.all([
+    supabase.from("timeline_chapters").select("*, fotos:timeline_photos(*)").order("sort_order"),
+    supabase.from("site_music").select("*").maybeSingle(),
+  ]);
 
   const capitulos: CapituloTimeline[] = (data ?? []).map((c) => {
     const bruto = c as unknown as CapituloTimeline & { fotos: FotoTimeline[] | null };
@@ -48,6 +48,12 @@ export default async function NossaHistoria() {
         .map((f) => ({ ...f, url: urlDoSite(f.image_path) ?? "" })),
     };
   });
+
+  // A música vem do painel; o config continua valendo como reserva.
+  const musica = linhaMusica as MusicaDoSite | null;
+  const arquivoMusica = urlDoSite(musica?.file_path ?? null) ?? CASAMENTO.musica.arquivo;
+  const tituloMusica = musica?.title || CASAMENTO.musica.titulo;
+  const artistaMusica = musica?.artist || CASAMENTO.musica.artista;
 
   return (
     <>
@@ -99,11 +105,11 @@ export default async function NossaHistoria() {
         </div>
       </Secao>
 
-      {CASAMENTO.musica.arquivo && (
+      {arquivoMusica && (
         <PlayerMusica
-          arquivo={CASAMENTO.musica.arquivo}
-          titulo={CASAMENTO.musica.titulo}
-          artista={CASAMENTO.musica.artista}
+          arquivo={arquivoMusica}
+          titulo={tituloMusica || "Nossa música"}
+          artista={artistaMusica}
         />
       )}
     </>

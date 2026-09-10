@@ -99,7 +99,7 @@ export function PlayerMusica({
 
           <label className="hidden items-center gap-2 sm:flex">
             <span className="sr-only">Volume</span>
-            <Icone nome="mural" className="h-4 w-4 text-terra/60" />
+            <Icone nome="volume" className="h-4 w-4 text-terra/60" />
             <input
               type="range"
               min={0}
