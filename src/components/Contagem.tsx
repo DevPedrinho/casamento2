@@ -5,8 +5,8 @@ import { DATA_CASAMENTO } from "@/lib/config";
 
 type Restante = { dias: number; horas: number; minutos: number; segundos: number };
 
-function calcular(alvo: Date): Restante | null {
-  const diff = alvo.getTime() - Date.now();
+function calcular(alvo: number): Restante | null {
+  const diff = alvo - Date.now();
   if (diff <= 0) return null;
   return {
     dias: Math.floor(diff / 86_400_000),
@@ -18,7 +18,10 @@ function calcular(alvo: Date): Restante | null {
 
 /** A data vem do painel; sem ela, vale a do config. */
 export function Contagem({ dataISO }: { dataISO?: string }) {
-  const alvo = dataISO ? new Date(dataISO) : DATA_CASAMENTO;
+  // Guardamos o instante como número, não como Date: um objeto novo a cada
+  // render entraria como dependência nova do efeito, e o efeito que marca
+  // o estado se chamaria de novo sem parar — um laço que trava a página.
+  const alvo = dataISO ? new Date(dataISO).getTime() : DATA_CASAMENTO.getTime();
 
   // Começa em null para o HTML do servidor bater com o do cliente; o
   // relógio real só entra depois da hidratação.
