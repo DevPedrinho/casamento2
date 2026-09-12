@@ -146,12 +146,19 @@ export function Vazio({ children }: { children: ReactNode }) {
 }
 
 /** Barra horizontal comparando fatias — usada em "gastos por categoria". */
+/**
+ * Barras por categoria.
+ *
+ * O formatador é opcional e, por padrão, é o `reais` daqui de dentro:
+ * este arquivo é "use client", e uma página de servidor não pode passar
+ * função por prop — o React recusa e a página inteira quebra.
+ */
 export function BarrasCategoria({
   itens,
-  formatar,
+  formatar = reais,
 }: {
   itens: { rotulo: string; valor: number; secundario?: number }[];
-  formatar: (v: number) => string;
+  formatar?: (v: number) => string;
 }) {
   const maior = Math.max(1, ...itens.map((i) => Math.max(i.valor, i.secundario ?? 0)));
 

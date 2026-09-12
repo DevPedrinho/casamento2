@@ -267,7 +267,7 @@ export default async function Dashboard() {
           {porCategoria.length === 0 ? (
             <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
           ) : (
-            <BarrasCategoria itens={porCategoria} formatar={reais} />
+            <BarrasCategoria itens={porCategoria} />
           )}
         </Bloco>
 
