@@ -9,16 +9,17 @@ const SELECT = `
   relationship, ceremony_role, attends, gender, age, age_range, favor_type,
   invite_status, confirmed_at, companions_planned, table_number, dietary_notes,
   notes, last_contact_at, next_action, next_action_at, access_code, code_sent_at,
-  extra, created_at,
-  grupo:guest_groups!guests_group_id_fkey ( id, name, side, notes )
+  invite_limit, extra, created_at,
+  grupo:guest_groups!guests_group_id_fkey ( id, name, side, notes, invite_limit )
 `;
 
 export default async function ConvidadosPage() {
   const supabase = await criarClienteServidor();
 
-  const [{ data: convidados }, { data: grupos }] = await Promise.all([
+  const [{ data: convidados }, { data: grupos }, { data: config }] = await Promise.all([
     supabase.from("guests").select(SELECT).order("full_name", { ascending: true }),
     supabase.from("guest_groups").select("*").order("name", { ascending: true }),
+    supabase.from("site_settings").select("default_invite_limit").maybeSingle(),
   ]);
 
   // O embed do PostgREST vem ora objeto, ora array de um item.
@@ -36,6 +37,7 @@ export default async function ConvidadosPage() {
     <GerenciadorConvidados
       convidados={lista}
       grupos={(grupos ?? []) as GrupoConvidados[]}
+      limitePadrao={config?.default_invite_limit ?? 2}
     />
   );
 }

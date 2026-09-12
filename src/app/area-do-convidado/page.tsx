@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { meuConvidado } from "@/lib/convidado";
-import { ROTULOS_RSVP, type Rsvp } from "@/lib/tipos";
+import { ROTULOS_RSVP, type Acompanhante, type Rsvp } from "@/lib/tipos";
 import { CASAMENTO } from "@/lib/config";
 import { Secao } from "@/components/Secao";
 import { BotaoLink } from "@/components/Botao";
@@ -34,11 +34,12 @@ export default async function AreaDoConvidado() {
     );
   }
 
-  const { data: rsvp } = await supabase
-    .from("rsvps")
-    .select("*")
-    .eq("guest_id", eu.id)
-    .maybeSingle();
+  const [{ data: rsvp }, { data: acompanhantes }] = await Promise.all([
+    supabase.from("rsvps").select("*").eq("guest_id", eu.id).maybeSingle(),
+    supabase.from("rsvp_companions").select("*").eq("guest_id", eu.id).order("created_at"),
+  ]);
+
+  const convidadosPorMim = (acompanhantes ?? []) as Acompanhante[];
   const perfil = eu;
 
   const resposta = rsvp as Rsvp | null;
@@ -59,11 +60,25 @@ export default async function AreaDoConvidado() {
                 {ROTULOS_RSVP[resposta.status]}
               </p>
               {resposta.status !== "nao_vou" && (
-                <p className="mt-3 text-sm text-terra">
-                  {resposta.companions === 0
-                    ? "Você vem sozinho(a)."
-                    : `Com ${resposta.companions} acompanhante${resposta.companions > 1 ? "s" : ""}.`}
-                </p>
+                <>
+                  <p className="mt-3 text-sm text-terra">
+                    {convidadosPorMim.length === 0
+                      ? "Você vem sozinho(a)."
+                      : `Com ${convidadosPorMim.length} acompanhante${convidadosPorMim.length > 1 ? "s" : ""}.`}
+                  </p>
+                  {convidadosPorMim.length > 0 && (
+                    <ul className="mt-3 space-y-1">
+                      {convidadosPorMim.map((a) => (
+                        <li key={a.id} className="titulo-serif text-lg text-oliva">
+                          {a.full_name}
+                          {a.age !== null && (
+                            <span className="text-sm text-terra"> · {a.age} anos</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
               {resposta.message && (
                 <>

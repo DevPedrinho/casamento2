@@ -1,19 +1,32 @@
 import Image from "next/image";
-import { CASAMENTO } from "@/lib/config";
+import { carregarCasamento } from "@/lib/configuracoes";
+import { urlDoSite } from "@/lib/storage";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
-import { ROTULOS_LOCAL, type LocalEvento } from "@/lib/tipos";
+import { ROTULOS_LOCAL, type LocalEvento, type MomentoDoDia } from "@/lib/tipos";
 import { Secao } from "@/components/Secao";
 import { BotaoLink } from "@/components/Botao";
 import { Contagem } from "@/components/Contagem";
 import { Divisor, FaixaVersalete } from "@/components/Ornamentos";
+import { CronogramaPublico } from "@/components/CronogramaPublico";
 
 // Os locais vêm do banco: os noivos editam em /admin/locais.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const supabase = await criarClienteServidor();
-  const { data } = await supabase.from("event_venues").select("*").order("sort_order");
+  const CASAMENTO = await carregarCasamento();
+  const [{ data }, { data: cronograma }] = await Promise.all([
+    supabase.from("event_venues").select("*").order("sort_order"),
+    supabase
+      .from("day_schedule")
+      .select("*")
+      .eq("audience", "convidados")
+      .order("starts_at")
+      .order("sort_order"),
+  ]);
+
   const locais = (data ?? []) as LocalEvento[];
+  const momentos = (cronograma ?? []) as MomentoDoDia[];
 
   const detalhes = [
     ...locais.map((local) => ({
@@ -25,6 +38,19 @@ export default async function Home() {
       ],
       mapsUrl: local.maps_url,
     })),
+    ...(locais.length === 0 && CASAMENTO.local.nome
+      ? [
+          {
+            titulo: "Cerimônia",
+            linhas: [
+              `às ${CASAMENTO.horaCerimonia}`,
+              CASAMENTO.local.nome,
+              [CASAMENTO.local.endereco, CASAMENTO.local.cidade].filter(Boolean).join(" — "),
+            ],
+            mapsUrl: CASAMENTO.local.mapsUrl || null,
+          },
+        ]
+      : []),
     {
       titulo: "Traje",
       linhas: [CASAMENTO.trajes, "Venha confortável —", "a festa é longa"],
@@ -58,7 +84,7 @@ export default async function Home() {
           <Divisor className="mt-6" />
 
           <Image
-            src="/img/monograma-dp.png"
+            src={urlDoSite(CASAMENTO.imagens.monograma) ?? "/img/monograma-dp.png"}
             alt={`Monograma de ${CASAMENTO.noiva} e ${CASAMENTO.noivo}`}
             width={1400}
             height={1345}
@@ -89,23 +115,23 @@ export default async function Home() {
 
       {/* ---------- Contagem regressiva ---------- */}
       <Secao fundo="claro" sobretitulo="Falta pouco" titulo="Contagem regressiva">
-        <Contagem />
+        <Contagem dataISO={CASAMENTO.dataISO} />
       </Secao>
 
       {/* ---------- Resumo da história ---------- */}
       <Secao id="historia" sobretitulo="Como tudo começou" titulo="Nossa história">
         <div className="mx-auto max-w-2xl space-y-6 text-center text-base leading-relaxed text-terra sm:text-lg">
           <p>
-            Tem amor que chega fazendo barulho. O nosso chegou devagar, do jeito que
-            se entra numa casa conhecida: sem pressa, sem precisar bater na porta.
+            {CASAMENTO.textos.home_paragrafo_1 ||
+              "Tem amor que chega fazendo barulho. O nosso chegou devagar, do jeito que se entra numa casa conhecida: sem pressa, sem precisar bater na porta."}
           </p>
           <p>
-            Entre conversas que viraram madrugada e planos que viraram rotina,
-            descobrimos que o melhor de estar junto não é a parte fácil — é saber
-            que, mesmo na parte difícil, a gente escolhe ficar.
+            {CASAMENTO.textos.home_paragrafo_2 ||
+              "Entre conversas que viraram madrugada e planos que viraram rotina, descobrimos que o melhor de estar junto não é a parte fácil — é saber que, mesmo na parte difícil, a gente escolhe ficar."}
           </p>
           <p className="titulo-serif text-xl text-oliva italic sm:text-2xl">
-            E é esse amor que a gente quer dividir com você em {CASAMENTO.dataExtenso}.
+            {CASAMENTO.textos.home_convite ||
+              `E é esse amor que a gente quer dividir com você em ${CASAMENTO.dataExtenso}.`}
           </p>
         </div>
         <div className="mt-12 text-center">
@@ -143,6 +169,13 @@ export default async function Home() {
           ))}
         </div>
       </Secao>
+
+      {/* ---------- Como vai ser o dia ---------- */}
+      {momentos.length > 0 && (
+        <Secao fundo="oliva" sobretitulo="Hora a hora" titulo="Como vai ser o dia">
+          <CronogramaPublico momentos={momentos} />
+        </Secao>
+      )}
 
       {/* ---------- Chamadas finais ---------- */}
       <Secao fundo="claro" sobretitulo="Participe" titulo="Como estar com a gente">

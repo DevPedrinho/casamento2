@@ -20,6 +20,7 @@ export type NomeIcone =
   | "fechar"
   | "recolher"
   | "busca"
+  | "cronograma"
   | "musica"
   | "volume"
   | "mais";
@@ -42,6 +43,7 @@ const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
   fechar: <path d="M6 6l12 12M18 6L6 18" />,
   recolher: <path d="M14 6l-6 6 6 6" />,
   busca: <><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></>,
+  cronograma: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
   musica: <><path d="M9 18V6l11-2v12" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="17.5" cy="16" r="2.5" /></>,
   volume: <><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M16 9.5a4 4 0 0 1 0 5" /><path d="M18.5 7a7 7 0 0 1 0 10" /></>,
   mais: <path d="M12 5v14M5 12h14" />,

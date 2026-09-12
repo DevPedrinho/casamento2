@@ -31,11 +31,13 @@ const PRINCIPAIS: Item[] = [
 
 /** Os demais entram no menu "Mais" — 11 itens inline não cabem sem cortar. */
 const SECUNDARIOS: Item[] = [
+  { href: "/admin/cronograma", rotulo: "Cronograma", icone: "cronograma" },
   { href: "/admin/fornecedores", rotulo: "Fornecedores", icone: "fornecedores" },
   { href: "/admin/timeline", rotulo: "Timeline", icone: "timeline" },
   { href: "/admin/mural", rotulo: "Mural", icone: "mural", chave: "mural" },
   { href: "/admin/presentes", rotulo: "Presentes", icone: "presentes" },
   { href: "/admin/locais", rotulo: "Local do evento", icone: "local" },
+  { href: "/admin/configuracoes", rotulo: "Configurações", icone: "config" },
 ];
 
 const ITENS: Item[] = [...PRINCIPAIS, ...SECUNDARIOS];

@@ -8,6 +8,15 @@ export type Convidado = {
   created_at: string;
 };
 
+/** Quem vem junto: uma linha por pessoa, com nome e idade. */
+export type Acompanhante = {
+  id: string;
+  guest_id: string;
+  full_name: string;
+  age: number | null;
+  notes: string | null;
+};
+
 export type Rsvp = {
   guest_id: string;
   status: StatusRsvp;
@@ -279,6 +288,8 @@ export type GrupoConvidados = {
   name: string;
   side: string | null;
   notes: string | null;
+  /** Quantas pessoas o convite da família comporta, com o titular dentro. */
+  invite_limit: number | null;
 };
 
 export type ConvidadoCompleto = {
@@ -307,6 +318,8 @@ export type ConvidadoCompleto = {
   last_contact_at: string | null;
   next_action: string | null;
   next_action_at: string | null;
+  /** Limite individual de pessoas no convite (para quem não tem família). */
+  invite_limit: number | null;
   /** Código do convite, gerado no painel. */
   access_code: string | null;
   /** Quando os noivos marcaram que entregaram o código. */
@@ -452,3 +465,59 @@ export type Arquivo = {
 
 /* ===================== Reações de story ===================== */
 
+
+/* ===================== Cronograma do grande dia ===================== */
+
+export type PublicoCronograma = "interno" | "convidados";
+
+export type MomentoDoDia = {
+  id: string;
+  starts_at: string;
+  ends_at: string | null;
+  title: string;
+  description: string | null;
+  location: string | null;
+  owner: string | null;
+  vendor_id: string | null;
+  audience: PublicoCronograma;
+  sort_order: number;
+};
+
+export const ROTULOS_PUBLICO: Record<PublicoCronograma, string> = {
+  interno: "Só para nós",
+  convidados: "Os convidados veem",
+};
+
+/* ===================== Configurações do site ===================== */
+
+export type ConfiguracoesSite = {
+  id: boolean;
+  bride_name: string;
+  groom_name: string;
+  motto: string;
+  tagline: string;
+  wedding_at: string;
+  ceremony_time: string | null;
+  reception_time: string | null;
+  dress_code: string | null;
+  venue_name: string | null;
+  venue_address: string | null;
+  venue_city: string | null;
+  venue_maps_url: string | null;
+  contact_email: string | null;
+  contact_whatsapp: string | null;
+  instagram_url: string | null;
+  hashtag: string | null;
+  rsvp_deadline: string | null;
+  default_invite_limit: number;
+  companion_rules: string | null;
+  logo_path: string | null;
+  monogram_path: string | null;
+  hero_image_path: string | null;
+  og_image_path: string | null;
+  color_olive: string | null;
+  color_lavender: string | null;
+  color_earth: string | null;
+  color_cream: string | null;
+  texts: Record<string, string>;
+};

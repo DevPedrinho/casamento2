@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ETAPAS_CONVITE,
   ROTULOS_CONVITE,
+  type Acompanhante,
   type ConvidadoCompleto,
   type GrupoConvidados,
   type StatusConvite,
@@ -18,7 +19,7 @@ import { Icone } from "@/components/Icones";
 const VAZIO = {
   full_name: "", group_id: "", side: "", relationship: "", ceremony_role: "",
   attends: "", gender: "", age: "", phone: "", whatsapp: "", email: "",
-  invite_status: "nao_contatado" as StatusConvite, companions_planned: "0",
+  invite_status: "nao_contatado" as StatusConvite, companions_planned: "0", invite_limit: "",
   table_number: "", favor_type: "", dietary_notes: "", notes: "",
   last_contact_at: "", next_action: "", next_action_at: "",
 };
@@ -51,6 +52,7 @@ export function FichaConvidado({
           email: convidado.email ?? "",
           invite_status: convidado.invite_status,
           companions_planned: convidado.companions_planned.toString(),
+          invite_limit: convidado.invite_limit?.toString() ?? "",
           table_number: convidado.table_number ?? "",
           favor_type: convidado.favor_type ?? "",
           dietary_notes: convidado.dietary_notes ?? "",
@@ -63,7 +65,26 @@ export function FichaConvidado({
   );
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  const [acompanhantes, setAcompanhantes] = useState<Acompanhante[]>([]);
   const fecharRef = useRef<HTMLButtonElement>(null);
+
+  const idDoConvidado = convidado?.id;
+
+  // Quem esta pessoa confirmou que traz — nome e idade, como ela digitou.
+  const carregarAcompanhantes = useCallback(async () => {
+    if (!idDoConvidado) return;
+    const supabase = criarClienteNavegador();
+    const { data } = await supabase
+      .from("rsvp_companions")
+      .select("*")
+      .eq("guest_id", idDoConvidado)
+      .order("created_at");
+    setAcompanhantes((data ?? []) as Acompanhante[]);
+  }, [idDoConvidado]);
+
+  useEffect(() => {
+    void carregarAcompanhantes();
+  }, [carregarAcompanhantes]);
 
   useEffect(() => {
     fecharRef.current?.focus();
@@ -113,6 +134,7 @@ export function FichaConvidado({
       email: form.email.trim() || null,
       invite_status: form.invite_status,
       companions_planned: Number(form.companions_planned) || 0,
+      invite_limit: form.invite_limit.trim() ? Number(form.invite_limit) : null,
       table_number: form.table_number.trim() || null,
       favor_type: form.favor_type.trim() || null,
       dietary_notes: form.dietary_notes.trim() || null,
@@ -189,6 +211,26 @@ export function FichaConvidado({
             <span className="versalete ml-auto text-xs text-terra">
               {convidado.code_sent_at ? "já entreguei" : "ainda não entreguei"}
             </span>
+          </div>
+        )}
+
+        {acompanhantes.length > 0 && (
+          <div className="border-b border-terra/15 bg-creme px-6 py-4">
+            <p className="versalete text-xs text-terra">
+              Confirmou {acompanhantes.length}{" "}
+              {acompanhantes.length === 1 ? "acompanhante" : "acompanhantes"}
+            </p>
+            <ul className="mt-3 space-y-1.5">
+              {acompanhantes.map((a) => (
+                <li key={a.id} className="text-base text-oliva">
+                  {a.full_name}
+                  {a.age !== null && (
+                    <span className="text-sm text-terra"> · {a.age} anos</span>
+                  )}
+                  {a.notes && <span className="text-sm text-terra"> · {a.notes}</span>}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -269,10 +311,24 @@ export function FichaConvidado({
                 ))}
               </select>
             </Campo>
-            <Campo id="acomp" rotulo="Acompanhantes">
+            <Campo id="acomp" rotulo="Acompanhantes previstos">
               <input id="acomp" inputMode="numeric" className="campo"
                 value={form.companions_planned}
                 onChange={(e) => set("companions_planned", e.target.value)} />
+            </Campo>
+            <Campo
+              id="lugares"
+              rotulo="Lugares no convite"
+              dica={
+                convidado?.group_id
+                  ? "A família manda: o limite dela vale para este convidado."
+                  : "Total de pessoas, incluindo o convidado. Vazio = 1 + acompanhantes previstos."
+              }
+            >
+              <input id="lugares" inputMode="numeric" className="campo"
+                placeholder="—"
+                value={form.invite_limit}
+                onChange={(e) => set("invite_limit", e.target.value)} />
             </Campo>
             <Campo id="mesa" rotulo="Mesa">
               <input id="mesa" className="campo" value={form.table_number}
@@ -347,16 +403,20 @@ export function FichaConvidado({
 function Campo({
   id,
   rotulo,
+  dica,
   children,
 }: {
   id: string;
   rotulo: string;
+  /** Uma linha de explicação embaixo do campo, quando ele pede contexto. */
+  dica?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <Rotulo htmlFor={id}>{rotulo}</Rotulo>
       {children}
+      {dica && <p className="mt-1.5 text-xs leading-relaxed text-terra/80">{dica}</p>}
     </div>
   );
 }

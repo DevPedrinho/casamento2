@@ -5,8 +5,8 @@ import { DATA_CASAMENTO } from "@/lib/config";
 
 type Restante = { dias: number; horas: number; minutos: number; segundos: number };
 
-function calcular(): Restante | null {
-  const diff = DATA_CASAMENTO.getTime() - Date.now();
+function calcular(alvo: Date): Restante | null {
+  const diff = alvo.getTime() - Date.now();
   if (diff <= 0) return null;
   return {
     dias: Math.floor(diff / 86_400_000),
@@ -16,18 +16,21 @@ function calcular(): Restante | null {
   };
 }
 
-export function Contagem() {
+/** A data vem do painel; sem ela, vale a do config. */
+export function Contagem({ dataISO }: { dataISO?: string }) {
+  const alvo = dataISO ? new Date(dataISO) : DATA_CASAMENTO;
+
   // Começa em null para o HTML do servidor bater com o do cliente; o
   // relógio real só entra depois da hidratação.
   const [restante, setRestante] = useState<Restante | null>(null);
   const [pronto, setPronto] = useState(false);
 
   useEffect(() => {
-    setRestante(calcular());
+    setRestante(calcular(alvo));
     setPronto(true);
-    const id = setInterval(() => setRestante(calcular()), 1000);
+    const id = setInterval(() => setRestante(calcular(alvo)), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [alvo]);
 
   if (!pronto) {
     return <div className="h-24" aria-hidden="true" />;

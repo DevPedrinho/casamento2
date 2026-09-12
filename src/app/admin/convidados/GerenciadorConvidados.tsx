@@ -19,6 +19,7 @@ import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
 import { FichaConvidado } from "./FichaConvidado";
+import { FamiliasConvite } from "./FamiliasConvite";
 
 export const TOM_STATUS: Record<StatusConvite, "neutro" | "oliva" | "lavanda" | "alerta" | "apagado"> = {
   nao_contatado: "neutro",
@@ -36,9 +37,11 @@ type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado";
 export function GerenciadorConvidados({
   convidados,
   grupos,
+  limitePadrao,
 }: {
   convidados: ConvidadoCompleto[];
   grupos: GrupoConvidados[];
+  limitePadrao: number;
 }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
@@ -252,6 +255,8 @@ export function GerenciadorConvidados({
           <Indicador rotulo="Cadastros ativos" valor={resumo.jaEntraram} />
         </div>
       </Bloco>
+
+      <FamiliasConvite grupos={grupos} convidados={convidados} limitePadrao={limitePadrao} />
 
       <Bloco titulo="Lista de convidados" descricao="Busque, filtre e edite. Clique em qualquer linha para abrir a ficha.">
         {/* ---------- Filtros ---------- */}

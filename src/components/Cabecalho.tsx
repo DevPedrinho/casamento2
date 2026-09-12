@@ -15,7 +15,7 @@ const LINKS = [
   { href: "/confirmar", rotulo: "Confirmar Presença" },
 ];
 
-export function Cabecalho() {
+export function Cabecalho({ nomes }: { nomes?: string }) {
   const caminho = usePathname();
   const [aberto, setAberto] = useState(false);
   const [logado, setLogado] = useState<boolean | null>(null);
@@ -66,7 +66,7 @@ export function Cabecalho() {
             className="h-10 w-auto"
           />
           <span className="titulo-serif versalete hidden text-sm text-oliva sm:block">
-            {CASAMENTO.noiva} &amp; {CASAMENTO.noivo}
+            {nomes ?? `${CASAMENTO.noiva} & ${CASAMENTO.noivo}`}
           </span>
         </Link>
 
