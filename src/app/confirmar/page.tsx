@@ -4,7 +4,14 @@ import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { carregarCasamento } from "@/lib/configuracoes";
 import { meuConvidado } from "@/lib/convidado";
-import type { Acompanhante, Rsvp } from "@/lib/tipos";
+import type {
+  Acompanhante,
+  Genero,
+  Presenca,
+  Rsvp,
+  TipoLocal,
+  Vinculo,
+} from "@/lib/tipos";
 import { CartaoForm } from "@/components/CartaoForm";
 import { BotaoLink } from "@/components/Botao";
 import { FormRsvp } from "./FormRsvp";
@@ -52,8 +59,8 @@ export default async function Confirmar() {
     );
   }
 
-  // Tudo que a tela precisa saber sobre o convite desta pessoa.
-  const [{ data: rsvp }, { data: acompanhantes }, { data: limite }, { data: ficha }] =
+  // Tudo que a tela precisa saber sobre esta pessoa.
+  const [{ data: rsvp }, { data: acompanhantes }, { data: ficha }, { data: locais }] =
     await Promise.all([
       supabase.from("rsvps").select("*").eq("guest_id", eu.id).maybeSingle(),
       supabase
@@ -61,53 +68,37 @@ export default async function Confirmar() {
         .select("*")
         .eq("guest_id", eu.id)
         .order("created_at"),
-      supabase.rpc("limite_do_convite", { p_guest: eu.id }),
       supabase
         .from("guests")
-        .select("group_id, grupo:guest_groups!guests_group_id_fkey ( name, invite_limit )")
+        .select("relationship_kind, attends, age, gender")
         .eq("id", eu.id)
         .maybeSingle(),
+      supabase.from("event_venues").select("kind, name").order("sort_order"),
     ]);
 
   const casamento = await carregarCasamento();
 
-  const grupoBruto = (ficha as { grupo: unknown } | null)?.grupo;
-  const grupo = (Array.isArray(grupoBruto) ? grupoBruto[0] : grupoBruto) as
-    | { name: string; invite_limit: number | null }
-    | null
-    | undefined;
+  const onde = (tipo: TipoLocal) =>
+    (locais ?? []).find((l) => l.kind === tipo)?.name ?? null;
 
-  // Quando o convite é de família, alguém da casa pode já ter confirmado
-  // parte dos lugares por outro login.
-  let usadosPorOutros = 0;
-  const grupoId = (ficha as { group_id: string | null } | null)?.group_id;
-
-  if (grupoId && grupo?.invite_limit) {
-    const { data: irmaos } = await supabase
-      .from("guests")
-      .select("id, rsvps ( status, companions )")
-      .eq("group_id", grupoId)
-      .neq("id", eu.id);
-
-    usadosPorOutros = (irmaos ?? []).reduce((soma, linha) => {
-      const bruto = (linha as { rsvps: unknown }).rsvps;
-      const resposta = (Array.isArray(bruto) ? bruto[0] : bruto) as
-        | { status: string; companions: number }
-        | null
-        | undefined;
-      if (!resposta || resposta.status === "nao_vou") return soma;
-      return soma + 1 + (resposta.companions ?? 0);
-    }, 0);
-  }
+  const minhaFicha = ficha as {
+    relationship_kind: Vinculo | null;
+    attends: Presenca | null;
+    age: number | null;
+    gender: Genero | null;
+  } | null;
 
   return (
     <FormRsvp
       nome={eu.full_name}
       rsvpInicial={(rsvp as Rsvp | null) ?? null}
       acompanhantesIniciais={(acompanhantes ?? []) as Acompanhante[]}
-      limite={typeof limite === "number" ? limite : 1}
-      lugaresUsadosPorOutros={usadosPorOutros}
-      nomeDoGrupo={grupo?.name ?? null}
+      vinculoInicial={minhaFicha?.relationship_kind ?? null}
+      presencaInicial={minhaFicha?.attends ?? null}
+      idadeInicial={minhaFicha?.age ?? null}
+      generoInicial={minhaFicha?.gender ?? null}
+      ondeCerimonia={onde("cerimonia")}
+      ondeRecepcao={onde("recepcao")}
       regras={casamento.regrasAcompanhante}
       prazo={casamento.prazoRsvp}
     />

@@ -181,22 +181,12 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
         </div>
       </Bloco>
 
-      {/* ---------- Convite ---------- */}
+      {/* ---------- Confirmação ---------- */}
       <Bloco
-        titulo="Regras do convite"
-        descricao="Quantas pessoas cabem num convite por padrão e o recado que o convidado lê antes de confirmar."
+        titulo="Confirmação de presença"
+        descricao="Até quando vocês aceitam resposta e o recado que o convidado lê antes de responder."
       >
-        <div className="grid gap-5 sm:grid-cols-[10rem_1fr]">
-          <div>
-            <Rotulo htmlFor="limite">Lugares por convite</Rotulo>
-            <input id="limite" type="number" min={1} max={20} className="campo"
-              value={form.default_invite_limit}
-              onChange={(e) => set("default_invite_limit", Number(e.target.value) || 1)} />
-            <p className="mt-1.5 text-xs leading-relaxed text-terra/80">
-              Vale para famílias novas. O limite de cada família fica na tela de
-              convidados.
-            </p>
-          </div>
+        <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <Rotulo htmlFor="prazo">Prazo para confirmar</Rotulo>
             <input id="prazo" type="date" className="campo" value={form.rsvp_deadline ?? ""}
@@ -207,6 +197,10 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
             <textarea id="regras" rows={2} className="campo resize-y"
               value={form.companion_rules ?? ""}
               onChange={(e) => set("companion_rules", e.target.value)} />
+            <p className="mt-1.5 text-xs leading-relaxed text-terra/80">
+              O site não limita quantas pessoas alguém traz. Quem passar do
+              planejado aparece marcado na lista de convidados.
+            </p>
           </div>
         </div>
       </Bloco>

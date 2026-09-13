@@ -1,5 +1,65 @@
 export type StatusRsvp = "confirmado" | "nao_vou" | "talvez";
 
+export type Genero = "masculino" | "feminino" | "outro";
+
+/**
+ * Onde a pessoa vai estar. A cerimônia é na capela e a festa é no buffet,
+ * então dá para ir a uma sem ir à outra — é comum com criança e com quem
+ * mora longe.
+ */
+export type Presenca = "cerimonia" | "recepcao" | "ambos";
+
+export const ROTULOS_PRESENCA: Record<Presenca, string> = {
+  cerimonia: "Só a cerimônia",
+  recepcao: "Só a festa",
+  ambos: "Cerimônia e festa",
+};
+
+/** O mesmo, dito de forma curta onde o espaço é apertado. */
+export const ROTULOS_PRESENCA_CURTO: Record<Presenca, string> = {
+  cerimonia: "Cerimônia",
+  recepcao: "Festa",
+  ambos: "Ambos",
+};
+
+/**
+ * Vínculo com os noivos, em lista fechada.
+ *
+ * O campo de texto livre continua existindo ao lado deste e é onde mora a
+ * história ("Companheira do Ramon"). Esta lista existe porque texto livre
+ * não vira gráfico: os 97 convidados geraram mais de 40 respostas diferentes.
+ */
+export type Vinculo =
+  | "familia_noiva"
+  | "familia_noivo"
+  | "amigos"
+  | "trabalho"
+  | "padrinhos"
+  | "crianca"
+  | "outro";
+
+export const ROTULOS_VINCULO: Record<Vinculo, string> = {
+  familia_noiva: "Família da noiva",
+  familia_noivo: "Família do noivo",
+  amigos: "Amigos",
+  trabalho: "Trabalho",
+  padrinhos: "Padrinhos e madrinhas",
+  crianca: "Criança",
+  outro: "Outro",
+};
+
+export const VINCULOS: Vinculo[] = [
+  "familia_noiva",
+  "familia_noivo",
+  "amigos",
+  "trabalho",
+  "padrinhos",
+  "crianca",
+  "outro",
+];
+
+export const PRESENCAS: Presenca[] = ["ambos", "cerimonia", "recepcao"];
+
 export type Convidado = {
   id: string;
   full_name: string;
@@ -8,12 +68,19 @@ export type Convidado = {
   created_at: string;
 };
 
-/** Quem vem junto: uma linha por pessoa, com nome e idade. */
+/** Quem vem junto: uma linha por pessoa, com tudo o que a festa precisa saber. */
 export type Acompanhante = {
   id: string;
   guest_id: string;
   full_name: string;
   age: number | null;
+  gender: Genero | null;
+  /** Vínculo com quem trouxe: "esposa", "filho", "namorada do Kevlley". */
+  relationship: string | null;
+  /** Vínculo com os noivos, na lista fechada. */
+  relationship_kind: Vinculo | null;
+  /** Cerimônia na capela, festa no buffet, ou as duas. */
+  attends: Presenca | null;
   notes: string | null;
 };
 
@@ -288,8 +355,6 @@ export type GrupoConvidados = {
   name: string;
   side: string | null;
   notes: string | null;
-  /** Quantas pessoas o convite da família comporta, com o titular dentro. */
-  invite_limit: number | null;
 };
 
 export type ConvidadoCompleto = {
@@ -303,23 +368,25 @@ export type ConvidadoCompleto = {
   group_id: string | null;
   side: "noivo" | "noiva" | null;
   relationship: string | null;
+  relationship_kind: Vinculo | null;
   ceremony_role: string | null;
-  attends: string | null;
-  gender: "masculino" | "feminino" | "outro" | null;
+  attends: Presenca | null;
+  gender: Genero | null;
   age: number | null;
   age_range: string | null;
   favor_type: string | null;
   invite_status: StatusConvite;
   confirmed_at: string | null;
   companions_planned: number;
-  table_number: string | null;
+  table_id: string | null;
   dietary_notes: string | null;
   notes: string | null;
   last_contact_at: string | null;
   next_action: string | null;
   next_action_at: string | null;
-  /** Limite individual de pessoas no convite (para quem não tem família). */
-  invite_limit: number | null;
+  /** Madrinha, padrinho, pai, mãe, daminha: quem tem papel na cerimônia. */
+  is_featured: boolean;
+  featured_order: number | null;
   /** Código do convite, gerado no painel. */
   access_code: string | null;
   /** Quando os noivos marcaram que entregaram o código. */
@@ -327,6 +394,17 @@ export type ConvidadoCompleto = {
   extra: Record<string, string>;
   created_at: string;
   grupo: GrupoConvidados | null;
+  mesa: Mesa | null;
+};
+
+/* ===================== Mesas ===================== */
+
+export type Mesa = {
+  id: string;
+  name: string;
+  seats: number;
+  notes: string | null;
+  sort_order: number;
 };
 
 /* ===================== Locais do evento ===================== */
@@ -509,7 +587,6 @@ export type ConfiguracoesSite = {
   instagram_url: string | null;
   hashtag: string | null;
   rsvp_deadline: string | null;
-  default_invite_limit: number;
   companion_rules: string | null;
   logo_path: string | null;
   monogram_path: string | null;

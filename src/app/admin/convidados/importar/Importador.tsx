@@ -26,7 +26,6 @@ const CAMPOS = [
   { valor: "age", rotulo: "Idade" },
   { valor: "age_range", rotulo: "Faixa etária" },
   { valor: "favor_type", rotulo: "Tipo de lembrancinha" },
-  { valor: "table_number", rotulo: "Mesa" },
   { valor: "notes", rotulo: "Observações" },
   { valor: "extra", rotulo: "Guardar como informação extra" },
 ] as const;
@@ -46,7 +45,6 @@ function adivinhar(coluna: string): string {
   if (c === "idade") return "age";
   if (c.includes("faixa")) return "age_range";
   if (c.includes("lembranc")) return "favor_type";
-  if (c.includes("mesa")) return "table_number";
   if (c.includes("obs")) return "notes";
   // Colunas sem campo correspondente são preservadas, não descartadas.
   return "extra";
@@ -172,6 +170,22 @@ export function Importador({
     const SEXO: Record<string, string> = { masculino: "masculino", feminino: "feminino" };
     const LADO: Record<string, string> = { noivo: "noivo", noiva: "noiva" };
 
+    /**
+     * A planilha escreve "Cerimônia e Recepção", "só a festa", "capela".
+     * O banco guarda três valores. Traduz aqui; o que não der para ler
+     * fica em branco, que é melhor que um palpite errado.
+     */
+    function presencaDaPlanilha(bruto: string | undefined): string | null {
+      const t = (bruto ?? "").toLowerCase();
+      if (!t.trim()) return null;
+      const temCerimonia = t.includes("cerim") || t.includes("capela") || t.includes("igreja");
+      const temFesta = t.includes("recep") || t.includes("fest") || t.includes("buffet");
+      if (temCerimonia && temFesta) return "ambos";
+      if (temCerimonia) return "cerimonia";
+      if (temFesta) return "recepcao";
+      return null;
+    }
+
     const registros = validas.map((p) => {
       const idade = Number(p.dados.age);
       return {
@@ -181,7 +195,7 @@ export function Importador({
         side: LADO[chaveDeNome(p.dados.side ?? "")] ?? null,
         relationship: p.dados.relationship ?? null,
         ceremony_role: p.dados.ceremony_role ?? null,
-        attends: p.dados.attends ?? null,
+        attends: presencaDaPlanilha(p.dados.attends),
         gender: SEXO[chaveDeNome(p.dados.gender ?? "")] ?? null,
         phone: p.dados.phone ?? null,
         whatsapp: p.dados.phone ?? null,
@@ -189,7 +203,6 @@ export function Importador({
         age: Number.isFinite(idade) && idade > 0 ? Math.round(idade) : null,
         age_range: p.dados.age_range ?? null,
         favor_type: p.dados.favor_type ?? null,
-        table_number: p.dados.table_number ?? null,
         notes: p.dados.notes ?? null,
         extra: p.extra,
       };

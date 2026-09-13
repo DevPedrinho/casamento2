@@ -5,8 +5,12 @@ import { useMemo, useState } from "react";
 import {
   ETAPAS_CONVITE,
   ROTULOS_CONVITE,
+  ROTULOS_PRESENCA_CURTO,
+  ROTULOS_VINCULO,
+  type Acompanhante,
   type ConvidadoCompleto,
   type GrupoConvidados,
+  type Mesa,
   type StatusConvite,
 } from "@/lib/tipos";
 import { formatarData } from "@/lib/formato";
@@ -19,7 +23,6 @@ import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
 import { FichaConvidado } from "./FichaConvidado";
-import { FamiliasConvite } from "./FamiliasConvite";
 
 export const TOM_STATUS: Record<StatusConvite, "neutro" | "oliva" | "lavanda" | "alerta" | "apagado"> = {
   nao_contatado: "neutro",
@@ -34,14 +37,26 @@ export const TOM_STATUS: Record<StatusConvite, "neutro" | "oliva" | "lavanda" | 
 type Ordem = "nome" | "grupo" | "status" | "idade";
 type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado";
 
+/**
+ * Duas leituras da mesma lista.
+ *
+ * "ficha" é a visão de organização: família, telefone, código do convite.
+ * "respostas" é a visão da festa: quem vem, para onde, com quem e em que
+ * mesa. São perguntas diferentes, e misturar as duas numa linha só deixava
+ * tudo apertado — por isso a chave, em vez de mais colunas.
+ */
+type Visao = "ficha" | "respostas";
+
 export function GerenciadorConvidados({
   convidados,
   grupos,
-  limitePadrao,
+  mesas,
+  acompanhantes,
 }: {
   convidados: ConvidadoCompleto[];
   grupos: GrupoConvidados[];
-  limitePadrao: number;
+  mesas: Mesa[];
+  acompanhantes: Acompanhante[];
 }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
@@ -56,6 +71,16 @@ export function GerenciadorConvidados({
   const [aberto, setAberto] = useState<ConvidadoCompleto | null>(null);
   const [novo, setNovo] = useState(false);
   const [salvandoLote, setSalvandoLote] = useState(false);
+  const [visao, setVisao] = useState<Visao>("ficha");
+
+  /** Acompanhantes agrupados por quem os trouxe. */
+  const porTitular = useMemo(() => {
+    const mapa = new Map<string, Acompanhante[]>();
+    for (const a of acompanhantes) {
+      mapa.set(a.guest_id, [...(mapa.get(a.guest_id) ?? []), a]);
+    }
+    return mapa;
+  }, [acompanhantes]);
 
   const resumo = useMemo(() => {
     const conta = (s: StatusConvite) => convidados.filter((c) => c.invite_status === s).length;
@@ -68,12 +93,16 @@ export function GerenciadorConvidados({
       naoVao: conta("nao_vai"),
       semConvite: conta("nao_contatado"),
       followUp: conta("follow_up"),
-      grupos: grupos.length,
       semCodigo: convidados.filter((c) => !c.access_code).length,
       codigoEnviado: convidados.filter((c) => c.code_sent_at).length,
       jaEntraram: convidados.filter((c) => c.user_id).length,
+      // Sem trava de lugares, o excesso vira aviso: quem trouxe mais gente do
+      // que os noivos tinham planejado aparece aqui para ser conversado.
+      excederam: convidados.filter(
+        (c) => (porTitular.get(c.id)?.length ?? 0) > c.companions_planned,
+      ).length,
     };
-  }, [convidados, grupos]);
+  }, [convidados, porTitular]);
 
   const visiveis = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -181,14 +210,19 @@ export function GerenciadorConvidados({
 
   function baixarCsv() {
     const alvo = selecionados.size > 0 ? visiveis.filter((c) => selecionados.has(c.id)) : visiveis;
-    const cab = ["Nome","Grupo","Lado","Relação","Papel","Telefone","Idade","Faixa",
-                 "Lembrancinha","Status","Acompanhantes","Mesa","Observações",
+    const cab = ["Nome","Grupo","Lado","Vínculo","Relação","Papel","Telefone","Idade","Faixa",
+                 "Lembrancinha","Status","Onde participa","Acompanhantes previstos",
+                 "Acompanhantes confirmados","Mesa","Observações",
                  "Código","Código entregue","Já se cadastrou"];
     const linhas = alvo.map((c) => [
-      c.full_name, c.grupo?.name ?? "", c.side ?? "", c.relationship ?? "",
+      c.full_name, c.grupo?.name ?? "", c.side ?? "",
+      c.relationship_kind ? ROTULOS_VINCULO[c.relationship_kind] : "",
+      c.relationship ?? "",
       c.ceremony_role ?? "", c.phone ?? "", c.age?.toString() ?? "", c.age_range ?? "",
       c.favor_type ?? "", ROTULOS_CONVITE[c.invite_status],
-      String(c.companions_planned), c.table_number ?? "", c.notes ?? "",
+      c.attends ? ROTULOS_PRESENCA_CURTO[c.attends] : "",
+      String(c.companions_planned), String(porTitular.get(c.id)?.length ?? 0),
+      c.mesa?.name ?? "", c.notes ?? "",
       formatarCodigo(c.access_code), formatarData(c.code_sent_at?.slice(0, 10) ?? null) ?? "",
       c.user_id ? "sim" : "não",
     ]);
@@ -230,7 +264,12 @@ export function GerenciadorConvidados({
         <Indicador rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" />
         <Indicador rotulo="Não irão" valor={resumo.naoVao} />
         <Indicador rotulo="Sem convite" valor={resumo.semConvite} tom={resumo.semConvite > 0 ? "alerta" : "oliva"} />
-        <Indicador rotulo="Famílias" valor={resumo.grupos} />
+        <Indicador
+          rotulo="Passaram do previsto"
+          valor={resumo.excederam}
+          tom={resumo.excederam > 0 ? "alerta" : "oliva"}
+          detalhe={resumo.excederam > 0 ? "vale uma conversa" : "ninguém fora da conta"}
+        />
       </div>
 
       <Bloco
@@ -256,9 +295,33 @@ export function GerenciadorConvidados({
         </div>
       </Bloco>
 
-      <FamiliasConvite grupos={grupos} convidados={convidados} limitePadrao={limitePadrao} />
-
-      <Bloco titulo="Lista de convidados" descricao="Busque, filtre e edite. Clique em qualquer linha para abrir a ficha.">
+      <Bloco
+        titulo="Lista de convidados"
+        descricao="Busque, filtre e edite. Clique em qualquer linha para abrir a ficha."
+        acao={
+          <div
+            role="group"
+            aria-label="Como ver a lista"
+            className="inline-flex rounded-sm border border-terra/30 p-0.5"
+          >
+            {(["ficha", "respostas"] as Visao[]).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVisao(v)}
+                aria-pressed={visao === v}
+                className={`versalete min-h-10 rounded-sm px-4 text-xs transition-colors ${
+                  visao === v
+                    ? "bg-oliva text-creme-claro"
+                    : "text-terra hover:text-oliva"
+                }`}
+              >
+                {v === "ficha" ? "Ficha completa" : "Respostas"}
+              </button>
+            ))}
+          </div>
+        }
+      >
         {/* ---------- Filtros ---------- */}
         <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
@@ -432,7 +495,11 @@ export function GerenciadorConvidados({
                             )}
                           </span>
                           <span className="block truncate text-sm text-terra">
-                            {[c.grupo?.name, c.relationship, c.phone].filter(Boolean).join(" · ") || "—"}
+                            {visao === "ficha"
+                              ? [c.grupo?.name, c.relationship, c.phone]
+                                  .filter(Boolean)
+                                  .join(" · ") || "—"
+                              : resumoDaResposta(c, porTitular.get(c.id) ?? [])}
                           </span>
                         </span>
                         <span className="hidden shrink-0 sm:block">
@@ -443,14 +510,21 @@ export function GerenciadorConvidados({
                       </button>
                     </div>
 
-                    <LinhaDoCodigo
-                      convidado={c}
-                      copiado={copiado === c.id}
-                      gerando={gerando}
-                      aoGerar={() => gerarCodigo(c.id)}
-                      aoCopiar={() => copiarCodigo(c)}
-                      aoMarcar={(enviado) => marcarEnviado([c.id], enviado)}
-                    />
+                    {visao === "ficha" ? (
+                      <LinhaDoCodigo
+                        convidado={c}
+                        copiado={copiado === c.id}
+                        gerando={gerando}
+                        aoGerar={() => gerarCodigo(c.id)}
+                        aoCopiar={() => copiarCodigo(c)}
+                        aoMarcar={(enviado) => marcarEnviado([c.id], enviado)}
+                      />
+                    ) : (
+                      <LinhaDaResposta
+                        convidado={c}
+                        acompanhantes={porTitular.get(c.id) ?? []}
+                      />
+                    )}
                   </div>
                 </li>
               ))}
@@ -463,6 +537,7 @@ export function GerenciadorConvidados({
         <FichaConvidado
           convidado={aberto}
           grupos={grupos}
+          mesas={mesas}
           aoFechar={() => {
             setAberto(null);
             setNovo(false);
@@ -577,3 +652,59 @@ function LinhaDoCodigo({
 }
 
 export { formatarData };
+
+
+/** A segunda linha da visão "Respostas": o essencial sem abrir a ficha. */
+function resumoDaResposta(convidado: ConvidadoCompleto, acompanhantes: Acompanhante[]) {
+  const partes = [
+    convidado.relationship_kind ? ROTULOS_VINCULO[convidado.relationship_kind] : null,
+    convidado.attends ? ROTULOS_PRESENCA_CURTO[convidado.attends] : "sem resposta",
+    acompanhantes.length > 0
+      ? `+${acompanhantes.length} ${acompanhantes.length > 1 ? "pessoas" : "pessoa"}`
+      : null,
+    convidado.mesa?.name ?? null,
+  ];
+  return partes.filter(Boolean).join(" · ");
+}
+
+/**
+ * O detalhe da resposta, na visão de festa: quem veio junto e o aviso de
+ * quem passou do planejado. Sem trava no site, este aviso é o que faz os
+ * noivos perceberem — e resolverem na conversa, que é onde isso se resolve.
+ */
+function LinhaDaResposta({
+  convidado,
+  acompanhantes,
+}: {
+  convidado: ConvidadoCompleto;
+  acompanhantes: Acompanhante[];
+}) {
+  const passou = acompanhantes.length > convidado.companions_planned;
+  if (acompanhantes.length === 0 && !passou) return null;
+
+  return (
+    <div className="border-t border-terra/15 px-4 py-3">
+      {acompanhantes.length > 0 && (
+        <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
+          {acompanhantes.map((a) => (
+            <li key={a.id} className="text-sm text-terra">
+              <span className="text-oliva">{a.full_name}</span>
+              {a.age !== null && <span> · {a.age} anos</span>}
+              {a.relationship && <span> · {a.relationship}</span>}
+              {a.attends && <span> · {ROTULOS_PRESENCA_CURTO[a.attends]}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {passou && (
+        <p className="mt-2 text-sm text-red-800">
+          Trouxe {acompanhantes.length}{" "}
+          {acompanhantes.length > 1 ? "acompanhantes" : "acompanhante"}; o
+          planejado para {convidado.full_name.split(" ")[0]} era{" "}
+          {convidado.companions_planned}.
+        </p>
+      )}
+    </div>
+  );
+}

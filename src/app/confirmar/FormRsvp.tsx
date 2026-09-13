@@ -4,69 +4,112 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { meuGuestId } from "@/lib/convidadoCliente";
-import { ROTULOS_RSVP, type Acompanhante, type Rsvp, type StatusRsvp } from "@/lib/tipos";
+import {
+  PRESENCAS,
+  ROTULOS_RSVP,
+  VINCULOS,
+  ROTULOS_VINCULO,
+  type Acompanhante,
+  type Genero,
+  type Presenca,
+  type Rsvp,
+  type StatusRsvp,
+  type Vinculo,
+} from "@/lib/tipos";
 import { CartaoForm, Aviso, Rotulo } from "@/components/CartaoForm";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Icone } from "@/components/Icones";
 
 const OPCOES: StatusRsvp[] = ["confirmado", "talvez", "nao_vou"];
 
-/** Uma linha do formulário de acompanhante; o id só existe se já foi salvo. */
-type LinhaAcompanhante = { id: string | null; nome: string; idade: string; obs: string };
+/** Uma pessoa do formulário. O id só existe depois de salva. */
+type Linha = {
+  id: string | null;
+  nome: string;
+  idade: string;
+  genero: string;
+  /** Vínculo com quem a trouxe: "esposa", "filho", "namorada". */
+  relacao: string;
+  vinculo: string;
+  presenca: Presenca;
+  obs: string;
+};
+
+const LINHA_VAZIA: Linha = {
+  id: null,
+  nome: "",
+  idade: "",
+  genero: "",
+  relacao: "",
+  vinculo: "",
+  presenca: "ambos",
+  obs: "",
+};
 
 export function FormRsvp({
   nome,
   rsvpInicial,
   acompanhantesIniciais,
-  limite,
-  lugaresUsadosPorOutros,
-  nomeDoGrupo,
+  vinculoInicial,
+  presencaInicial,
+  idadeInicial,
+  generoInicial,
+  ondeCerimonia,
+  ondeRecepcao,
   regras,
   prazo,
 }: {
   nome: string;
   rsvpInicial: Rsvp | null;
   acompanhantesIniciais: Acompanhante[];
-  /** Quantas pessoas o convite comporta, contando o titular. */
-  limite: number;
-  /** Pessoas do mesmo convite já confirmadas por outro login da família. */
-  lugaresUsadosPorOutros: number;
-  nomeDoGrupo: string | null;
-  /** Recado sobre acompanhantes, escrito pelos noivos no painel. */
+  vinculoInicial: Vinculo | null;
+  presencaInicial: Presenca | null;
+  idadeInicial: number | null;
+  generoInicial: Genero | null;
+  /** Nome da capela e do buffet, para a pergunta não ficar abstrata. */
+  ondeCerimonia: string | null;
+  ondeRecepcao: string | null;
   regras?: string;
-  /** Data limite para confirmar, quando os noivos definem uma. */
   prazo?: string | null;
 }) {
   const router = useRouter();
 
   const [status, setStatus] = useState<StatusRsvp>(rsvpInicial?.status ?? "confirmado");
-  const [acompanhantes, setAcompanhantes] = useState<LinhaAcompanhante[]>(
+  const [vinculo, setVinculo] = useState<string>(vinculoInicial ?? "");
+  const [presenca, setPresenca] = useState<Presenca>(presencaInicial ?? "ambos");
+  const [idade, setIdade] = useState(idadeInicial === null ? "" : String(idadeInicial));
+  const [genero, setGenero] = useState<string>(generoInicial ?? "");
+  const [restricoes, setRestricoes] = useState(rsvpInicial?.dietary_notes ?? "");
+  const [recado, setRecado] = useState(rsvpInicial?.message ?? "");
+
+  const [acompanhantes, setAcompanhantes] = useState<Linha[]>(
     acompanhantesIniciais.map((a) => ({
       id: a.id,
       nome: a.full_name,
       idade: a.age === null ? "" : String(a.age),
+      genero: a.gender ?? "",
+      relacao: a.relationship ?? "",
+      vinculo: a.relationship_kind ?? "",
+      presenca: a.attends ?? "ambos",
       obs: a.notes ?? "",
     })),
   );
-  const [restricoes, setRestricoes] = useState(rsvpInicial?.dietary_notes ?? "");
-  const [recado, setRecado] = useState(rsvpInicial?.message ?? "");
+
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
   const vai = status !== "nao_vou";
-
-  // O titular ocupa um lugar; o resto do convite é o que sobra para
-  // acompanhantes, descontando quem a família já confirmou por outro login.
-  const lugaresRestantes = Math.max(0, limite - lugaresUsadosPorOutros - 1);
-  const podeAdicionar = acompanhantes.length < lugaresRestantes;
+  const preenchidos = acompanhantes.filter((a) => a.nome.trim().length > 0);
+  const total = vai ? 1 + preenchidos.length : 0;
 
   function adicionar() {
-    if (!podeAdicionar) return;
-    setAcompanhantes((atual) => [...atual, { id: null, nome: "", idade: "", obs: "" }]);
+    // O acompanhante entra já com o vínculo de quem o convidou: quase sempre
+    // é o mesmo, e quem quiser troca em um clique.
+    setAcompanhantes((atual) => [...atual, { ...LINHA_VAZIA, vinculo }]);
   }
 
-  function alterar(indice: number, campo: keyof LinhaAcompanhante, valor: string) {
+  function alterar(indice: number, campo: keyof Linha, valor: string) {
     setAcompanhantes((atual) =>
       atual.map((linha, i) => (i === indice ? { ...linha, [campo]: valor } : linha)),
     );
@@ -81,16 +124,8 @@ export function FormRsvp({
     setErro(null);
     setSalvo(false);
 
-    const preenchidos = vai
-      ? acompanhantes.filter((a) => a.nome.trim().length > 0)
-      : [];
-
     if (vai && acompanhantes.some((a) => !a.nome.trim())) {
       setErro("Falta o nome de um acompanhante. Escreva ou remova a linha.");
-      return;
-    }
-    if (preenchidos.length > lugaresRestantes) {
-      setErro(`Seu convite é para ${limite} pessoa${limite > 1 ? "s" : ""}.`);
       return;
     }
 
@@ -102,13 +137,32 @@ export function FormRsvp({
       return;
     }
 
+    const numero = (v: string) => (v.trim() === "" ? null : Number(v));
+
+    // ---------- A ficha de quem respondeu ----------
+    const { error: erroFicha } = await supabase
+      .from("guests")
+      .update({
+        relationship_kind: vinculo || null,
+        attends: vai ? presenca : null,
+        age: numero(idade),
+        gender: genero || null,
+        dietary_notes: vai ? restricoes.trim() || null : null,
+      })
+      .eq("id", guestId);
+
+    if (erroFicha) {
+      setErro("Não foi possível salvar seus dados agora. Tente de novo em instantes.");
+      setEnviando(false);
+      return;
+    }
+
+    // ---------- A resposta ----------
     const { error } = await supabase.from("rsvps").upsert(
       {
         guest_id: guestId,
         status,
-        companions: preenchidos.length,
-        // A lista de nomes vira uma linha por pessoa; este campo antigo
-        // segue preenchido para não quebrar quem já lia dele.
+        companions: vai ? preenchidos.length : 0,
         companion_names: preenchidos.length
           ? preenchidos.map((a) => a.nome.trim()).join(", ")
           : null,
@@ -124,8 +178,7 @@ export function FormRsvp({
       return;
     }
 
-    // Regrava os acompanhantes: apaga os que saíram, atualiza os que ficaram
-    // e insere os novos. O banco confere o limite de novo, por garantia.
+    // ---------- Quem vem junto ----------
     const idsQueFicam = preenchidos.map((a) => a.id).filter(Boolean) as string[];
     const paraApagar = acompanhantesIniciais
       .filter((a) => !idsQueFicam.includes(a.id))
@@ -135,11 +188,15 @@ export function FormRsvp({
       await supabase.from("rsvp_companions").delete().in("id", paraApagar);
     }
 
-    for (const linha of preenchidos) {
+    for (const linha of vai ? preenchidos : []) {
       const dados = {
         guest_id: guestId,
         full_name: linha.nome.trim(),
-        age: linha.idade.trim() === "" ? null : Number(linha.idade),
+        age: numero(linha.idade),
+        gender: linha.genero || null,
+        relationship: linha.relacao.trim() || null,
+        relationship_kind: linha.vinculo || null,
+        attends: linha.presenca,
         notes: linha.obs.trim() || null,
       };
 
@@ -148,12 +205,7 @@ export function FormRsvp({
         : await supabase.from("rsvp_companions").insert(dados);
 
       if (resposta.error) {
-        const limiteDoBanco = resposta.error.message.match(/LIMITE_DO_CONVITE:(\d+)/);
-        setErro(
-          limiteDoBanco
-            ? `Seu convite é para ${limiteDoBanco[1]} pessoa${Number(limiteDoBanco[1]) > 1 ? "s" : ""}. Fale com os noivos se precisar de mais um lugar.`
-            : "Não foi possível salvar os acompanhantes. Tente de novo.",
-        );
+        setErro("Não foi possível salvar os acompanhantes. Tente de novo.");
         setEnviando(false);
         router.refresh();
         return;
@@ -166,7 +218,6 @@ export function FormRsvp({
   }
 
   const primeiroNome = nome.trim().split(" ")[0];
-  const totalConfirmado = vai ? 1 + acompanhantes.filter((a) => a.nome.trim()).length : 0;
 
   return (
     <CartaoForm
@@ -184,92 +235,139 @@ export function FormRsvp({
         </BotaoLink>
       }
     >
-      <form onSubmit={enviar} className="space-y-6">
+      <form onSubmit={enviar} className="space-y-7">
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {salvo && <Aviso tipo="ok">Resposta salva! Obrigado por avisar. 💜</Aviso>}
 
-        {/* ---------- O tamanho do convite, dito de saída ---------- */}
-        <div className="rounded-sm border border-lavanda/35 bg-lavanda/10 px-5 py-4 text-center">
-          <p className="versalete text-xs text-terra">
-            {nomeDoGrupo ? `Convite · ${nomeDoGrupo}` : "Seu convite"}
-          </p>
-          <p className="titulo-serif mt-2 text-2xl text-oliva">
-            {limite} {limite > 1 ? "pessoas" : "pessoa"}
-          </p>
-          {lugaresUsadosPorOutros > 0 && (
-            <p className="mt-1 text-sm text-terra">
-              {lugaresUsadosPorOutros}{" "}
-              {lugaresUsadosPorOutros > 1 ? "já confirmadas" : "já confirmada"} por alguém
-              da sua família.
-            </p>
-          )}
-          <p className="mt-2 text-sm text-terra">
-            {lugaresRestantes === 0
-              ? "O convite é só para você."
-              : `Você pode trazer até ${lugaresRestantes} ${
-                  lugaresRestantes > 1 ? "acompanhantes" : "acompanhante"
-                }.`}
-          </p>
-          {regras && <p className="mt-3 text-sm leading-relaxed text-terra/85">{regras}</p>}
-          {prazo && (
-            <p className="versalete mt-3 text-xs text-terra">
-              Confirme até {new Date(`${prazo}T12:00:00`).toLocaleDateString("pt-BR")}
-            </p>
-          )}
-        </div>
+        {(regras || prazo) && (
+          <div className="rounded-sm border border-lavanda/35 bg-lavanda/10 px-5 py-4 text-center">
+            {regras && <p className="text-sm leading-relaxed text-terra">{regras}</p>}
+            {prazo && (
+              <p className="versalete mt-2 text-xs text-terra">
+                Confirme até {new Date(`${prazo}T12:00:00`).toLocaleDateString("pt-BR")}
+              </p>
+            )}
+          </div>
+        )}
 
+        {/* ---------- Você vem? ---------- */}
         <fieldset>
           <legend className="versalete mb-3 block text-xs text-terra">Você vem?</legend>
           <div className="grid gap-2 sm:grid-cols-3">
             {OPCOES.map((opcao) => (
-              <label
+              <Opcao
                 key={opcao}
-                className={`titulo-serif cursor-pointer rounded-sm border px-4 py-3 text-center text-sm transition-colors ${
-                  status === opcao
-                    ? "border-oliva bg-oliva text-creme-claro"
-                    : "border-terra/30 text-terra hover:border-oliva"
-                }`}
+                nome="status"
+                marcado={status === opcao}
+                aoMarcar={() => setStatus(opcao)}
               >
-                <input
-                  type="radio"
-                  name="status"
-                  value={opcao}
-                  checked={status === opcao}
-                  onChange={() => setStatus(opcao)}
-                  className="sr-only"
-                />
                 {ROTULOS_RSVP[opcao]}
-              </label>
+              </Opcao>
             ))}
           </div>
         </fieldset>
 
         {vai && (
           <>
-            {/* ---------- Acompanhantes, um a um ---------- */}
-            <fieldset className="space-y-3">
+            {/* ---------- Sobre você ---------- */}
+            <fieldset className="space-y-5">
+              <legend className="versalete mb-1 block text-xs text-terra">Sobre você</legend>
+
+              <div>
+                <Rotulo htmlFor="vinculo">Qual é o seu vínculo com os noivos?</Rotulo>
+                <select
+                  id="vinculo"
+                  className="campo"
+                  value={vinculo}
+                  onChange={(e) => setVinculo(e.target.value)}
+                >
+                  <option value="">Escolha uma opção</option>
+                  {VINCULOS.map((v) => (
+                    <option key={v} value={v}>
+                      {ROTULOS_VINCULO[v]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <PerguntaPresenca
+                idBase="voce"
+                legenda="Você vai à cerimônia, à festa ou às duas?"
+                valor={presenca}
+                aoMudar={setPresenca}
+                ondeCerimonia={ondeCerimonia}
+                ondeRecepcao={ondeRecepcao}
+              />
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Rotulo htmlFor="idade">Sua idade (opcional)</Rotulo>
+                  <input
+                    id="idade"
+                    type="number"
+                    min={0}
+                    max={130}
+                    inputMode="numeric"
+                    className="campo"
+                    placeholder="—"
+                    value={idade}
+                    onChange={(e) => setIdade(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Rotulo htmlFor="genero">Como você se identifica (opcional)</Rotulo>
+                  <select
+                    id="genero"
+                    className="campo"
+                    value={genero}
+                    onChange={(e) => setGenero(e.target.value)}
+                  >
+                    <option value="">Prefiro não dizer</option>
+                    <option value="feminino">Feminino</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <Rotulo htmlFor="restricoes">Alguma restrição alimentar sua? (opcional)</Rotulo>
+                <input
+                  id="restricoes"
+                  className="campo"
+                  placeholder="Vegetariano, sem glúten, alergia a…"
+                  value={restricoes}
+                  onChange={(e) => setRestricoes(e.target.value)}
+                />
+              </div>
+            </fieldset>
+
+            {/* ---------- Quem vem com você ---------- */}
+            <fieldset className="space-y-4">
               <legend className="versalete mb-1 block text-xs text-terra">
                 Quem vem com você
               </legend>
 
               {acompanhantes.length === 0 && (
                 <p className="rounded-sm border border-dashed border-terra/30 px-5 py-4 text-center text-sm text-terra">
-                  {lugaresRestantes === 0
-                    ? "Seu convite é individual."
-                    : "Ninguém adicionado ainda."}
+                  Ninguém adicionado ainda. Se você vem sozinho(a), é só seguir.
                 </p>
               )}
 
               {acompanhantes.map((linha, i) => (
                 <div
                   key={linha.id ?? `novo-${i}`}
-                  className="rounded-sm border border-terra/20 bg-creme p-4"
+                  className="rounded-sm border border-terra/20 bg-creme p-4 sm:p-5"
                 >
-                  <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
+                  <p className="versalete mb-3 text-xs text-lavanda">
+                    {linha.nome.trim() || `Acompanhante ${i + 1}`}
+                  </p>
+
+                  <div className="grid gap-4 sm:grid-cols-[1fr_6rem]">
                     <div>
-                      <Rotulo htmlFor={`acomp-nome-${i}`}>Nome completo</Rotulo>
+                      <Rotulo htmlFor={`ac-nome-${i}`}>Nome completo</Rotulo>
                       <input
-                        id={`acomp-nome-${i}`}
+                        id={`ac-nome-${i}`}
                         className="campo"
                         placeholder="Nome de quem vem"
                         value={linha.nome}
@@ -277,9 +375,9 @@ export function FormRsvp({
                       />
                     </div>
                     <div>
-                      <Rotulo htmlFor={`acomp-idade-${i}`}>Idade</Rotulo>
+                      <Rotulo htmlFor={`ac-idade-${i}`}>Idade</Rotulo>
                       <input
-                        id={`acomp-idade-${i}`}
+                        id={`ac-idade-${i}`}
                         type="number"
                         min={0}
                         max={130}
@@ -292,23 +390,77 @@ export function FormRsvp({
                     </div>
                   </div>
 
-                  <div className="mt-3">
-                    <Rotulo htmlFor={`acomp-obs-${i}`}>
-                      Restrição alimentar dessa pessoa (opcional)
-                    </Rotulo>
-                    <input
-                      id={`acomp-obs-${i}`}
-                      className="campo"
-                      placeholder="Vegetariano, sem lactose, menu infantil…"
-                      value={linha.obs}
-                      onChange={(e) => alterar(i, "obs", e.target.value)}
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Rotulo htmlFor={`ac-relacao-${i}`}>Quem é essa pessoa para você?</Rotulo>
+                      <input
+                        id={`ac-relacao-${i}`}
+                        className="campo"
+                        placeholder="Esposa, filho, namorada…"
+                        value={linha.relacao}
+                        onChange={(e) => alterar(i, "relacao", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Rotulo htmlFor={`ac-vinculo-${i}`}>E com os noivos?</Rotulo>
+                      <select
+                        id={`ac-vinculo-${i}`}
+                        className="campo"
+                        value={linha.vinculo}
+                        onChange={(e) => alterar(i, "vinculo", e.target.value)}
+                      >
+                        <option value="">Escolha uma opção</option>
+                        {VINCULOS.map((v) => (
+                          <option key={v} value={v}>
+                            {ROTULOS_VINCULO[v]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <PerguntaPresenca
+                      idBase={`ac-${i}`}
+                      legenda="Essa pessoa vai a quê?"
+                      valor={linha.presenca}
+                      aoMudar={(v) => alterar(i, "presenca", v)}
+                      ondeCerimonia={ondeCerimonia}
+                      ondeRecepcao={ondeRecepcao}
                     />
+                  </div>
+
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Rotulo htmlFor={`ac-genero-${i}`}>Como se identifica (opcional)</Rotulo>
+                      <select
+                        id={`ac-genero-${i}`}
+                        className="campo"
+                        value={linha.genero}
+                        onChange={(e) => alterar(i, "genero", e.target.value)}
+                      >
+                        <option value="">Prefiro não dizer</option>
+                        <option value="feminino">Feminino</option>
+                        <option value="masculino">Masculino</option>
+                        <option value="outro">Outro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Rotulo htmlFor={`ac-obs-${i}`}>Restrição alimentar (opcional)</Rotulo>
+                      <input
+                        id={`ac-obs-${i}`}
+                        className="campo"
+                        placeholder="Vegetariano, sem lactose, menu infantil…"
+                        value={linha.obs}
+                        onChange={(e) => alterar(i, "obs", e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => remover(i)}
-                    className="versalete mt-3 inline-flex min-h-11 items-center gap-2 text-xs text-red-800 underline underline-offset-4"
+                    className="versalete mt-4 inline-flex min-h-11 items-center gap-2 text-xs text-red-800 underline underline-offset-4"
                   >
                     <Icone nome="fechar" className="h-4 w-4" />
                     Remover
@@ -316,32 +468,11 @@ export function FormRsvp({
                 </div>
               ))}
 
-              {podeAdicionar ? (
-                <Botao type="button" variante="contorno" onClick={adicionar} className="w-full">
-                  <Icone nome="mais" className="h-4 w-4" />
-                  Adicionar acompanhante
-                </Botao>
-              ) : (
-                lugaresRestantes > 0 && (
-                  <p className="text-center text-sm text-terra">
-                    {lugaresRestantes > 1
-                      ? `Você já preencheu os ${lugaresRestantes} lugares do seu convite.`
-                      : "Você já preencheu o lugar que sobrava no seu convite."}
-                  </p>
-                )
-              )}
+              <Botao type="button" variante="contorno" onClick={adicionar} className="w-full">
+                <Icone nome="mais" className="h-4 w-4" />
+                Adicionar acompanhante
+              </Botao>
             </fieldset>
-
-            <div>
-              <Rotulo htmlFor="restricoes">Alguma restrição alimentar sua? (opcional)</Rotulo>
-              <input
-                id="restricoes"
-                className="campo"
-                placeholder="Vegetariano, sem glúten, alergia a…"
-                value={restricoes}
-                onChange={(e) => setRestricoes(e.target.value)}
-              />
-            </div>
           </>
         )}
 
@@ -361,10 +492,99 @@ export function FormRsvp({
           {enviando
             ? "Salvando…"
             : vai
-              ? `Confirmar ${totalConfirmado} ${totalConfirmado > 1 ? "pessoas" : "pessoa"}`
+              ? `Confirmar ${total} ${total > 1 ? "pessoas" : "pessoa"}`
               : "Enviar resposta"}
         </Botao>
       </form>
     </CartaoForm>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * Cerimônia, festa ou as duas.
+ *
+ * A pergunta vem com o nome do lugar junto porque "recepção" sozinho é
+ * palavra de convite; "a festa, no buffet" é onde a pessoa vai estar.
+ */
+function PerguntaPresenca({
+  idBase,
+  legenda,
+  valor,
+  aoMudar,
+  ondeCerimonia,
+  ondeRecepcao,
+}: {
+  idBase: string;
+  legenda: string;
+  valor: Presenca;
+  aoMudar: (v: Presenca) => void;
+  ondeCerimonia: string | null;
+  ondeRecepcao: string | null;
+}) {
+  const detalhe: Record<Presenca, string | null> = {
+    ambos: null,
+    cerimonia: ondeCerimonia,
+    recepcao: ondeRecepcao,
+  };
+
+  const rotulo: Record<Presenca, string> = {
+    ambos: "Cerimônia e festa",
+    cerimonia: "Só a cerimônia",
+    recepcao: "Só a festa",
+  };
+
+  return (
+    <fieldset>
+      <legend className="versalete mb-2 block text-xs text-terra">{legenda}</legend>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {PRESENCAS.map((opcao) => (
+          <Opcao
+            key={opcao}
+            nome={`presenca-${idBase}`}
+            marcado={valor === opcao}
+            aoMarcar={() => aoMudar(opcao)}
+          >
+            {rotulo[opcao]}
+            {detalhe[opcao] && (
+              <span className="mt-0.5 block text-xs opacity-80">{detalhe[opcao]}</span>
+            )}
+          </Opcao>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** Botão de rádio que parece botão: área de toque inteira, sem bolinha. */
+function Opcao({
+  nome,
+  marcado,
+  aoMarcar,
+  children,
+}: {
+  nome: string;
+  marcado: boolean;
+  aoMarcar: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      className={`titulo-serif flex min-h-12 cursor-pointer items-center justify-center rounded-sm border px-4 py-3 text-center text-sm transition-colors ${
+        marcado
+          ? "border-oliva bg-oliva text-creme-claro"
+          : "border-terra/30 text-terra hover:border-oliva"
+      }`}
+    >
+      <input
+        type="radio"
+        name={nome}
+        checked={marcado}
+        onChange={aoMarcar}
+        className="sr-only"
+      />
+      <span>{children}</span>
+    </label>
   );
 }

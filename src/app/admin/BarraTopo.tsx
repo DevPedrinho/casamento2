@@ -25,14 +25,16 @@ const PRINCIPAIS: Item[] = [
   { href: "/admin/convidados", rotulo: "Convidados", icone: "convidados", chave: "convidados" },
   { href: "/admin/crm", rotulo: "CRM", icone: "crm", chave: "crm" },
   { href: "/admin/checklist", rotulo: "Tarefas", icone: "tarefas", chave: "tarefas" },
-  { href: "/admin/kanban", rotulo: "Kanban", icone: "kanban" },
+  { href: "/admin/fornecedores", rotulo: "Fornecedores", icone: "fornecedores" },
   { href: "/admin/financeiro", rotulo: "Financeiro", icone: "financeiro", chave: "financeiro" },
 ];
 
-/** Os demais entram no menu "Mais" — 11 itens inline não cabem sem cortar. */
+/** Os demais entram no menu "Mais" — 12 itens inline não cabem sem cortar. */
 const SECUNDARIOS: Item[] = [
+  { href: "/admin/mesas", rotulo: "Mesas", icone: "mesas" },
+  { href: "/admin/personagens", rotulo: "Personagens", icone: "personagens" },
   { href: "/admin/cronograma", rotulo: "Cronograma", icone: "cronograma" },
-  { href: "/admin/fornecedores", rotulo: "Fornecedores", icone: "fornecedores" },
+  { href: "/admin/kanban", rotulo: "Kanban", icone: "kanban" },
   { href: "/admin/timeline", rotulo: "Timeline", icone: "timeline" },
   { href: "/admin/mural", rotulo: "Mural", icone: "mural", chave: "mural" },
   { href: "/admin/presentes", rotulo: "Presentes", icone: "presentes" },

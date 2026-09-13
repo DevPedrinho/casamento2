@@ -3,10 +3,15 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ETAPAS_CONVITE,
+  PRESENCAS,
   ROTULOS_CONVITE,
+  ROTULOS_PRESENCA,
+  ROTULOS_VINCULO,
+  VINCULOS,
   type Acompanhante,
   type ConvidadoCompleto,
   type GrupoConvidados,
+  type Mesa,
   type StatusConvite,
 } from "@/lib/tipos";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
@@ -17,10 +22,11 @@ import { Avatar } from "@/components/Avatar";
 import { Icone } from "@/components/Icones";
 
 const VAZIO = {
-  full_name: "", group_id: "", side: "", relationship: "", ceremony_role: "",
+  full_name: "", group_id: "", side: "", relationship: "", relationship_kind: "",
+  ceremony_role: "", is_featured: false,
   attends: "", gender: "", age: "", phone: "", whatsapp: "", email: "",
-  invite_status: "nao_contatado" as StatusConvite, companions_planned: "0", invite_limit: "",
-  table_number: "", favor_type: "", dietary_notes: "", notes: "",
+  invite_status: "nao_contatado" as StatusConvite, companions_planned: "0",
+  table_id: "", favor_type: "", dietary_notes: "", notes: "",
   last_contact_at: "", next_action: "", next_action_at: "",
 };
 
@@ -28,11 +34,13 @@ const VAZIO = {
 export function FichaConvidado({
   convidado,
   grupos,
+  mesas,
   aoFechar,
   aoSalvar,
 }: {
   convidado: ConvidadoCompleto | null;
   grupos: GrupoConvidados[];
+  mesas: Mesa[];
   aoFechar: () => void;
   aoSalvar: () => void;
 }) {
@@ -43,7 +51,9 @@ export function FichaConvidado({
           group_id: convidado.group_id ?? "",
           side: convidado.side ?? "",
           relationship: convidado.relationship ?? "",
+          relationship_kind: convidado.relationship_kind ?? "",
           ceremony_role: convidado.ceremony_role ?? "",
+          is_featured: convidado.is_featured,
           attends: convidado.attends ?? "",
           gender: convidado.gender ?? "",
           age: convidado.age?.toString() ?? "",
@@ -52,8 +62,7 @@ export function FichaConvidado({
           email: convidado.email ?? "",
           invite_status: convidado.invite_status,
           companions_planned: convidado.companions_planned.toString(),
-          invite_limit: convidado.invite_limit?.toString() ?? "",
-          table_number: convidado.table_number ?? "",
+          table_id: convidado.table_id ?? "",
           favor_type: convidado.favor_type ?? "",
           dietary_notes: convidado.dietary_notes ?? "",
           notes: convidado.notes ?? "",
@@ -125,8 +134,10 @@ export function FichaConvidado({
       group_id: form.group_id || null,
       side: form.side || null,
       relationship: form.relationship.trim() || null,
+      relationship_kind: form.relationship_kind || null,
       ceremony_role: form.ceremony_role.trim() || null,
-      attends: form.attends.trim() || null,
+      is_featured: form.is_featured,
+      attends: form.attends || null,
       gender: form.gender || null,
       age: idade,
       phone: form.phone.trim() || null,
@@ -134,8 +145,7 @@ export function FichaConvidado({
       email: form.email.trim() || null,
       invite_status: form.invite_status,
       companions_planned: Number(form.companions_planned) || 0,
-      invite_limit: form.invite_limit.trim() ? Number(form.invite_limit) : null,
-      table_number: form.table_number.trim() || null,
+      table_id: form.table_id || null,
       favor_type: form.favor_type.trim() || null,
       dietary_notes: form.dietary_notes.trim() || null,
       notes: form.notes.trim() || null,
@@ -261,13 +271,35 @@ export function FichaConvidado({
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
-            <Campo id="rel" rotulo="Relação">
+            <Campo id="vinculo" rotulo="Vínculo com os noivos">
+              <select id="vinculo" className="campo" value={form.relationship_kind}
+                onChange={(e) => set("relationship_kind", e.target.value)}>
+                <option value="">—</option>
+                {VINCULOS.map((v) => (
+                  <option key={v} value={v}>{ROTULOS_VINCULO[v]}</option>
+                ))}
+              </select>
+            </Campo>
+            <Campo id="rel" rotulo="Relação, com as palavras de vocês"
+              dica="É o que aparece na ficha: “Prima 2º grau”, “Companheira do Ramon”.">
               <input id="rel" className="campo" placeholder="Prima, Tio, Amigo…"
                 value={form.relationship} onChange={(e) => set("relationship", e.target.value)} />
             </Campo>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
             <Campo id="papel" rotulo="Papel na cerimônia">
               <input id="papel" className="campo" placeholder="Madrinha, Padrinho…"
                 value={form.ceremony_role} onChange={(e) => set("ceremony_role", e.target.value)} />
+            </Campo>
+            <Campo id="destaque" rotulo="Personagem principal"
+              dica="Ganha etiqueta no mural e as publicações sobem para o topo.">
+              <label className="flex min-h-11 items-center gap-3">
+                <input id="destaque" type="checkbox" checked={form.is_featured}
+                  onChange={(e) => set("is_featured", e.target.checked)}
+                  className="h-5 w-5 accent-[var(--color-oliva)]" />
+                <span className="text-sm text-terra">Aparece em destaque no mural</span>
+              </label>
             </Campo>
           </div>
 
@@ -316,23 +348,23 @@ export function FichaConvidado({
                 value={form.companions_planned}
                 onChange={(e) => set("companions_planned", e.target.value)} />
             </Campo>
-            <Campo
-              id="lugares"
-              rotulo="Lugares no convite"
-              dica={
-                convidado?.group_id
-                  ? "A família manda: o limite dela vale para este convidado."
-                  : "Total de pessoas, incluindo o convidado. Vazio = 1 + acompanhantes previstos."
-              }
-            >
-              <input id="lugares" inputMode="numeric" className="campo"
-                placeholder="—"
-                value={form.invite_limit}
-                onChange={(e) => set("invite_limit", e.target.value)} />
+            <Campo id="presenca" rotulo="Onde participa">
+              <select id="presenca" className="campo" value={form.attends}
+                onChange={(e) => set("attends", e.target.value)}>
+                <option value="">Ainda não respondeu</option>
+                {PRESENCAS.map((v) => (
+                  <option key={v} value={v}>{ROTULOS_PRESENCA[v]}</option>
+                ))}
+              </select>
             </Campo>
             <Campo id="mesa" rotulo="Mesa">
-              <input id="mesa" className="campo" value={form.table_number}
-                onChange={(e) => set("table_number", e.target.value)} />
+              <select id="mesa" className="campo" value={form.table_id}
+                onChange={(e) => set("table_id", e.target.value)}>
+                <option value="">Sem mesa</option>
+                {mesas.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
             </Campo>
           </div>
 

@@ -23,7 +23,10 @@ export type NomeIcone =
   | "cronograma"
   | "musica"
   | "volume"
-  | "mais";
+  | "mais"
+  | "mesas"
+  | "personagens"
+  | "estrela";
 
 const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
   dashboard: <><rect x="3" y="3" width="7" height="8" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="11" width="7" height="10" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></>,
@@ -47,6 +50,10 @@ const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
   musica: <><path d="M9 18V6l11-2v12" /><circle cx="6.5" cy="18" r="2.5" /><circle cx="17.5" cy="16" r="2.5" /></>,
   volume: <><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M16 9.5a4 4 0 0 1 0 5" /><path d="M18.5 7a7 7 0 0 1 0 10" /></>,
   mais: <path d="M12 5v14M5 12h14" />,
+  // Mesa redonda vista de cima, com os lugares em volta.
+  mesas: <><circle cx="12" cy="12" r="5" /><circle cx="12" cy="4.2" r="1.6" /><circle cx="12" cy="19.8" r="1.6" /><circle cx="4.2" cy="12" r="1.6" /><circle cx="19.8" cy="12" r="1.6" /></>,
+  personagens: <><circle cx="12" cy="7.5" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /><path d="M12 1.2l.9 1.9 2.1.3-1.5 1.5.35 2.1L12 6.1l-1.85 1 .35-2.1-1.5-1.5 2.1-.3z" /></>,
+  estrela: <path d="M12 3.5l2.6 5.4 5.9.85-4.25 4.2 1 5.9L12 17.05 6.75 19.85l1-5.9L3.5 9.75l5.9-.85z" />,
 };
 
 export function Icone({

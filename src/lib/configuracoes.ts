@@ -27,7 +27,6 @@ export type Casamento = {
   instagram: string;
   hashtag: string;
   prazoRsvp: string | null;
-  limitePadrao: number;
   regrasAcompanhante: string;
   imagens: {
     logo: string | null;
@@ -78,9 +77,8 @@ export function montarCasamento(config: ConfiguracoesSite | null): Casamento {
       instagram: "",
       hashtag: "",
       prazoRsvp: null,
-      limitePadrao: 2,
       regrasAcompanhante:
-        "Cada convite vale para um número certo de pessoas. Confirme apenas quem está no seu convite.",
+        "Conte quem vem com você — nome, idade e se a pessoa vai à cerimônia, à festa ou às duas.",
       imagens: { logo: null, monograma: null, capa: null, compartilhamento: null },
       paleta: { oliva: null, lavanda: null, terra: null, creme: null },
       textos: {},
@@ -109,7 +107,6 @@ export function montarCasamento(config: ConfiguracoesSite | null): Casamento {
     instagram: config.instagram_url ?? "",
     hashtag: config.hashtag ?? "",
     prazoRsvp: config.rsvp_deadline,
-    limitePadrao: config.default_invite_limit,
     regrasAcompanhante: config.companion_rules ?? "",
     imagens: {
       logo: config.logo_path,
