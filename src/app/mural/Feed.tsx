@@ -145,7 +145,7 @@ function CartaoPost({
           type="button"
           onClick={alternarCurtida}
           aria-pressed={curti}
-          className={`inline-flex items-center gap-2 text-base transition-colors ${
+          className={`inline-flex min-h-11 items-center gap-2 text-base transition-colors ${
             curti ? "text-lavanda" : "text-terra hover:text-lavanda"
           }`}
         >
@@ -158,7 +158,7 @@ function CartaoPost({
           <button
             type="button"
             onClick={() => setVendoCurtidas(true)}
-            className="inline-block py-1.5 text-sm text-terra underline underline-offset-4 transition-colors hover:text-lavanda"
+            className="inline-flex min-h-11 items-center text-sm text-terra underline underline-offset-4 transition-colors hover:text-lavanda"
           >
             ver quem curtiu
           </button>
@@ -167,7 +167,7 @@ function CartaoPost({
         <button
           type="button"
           onClick={() => setComentando((v) => !v)}
-          className="inline-flex items-center gap-2 text-base text-terra transition-colors hover:text-oliva"
+          className="inline-flex min-h-11 items-center gap-2 text-base text-terra transition-colors hover:text-oliva"
         >
           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.6">
             <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.6-4.7A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z" />
@@ -187,7 +187,7 @@ function CartaoPost({
             <button
               type="button"
               onClick={apagar}
-              className="versalete inline-block py-1.5 text-xs text-red-800 underline underline-offset-4"
+              className="inline-flex min-h-11 items-center versalete text-xs text-red-800 underline underline-offset-4"
             >
               Apagar
             </button>
@@ -197,7 +197,7 @@ function CartaoPost({
               type="button"
               onClick={denunciar}
               disabled={denunciado}
-              className="versalete inline-block py-1.5 text-xs text-terra/70 underline underline-offset-4 disabled:no-underline"
+              className="inline-flex min-h-11 items-center versalete text-xs text-terra/70 underline underline-offset-4 disabled:no-underline"
             >
               {denunciado ? "Denunciado" : "Denunciar"}
             </button>
@@ -364,7 +364,7 @@ function Comentarios({
                     type="button"
                     onClick={() => apagar(c.id)}
                     aria-label="Apagar comentário"
-                    className="versalete shrink-0 text-xs text-terra/60 underline underline-offset-4 hover:text-red-800"
+                    className="inline-flex min-h-11 items-center versalete shrink-0 text-xs text-terra/60 underline underline-offset-4 hover:text-red-800"
                   >
                     Apagar
                   </button>

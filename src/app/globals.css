@@ -69,6 +69,26 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* O espaçamento largo das versaletes é lindo num título e desastroso num
+   botão de celular: "IMPORTAR PLANILHA" com 0.32em não cabe em 390px e cada
+   botão acaba ocupando a linha inteira. */
+@media (max-width: 639px) {
+  .versalete {
+    letter-spacing: 0.16em;
+  }
+}
+
+/* O iPhone dá zoom sozinho em qualquer campo com menos de 16px, e o zoom
+   não volta: a pessoa fica com a tela torta pelo resto da visita. Nenhum
+   campo escapa disso, nem os pequenininhos de tabela. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 1rem !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -111,6 +131,26 @@ body {
 .js-ativo .revelar.revelado {
   opacity: 1;
   transform: none;
+}
+
+/* O espaçamento largo das versaletes é lindo num título e desastroso num
+   botão de celular: "IMPORTAR PLANILHA" com 0.32em não cabe em 390px e cada
+   botão acaba ocupando a linha inteira. */
+@media (max-width: 639px) {
+  .versalete {
+    letter-spacing: 0.16em;
+  }
+}
+
+/* O iPhone dá zoom sozinho em qualquer campo com menos de 16px, e o zoom
+   não volta: a pessoa fica com a tela torta pelo resto da visita. Nenhum
+   campo escapa disso, nem os pequenininhos de tabela. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 1rem !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

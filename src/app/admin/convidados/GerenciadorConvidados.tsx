@@ -276,7 +276,7 @@ export function GerenciadorConvidados({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="versalete titulo-serif text-xs text-terra">Lista completa</p>
-          <h1 className="titulo-serif mt-2 text-4xl text-oliva">Convidados</h1>
+          <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Convidados</h1>
         </div>
         <div className="flex flex-wrap gap-3">
           <BotaoLink href="/admin/convidados/importar" variante="contorno">
@@ -357,7 +357,7 @@ export function GerenciadorConvidados({
         }
       >
         {/* ---------- Filtros ---------- */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <Rotulo htmlFor="busca">Buscar</Rotulo>
             <div className="relative">

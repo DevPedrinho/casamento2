@@ -167,7 +167,7 @@ function LinhaPost({ post, aoMudar }: { post: Publicacao; aoMudar: () => void })
               type="button"
               onClick={alternarOculto}
               disabled={ocupado}
-              className="versalete text-xs text-oliva underline underline-offset-4 disabled:opacity-50"
+              className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4 disabled:opacity-50"
             >
               {post.is_hidden ? "Mostrar de novo" : "Ocultar do mural"}
             </button>
@@ -175,7 +175,7 @@ function LinhaPost({ post, aoMudar }: { post: Publicacao; aoMudar: () => void })
               type="button"
               onClick={apagar}
               disabled={ocupado}
-              className="versalete text-xs text-red-800 underline underline-offset-4 disabled:opacity-50"
+              className="versalete inline-flex min-h-11 items-center text-xs text-red-800 underline underline-offset-4 disabled:opacity-50"
             >
               Apagar
             </button>

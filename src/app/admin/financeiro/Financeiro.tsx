@@ -249,7 +249,7 @@ export function Financeiro({
             </h3>
             {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <Rotulo htmlFor="d-desc">Descrição</Rotulo>
                 <input id="d-desc" required className="campo" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
@@ -260,7 +260,7 @@ export function Financeiro({
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div>
                 <Rotulo htmlFor="d-prev">Previsto (R$)</Rotulo>
                 <input id="d-prev" inputMode="decimal" className="campo" value={form.estimated} onChange={(e) => setForm({ ...form, estimated: e.target.value })} />
@@ -275,7 +275,7 @@ export function Financeiro({
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div>
                 <Rotulo htmlFor="d-status">Status</Rotulo>
                 <select id="d-status" className="campo" value={form.status}
@@ -437,7 +437,7 @@ function AlertasEGraficos({
   return (
     <div className="space-y-6">
       {(atrasadas.length > 0 || proximas.length > 0) && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {atrasadas.length > 0 && (
             <div className="rounded-sm border border-red-800/30 bg-red-50/60 px-6 py-5">
               <p className="versalete text-xs text-red-900">
@@ -477,7 +477,7 @@ function AlertasEGraficos({
       )}
 
       {porCategoria.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Bloco
             titulo="Planejado × realizado"
             descricao="Toque numa categoria para abrir as despesas dela, logo abaixo."
@@ -756,7 +756,7 @@ function FormPagamento({
   return (
     <form onSubmit={enviar} className="mt-4 space-y-4 border-t border-terra/15 pt-4">
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <Rotulo htmlFor={`p-valor-${despesaId}`}>Valor (R$)</Rotulo>
           <input id={`p-valor-${despesaId}`} inputMode="decimal" className="campo" value={valor} onChange={(e) => setValor(e.target.value)} />

@@ -20,7 +20,7 @@ export function BotaoSair() {
       type="button"
       onClick={sair}
       disabled={saindo}
-      className="versalete text-xs text-terra underline underline-offset-4 transition-colors hover:text-oliva disabled:opacity-50"
+      className="inline-flex min-h-11 items-center versalete text-xs text-terra underline underline-offset-4 transition-colors hover:text-oliva disabled:opacity-50"
     >
       {saindo ? "Saindo…" : "Sair da conta"}
     </button>

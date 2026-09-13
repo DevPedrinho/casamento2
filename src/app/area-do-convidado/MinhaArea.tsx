@@ -278,7 +278,7 @@ function AbaDados({ guestId, ficha }: { guestId: string; ficha: MinhaFicha | nul
         <input id="meu-nome" className="campo" value={nome} onChange={(e) => setNome(e.target.value)} />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <Rotulo htmlFor="meu-fone">WhatsApp</Rotulo>
           <input
@@ -302,7 +302,7 @@ function AbaDados({ guestId, ficha }: { guestId: string; ficha: MinhaFicha | nul
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <Rotulo htmlFor="minha-idade">Idade</Rotulo>
           <input

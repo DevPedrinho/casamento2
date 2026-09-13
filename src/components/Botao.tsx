@@ -4,7 +4,7 @@ import type { ComponentProps, ReactNode } from "react";
 type Variante = "solido" | "contorno" | "lavanda";
 
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-sm px-7 py-3 text-sm versalete titulo-serif transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oliva";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm sm:px-7 sm:py-3 versalete titulo-serif transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oliva";
 
 const VARIANTES: Record<Variante, string> = {
   solido: "bg-oliva text-creme-claro hover:bg-oliva-escuro shadow-sm",

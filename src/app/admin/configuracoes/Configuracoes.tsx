@@ -85,7 +85,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="versalete titulo-serif text-xs text-terra">Conteúdo do site</p>
-          <h1 className="titulo-serif mt-2 text-4xl text-oliva">Configurações</h1>
+          <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Configurações</h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
             O que está aqui aparece no site na hora. Nada disso exige mexer no
             código.
@@ -101,7 +101,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
 
       {/* ---------- Quem casa ---------- */}
       <Bloco titulo="Os noivos" descricao="Nomes, lema e a frase que abre o site.">
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <Rotulo htmlFor="noiva">Noiva</Rotulo>
             <input id="noiva" required className="campo" value={form.bride_name}
@@ -132,7 +132,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
 
       {/* ---------- Quando e onde ---------- */}
       <Bloco titulo="Data, horários e local" descricao="Alimentam a contagem regressiva e o bloco do grande dia.">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <Rotulo htmlFor="data">Data</Rotulo>
             <input id="data" type="date" className="campo" value={dataLocal}
@@ -186,7 +186,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
         titulo="Confirmação de presença"
         descricao="Até quando vocês aceitam resposta e o recado que o convidado lê antes de responder."
       >
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <Rotulo htmlFor="prazo">Prazo para confirmar</Rotulo>
             <input id="prazo" type="date" className="campo" value={form.rsvp_deadline ?? ""}
@@ -207,7 +207,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
 
       {/* ---------- Contato ---------- */}
       <Bloco titulo="Contato e redes" descricao="Como os convidados falam com vocês.">
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
             <Rotulo htmlFor="email">E-mail</Rotulo>
             <input id="email" type="email" className="campo" value={form.contact_email ?? ""}
@@ -228,7 +228,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
 
       {/* ---------- Imagens ---------- */}
       <Bloco titulo="Imagens" descricao="Monograma, logo e a imagem que aparece ao compartilhar o link.">
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <UploadImagem
             pasta="marca"
             rotulo="Monograma D + P"
@@ -267,7 +267,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
         titulo="Paleta"
         descricao="As cores da identidade. Deixe em branco para usar as do PDF original."
       >
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {CORES.map(({ campo, rotulo, padrao }) => {
             const valor = (form[campo] as string | null) ?? "";
             return (

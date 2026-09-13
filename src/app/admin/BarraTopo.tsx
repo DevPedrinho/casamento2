@@ -104,7 +104,7 @@ export function BarraTopo({ nome, pendencias }: { nome: string; pendencias: Pend
     <header className="sticky top-0 z-40 border-b border-terra/15 bg-creme-claro/95 backdrop-blur-sm">
       <div className="flex items-center gap-4 px-4 py-3 sm:px-6">
         {/* ---------- Marca, no canto superior esquerdo ---------- */}
-        <Link href="/admin" className="flex shrink-0 items-center gap-3">
+        <Link href="/admin" className="flex min-h-11 shrink-0 items-center gap-3">
           <Image
             src="/img/monograma-dp.png"
             alt=""

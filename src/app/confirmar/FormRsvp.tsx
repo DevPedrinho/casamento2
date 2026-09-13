@@ -253,7 +253,7 @@ export function FormRsvp({
         {/* ---------- Você vem? ---------- */}
         <fieldset>
           <legend className="versalete mb-3 block text-xs text-terra">Você vem?</legend>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {OPCOES.map((opcao) => (
               <Opcao
                 key={opcao}
@@ -299,7 +299,7 @@ export function FormRsvp({
                 ondeRecepcao={ondeRecepcao}
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Rotulo htmlFor="idade">Sua idade (opcional)</Rotulo>
                   <input
@@ -363,7 +363,7 @@ export function FormRsvp({
                     {linha.nome.trim() || `Acompanhante ${i + 1}`}
                   </p>
 
-                  <div className="grid gap-4 sm:grid-cols-[1fr_6rem]">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_6rem]">
                     <div>
                       <Rotulo htmlFor={`ac-nome-${i}`}>Nome completo</Rotulo>
                       <input
@@ -390,7 +390,7 @@ export function FormRsvp({
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Rotulo htmlFor={`ac-relacao-${i}`}>Quem é essa pessoa para você?</Rotulo>
                       <input
@@ -430,7 +430,7 @@ export function FormRsvp({
                     />
                   </div>
 
-                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Rotulo htmlFor={`ac-genero-${i}`}>Como se identifica (opcional)</Rotulo>
                       <select
@@ -538,7 +538,7 @@ function PerguntaPresenca({
   return (
     <fieldset>
       <legend className="versalete mb-2 block text-xs text-terra">{legenda}</legend>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {PRESENCAS.map((opcao) => (
           <Opcao
             key={opcao}

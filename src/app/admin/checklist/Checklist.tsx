@@ -220,7 +220,7 @@ function LinhaTarefa({
             onClick={aoAlternar}
             disabled={salvando}
             aria-label={`Mudar status de ${tarefa.title}`}
-            className="disabled:opacity-50"
+            className="-my-2 inline-flex min-h-11 items-center py-2 disabled:opacity-50"
           >
             <Selo tom={feita ? "oliva" : tarefa.status === "fazendo" ? "lavanda" : "neutro"}>
               {ROTULOS_TAREFA[tarefa.status]}
@@ -250,7 +250,7 @@ function LinhaTarefa({
       <button
         type="button"
         onClick={aoRemover}
-        className="versalete shrink-0 text-xs text-red-800 underline underline-offset-4"
+        className="inline-flex min-h-11 items-center versalete shrink-0 text-xs text-red-800 underline underline-offset-4"
       >
         Remover
       </button>
@@ -296,7 +296,7 @@ function SubTarefas({ tarefa }: { tarefa: Tarefa }) {
       <button
         type="button"
         onClick={() => setAbrindo(true)}
-        className="versalete mt-2 text-xs text-terra/70 underline underline-offset-4 hover:text-oliva"
+        className="inline-flex min-h-11 items-center versalete mt-2 text-xs text-terra/70 underline underline-offset-4 hover:text-oliva"
       >
         + subtarefa
       </button>
@@ -418,7 +418,7 @@ function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
     <form onSubmit={enviar} className="mb-8 space-y-5 rounded-sm border border-terra/20 bg-creme p-6">
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <div>
           <Rotulo htmlFor="t-title">Tarefa</Rotulo>
           <input id="t-title" required className="campo" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -429,7 +429,7 @@ function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
         <div>
           <Rotulo htmlFor="t-fase">Fase</Rotulo>
           <select id="t-fase" className="campo" value={phase} onChange={(e) => setPhase(e.target.value)}>

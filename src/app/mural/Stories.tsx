@@ -293,7 +293,7 @@ export function VisualizadorStories({
             <button
               type="button"
               onClick={() => setPainel("vistas")}
-              className="versalete text-xs text-creme-claro underline underline-offset-4"
+              className="inline-flex min-h-11 items-center versalete text-xs text-creme-claro underline underline-offset-4"
             >
               Visualizado por {story.visualizacoes?.length ?? 0}
             </button>
@@ -301,7 +301,7 @@ export function VisualizadorStories({
               <button
                 type="button"
                 onClick={() => setPainel("reacoes")}
-                className="versalete text-xs text-creme-claro underline underline-offset-4"
+                className="inline-flex min-h-11 items-center versalete text-xs text-creme-claro underline underline-offset-4"
               >
                 {story.reacoes?.length} reaç{(story.reacoes?.length ?? 0) === 1 ? "ão" : "ões"}
               </button>
@@ -309,7 +309,7 @@ export function VisualizadorStories({
             <button
               type="button"
               onClick={apagar}
-              className="versalete text-xs text-creme/80 underline underline-offset-4 hover:text-creme-claro"
+              className="inline-flex min-h-11 items-center versalete text-xs text-creme/80 underline underline-offset-4 hover:text-creme-claro"
             >
               Apagar story
             </button>

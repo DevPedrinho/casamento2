@@ -252,7 +252,7 @@ export function FichaConvidado({
               onChange={(e) => set("full_name", e.target.value)} />
           </Campo>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Campo id="grupo" rotulo="Família / grupo">
               <select id="grupo" className="campo" value={form.group_id}
                 onChange={(e) => set("group_id", e.target.value)}>
@@ -270,7 +270,7 @@ export function FichaConvidado({
             </Campo>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Campo id="vinculo" rotulo="Vínculo com os noivos">
               <select id="vinculo" className="campo" value={form.relationship_kind}
                 onChange={(e) => set("relationship_kind", e.target.value)}>
@@ -287,7 +287,7 @@ export function FichaConvidado({
             </Campo>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Campo id="papel" rotulo="Papel na cerimônia">
               <input id="papel" className="campo" placeholder="Madrinha, Padrinho…"
                 value={form.ceremony_role} onChange={(e) => set("ceremony_role", e.target.value)} />
@@ -303,7 +303,7 @@ export function FichaConvidado({
             </Campo>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             <Campo id="sexo" rotulo="Sexo">
               <select id="sexo" className="campo" value={form.gender}
                 onChange={(e) => set("gender", e.target.value)}>
@@ -323,7 +323,7 @@ export function FichaConvidado({
             </Campo>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Campo id="fone" rotulo="Telefone / WhatsApp">
               <input id="fone" className="campo" placeholder="85-9xxxx-xxxx" value={form.phone}
                 onChange={(e) => set("phone", e.target.value)} />
@@ -334,7 +334,7 @@ export function FichaConvidado({
             </Campo>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             <Campo id="status" rotulo="Status do convite">
               <select id="status" className="campo" value={form.invite_status}
                 onChange={(e) => set("invite_status", e.target.value as StatusConvite)}>
@@ -368,7 +368,7 @@ export function FichaConvidado({
             </Campo>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Campo id="ult" rotulo="Último contato">
               <input id="ult" type="date" className="campo" value={form.last_contact_at}
                 onChange={(e) => set("last_contact_at", e.target.value)} />
@@ -421,7 +421,7 @@ export function FichaConvidado({
             <button
               type="button"
               onClick={remover}
-              className="versalete ml-auto text-xs text-red-800 underline underline-offset-4"
+              className="inline-flex min-h-11 items-center versalete ml-auto text-xs text-red-800 underline underline-offset-4"
             >
               Remover
             </button>

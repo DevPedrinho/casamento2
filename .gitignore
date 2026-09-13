@@ -10,3 +10,7 @@ npm-debug.log*
 next-env.d.ts
 .vercel
 *.tsbuildinfo
+
+# Espelho local usado para conferir as telas no tamanho de celular.
+# Contém um despejo do banco (nomes, telefones, códigos) — nunca versionar.
+.preview/

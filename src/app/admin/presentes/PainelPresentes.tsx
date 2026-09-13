@@ -134,7 +134,7 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
           {erro && <Aviso tipo="erro">{erro}</Aviso>}
           {ok && <Aviso tipo="ok">{ok}</Aviso>}
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <Rotulo htmlFor="g-title">Nome do presente</Rotulo>
               <input
@@ -170,7 +170,7 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
             />
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <Rotulo htmlFor="g-preco">Valor em R$ (deixe vazio para valor livre)</Rotulo>
               <input
@@ -251,7 +251,7 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
                       {presente.category}
                     </span>
                   </p>
-                  <p className="mt-1.5 truncate text-sm text-terra">
+                  <p className="mt-1.5 text-sm break-all text-terra">
                     {formatarPreco(presente.price_cents) ?? "Valor livre"} ·{" "}
                     <span className="break-all">{presente.gift_url}</span>
                   </p>
@@ -260,21 +260,21 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
                   <button
                     type="button"
                     onClick={() => editar(presente)}
-                    className="versalete text-oliva underline underline-offset-4"
+                    className="inline-flex min-h-11 items-center versalete text-oliva underline underline-offset-4"
                   >
                     Editar
                   </button>
                   <button
                     type="button"
                     onClick={() => alternarAtivo(presente)}
-                    className="versalete text-terra underline underline-offset-4"
+                    className="inline-flex min-h-11 items-center versalete text-terra underline underline-offset-4"
                   >
                     {presente.is_active ? "Ocultar" : "Mostrar"}
                   </button>
                   <button
                     type="button"
                     onClick={() => remover(presente)}
-                    className="versalete text-red-800 underline underline-offset-4"
+                    className="inline-flex min-h-11 items-center versalete text-red-800 underline underline-offset-4"
                   >
                     Remover
                   </button>

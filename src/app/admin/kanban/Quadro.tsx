@@ -99,7 +99,7 @@ export function Quadro({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="versalete titulo-serif text-xs text-terra">Organização do projeto</p>
-          <h1 className="titulo-serif mt-2 text-4xl text-oliva">Quadro do casamento</h1>
+          <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Quadro do casamento</h1>
         </div>
         <Botao type="button" onClick={() => setNovoNaColuna(colunas[0]?.id ?? null)}>
           <Icone nome="mais" className="h-4 w-4" />

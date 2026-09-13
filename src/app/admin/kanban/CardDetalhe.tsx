@@ -172,7 +172,7 @@ export function CardDetalhe({
               onChange={(e) => set("description", e.target.value)} />
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
               <Rotulo htmlFor="k-col">Coluna</Rotulo>
               <select id="k-col" className="campo" value={form.column_id}
@@ -189,7 +189,7 @@ export function CardDetalhe({
             </div>
           </div>
 
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             <div>
               <Rotulo htmlFor="k-prio">Prioridade</Rotulo>
               <select id="k-prio" className="campo" value={form.priority}
@@ -293,7 +293,7 @@ export function CardDetalhe({
           <Botao type="button" variante="contorno" onClick={aoFechar}>Cancelar</Botao>
           {card && (
             <button type="button" onClick={remover}
-              className="versalete ml-auto text-xs text-red-800 underline underline-offset-4">
+              className="inline-flex min-h-11 items-center versalete ml-auto text-xs text-red-800 underline underline-offset-4">
               Remover
             </button>
           )}

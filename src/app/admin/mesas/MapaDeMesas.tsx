@@ -199,7 +199,7 @@ export function MapaDeMesas({
     <div className="space-y-8">
       <header>
         <p className="versalete titulo-serif text-xs text-terra">Recepção</p>
-        <h1 className="titulo-serif mt-2 text-4xl text-oliva sm:text-5xl">Mesas</h1>
+        <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl lg:text-5xl">Mesas</h1>
         <p className="mt-3 max-w-2xl text-base text-terra">
           Quem vai à festa precisa de uma cadeira. Escolha uma pessoa da lista
           de fora e toque na mesa onde ela senta — os acompanhantes vão junto.
@@ -229,7 +229,7 @@ export function MapaDeMesas({
           ) : undefined
         }
       >
-        <div className="grid gap-4 sm:grid-cols-[1fr_8rem_auto] sm:items-end">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_8rem_auto] sm:items-end">
           <div>
             <Rotulo htmlFor="mesa-nome">Nome da mesa</Rotulo>
             <input
@@ -268,7 +268,7 @@ export function MapaDeMesas({
             : "Toque em alguém para escolher a mesa."
         }
       >
-        <div className="mb-4 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
             <Rotulo htmlFor="busca-mesa">Buscar</Rotulo>
             <input
@@ -325,7 +325,7 @@ export function MapaDeMesas({
           <Vazio>Nenhuma mesa criada ainda.</Vazio>
         </Bloco>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {mesas.map((mesa) => {
             const nela = porMesa.mapa.get(mesa.id) ?? [];
             const ocupados = nela.reduce((s, g) => s + g.cadeiras.length, 0);
@@ -394,7 +394,7 @@ export function MapaDeMesas({
                           onClick={() => mover(g.titular.id, null)}
                           disabled={salvando}
                           aria-label={`Tirar ${g.titular.full_name} da mesa`}
-                          className="shrink-0 text-terra transition-colors hover:text-red-800"
+                          className="-my-2 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center text-terra transition-colors hover:text-red-800"
                         >
                           <Icone nome="fechar" className="h-4 w-4" />
                         </button>
@@ -404,8 +404,8 @@ export function MapaDeMesas({
                 )}
 
                 <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-terra/15 pt-4">
-                  <label className="flex items-center gap-2 text-xs text-terra">
-                    <span className="versalete">Lugares</span>
+                  <label className="flex min-h-11 items-center gap-2 text-terra">
+                    <span className="versalete text-xs">Lugares</span>
                     <input
                       type="number"
                       min={1}
@@ -417,7 +417,7 @@ export function MapaDeMesas({
                         if (v && v !== mesa.seats) void mudarLugares(mesa, v);
                       }}
                       aria-label={`Lugares na ${mesa.name}`}
-                      className="campo w-20 py-1.5"
+                      className="campo w-20 py-2"
                     />
                   </label>
                   <button

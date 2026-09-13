@@ -30,7 +30,7 @@ export function EditorTimeline({ capitulos }: { capitulos: CapituloTimeline[] })
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="versalete titulo-serif text-xs text-terra">Nossa história</p>
-          <h1 className="titulo-serif mt-2 text-4xl text-oliva">Timeline do casal</h1>
+          <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Timeline do casal</h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
             Cada capítulo é um ano. O resumo aparece direto; atrás do
             &ldquo;Ver mais&rdquo; cabem até três parágrafos.
@@ -129,7 +129,7 @@ function FormCapitulo({ capitulo }: { capitulo: CapituloTimeline }) {
           {erro && <Aviso tipo="erro">{erro}</Aviso>}
           {ok && <Aviso tipo="ok">Salvo!</Aviso>}
 
-          <div className="grid gap-5 sm:grid-cols-[1fr_2fr]">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_2fr]">
             <div>
               <Rotulo htmlFor="t-periodo">Período</Rotulo>
               <input id="t-periodo" required className="campo" placeholder="Ano 1"
@@ -160,7 +160,7 @@ function FormCapitulo({ capitulo }: { capitulo: CapituloTimeline }) {
               {salvando ? "Salvando…" : "Salvar"}
             </Botao>
             <button type="button" onClick={removerCapitulo}
-              className="versalete ml-auto text-xs text-red-800 underline underline-offset-4">
+              className="inline-flex min-h-11 items-center versalete ml-auto text-xs text-red-800 underline underline-offset-4">
               Remover capítulo
             </button>
           </div>
@@ -253,7 +253,7 @@ function Galeria({ capitulo }: { capitulo: CapituloTimeline }) {
       {capitulo.fotos.length === 0 ? (
         <Vazio>Nenhuma foto neste capítulo ainda.</Vazio>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {capitulo.fotos.map((foto, i) => (
             <li key={foto.id} className="overflow-hidden rounded-sm border border-terra/20 bg-creme">
               <div className="relative aspect-4/3">
@@ -272,26 +272,26 @@ function Galeria({ capitulo }: { capitulo: CapituloTimeline }) {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   {!foto.is_cover && (
                     <button type="button" onClick={() => definirCapa(foto)}
-                      className="versalete text-xs text-oliva underline underline-offset-4">
+                      className="inline-flex min-h-11 items-center versalete text-xs text-oliva underline underline-offset-4">
                       Tornar principal
                     </button>
                   )}
                   <button type="button" onClick={() => trocarLegenda(foto)}
-                    className="versalete text-xs text-terra underline underline-offset-4">
+                    className="inline-flex min-h-11 items-center versalete text-xs text-terra underline underline-offset-4">
                     Legenda
                   </button>
                   <button type="button" onClick={() => mover(foto, -1)} disabled={i === 0}
                     aria-label="Mover para trás"
-                    className="versalete text-xs text-terra disabled:opacity-30">
+                    className="versalete inline-flex h-11 w-11 items-center justify-center text-base text-terra disabled:opacity-30">
                     ←
                   </button>
                   <button type="button" onClick={() => mover(foto, 1)}
                     disabled={i === capitulo.fotos.length - 1} aria-label="Mover para frente"
-                    className="versalete text-xs text-terra disabled:opacity-30">
+                    className="versalete inline-flex h-11 w-11 items-center justify-center text-base text-terra disabled:opacity-30">
                     →
                   </button>
                   <button type="button" onClick={() => remover(foto)}
-                    className="versalete ml-auto text-xs text-red-800 underline underline-offset-4">
+                    className="inline-flex min-h-11 items-center versalete ml-auto text-xs text-red-800 underline underline-offset-4">
                     Excluir
                   </button>
                 </div>

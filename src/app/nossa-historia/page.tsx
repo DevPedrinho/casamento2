@@ -88,7 +88,7 @@ export default async function NossaHistoria() {
       <Timeline capitulos={capitulos} />
 
       <Secao fundo="oliva" sobretitulo="O que nos guia" titulo={CASAMENTO.lema}>
-        <div className="grid gap-10 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
           {VALORES.map((valor) => (
             <article key={valor.titulo} className="text-center">
               <Coracao className="mx-auto w-4 text-lavanda-claro" />

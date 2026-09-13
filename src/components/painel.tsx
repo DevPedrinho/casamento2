@@ -23,10 +23,10 @@ export function Indicador({
   } as const;
 
   return (
-    <div className="rounded-sm border border-terra/20 bg-creme-claro px-5 py-6 text-center">
-      <span className={`titulo-serif block text-3xl tabular-nums lining-nums ${tons[tom]}`}>{valor}</span>
-      <span className="versalete mt-2 block text-xs text-terra">{rotulo}</span>
-      {detalhe && <span className="mt-1.5 block text-sm text-terra/85">{detalhe}</span>}
+    <div className="rounded-sm border border-terra/20 bg-creme-claro px-3 py-4 text-center sm:px-5 sm:py-6">
+      <span className={`titulo-serif block text-2xl tabular-nums lining-nums sm:text-3xl ${tons[tom]}`}>{valor}</span>
+      <span className="versalete mt-1.5 block text-xs text-terra sm:mt-2">{rotulo}</span>
+      {detalhe && <span className="mt-1 block text-sm text-terra/85">{detalhe}</span>}
     </div>
   );
 }

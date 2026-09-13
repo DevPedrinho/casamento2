@@ -225,7 +225,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
             </h3>
             {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div>
                 <Rotulo htmlFor="f-nome">Nome</Rotulo>
                 <input id="f-nome" required className="campo" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -248,7 +248,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div>
                 <Rotulo htmlFor="f-contato">Pessoa de contato</Rotulo>
                 <input id="f-contato" className="campo" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
@@ -263,7 +263,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <Rotulo htmlFor="f-insta">Instagram</Rotulo>
                 <input id="f-insta" className="campo" placeholder="@perfil" value={form.instagram} onChange={(e) => setForm({ ...form, instagram: e.target.value })} />
@@ -274,7 +274,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <Rotulo htmlFor="f-empresa">Empresa / razão social</Rotulo>
                 <input id="f-empresa" className="campo" value={form.company}
@@ -288,7 +288,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div>
                 <Rotulo htmlFor="f-orc">Orçamento recebido (R$)</Rotulo>
                 <input id="f-orc" inputMode="decimal" className="campo" placeholder="12000,00" value={form.quoted} onChange={(e) => setForm({ ...form, quoted: e.target.value })} />
@@ -304,7 +304,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
               </div>
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <Rotulo htmlFor="f-acao">Próximo passo</Rotulo>
                 <input id="f-acao" className="campo" placeholder="Pedir orçamento, agendar visita…" value={form.next_action} onChange={(e) => setForm({ ...form, next_action: e.target.value })} />
@@ -356,7 +356,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
                 {itens.length === 0 ? (
                   <p className="text-sm text-terra/70">Ninguém nesta etapa.</p>
                 ) : (
-                  <ul className="grid gap-4 lg:grid-cols-2">
+                  <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     {itens.map((f) => (
                       <CartaoFornecedor
                         key={f.id}
@@ -438,7 +438,7 @@ function CartaoFornecedor({
                 href={`https://wa.me/55${f.phone.replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline underline-offset-4 hover:text-oliva"
+                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-oliva"
               >
                 {f.phone}
               </a>
@@ -451,7 +451,7 @@ function CartaoFornecedor({
                 href={`https://instagram.com/${f.instagram}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline underline-offset-4 hover:text-oliva"
+                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-oliva"
               >
                 @{f.instagram}
               </a>
@@ -459,7 +459,7 @@ function CartaoFornecedor({
           )}
           {site && (
             <p>
-              <a href={site} target="_blank" rel="noopener noreferrer" className="break-all underline underline-offset-4 hover:text-oliva">
+              <a href={site} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center break-all underline underline-offset-4 hover:text-oliva">
                 {site.replace(/^https?:\/\//, "")}
               </a>
             </p>
@@ -494,7 +494,7 @@ function CartaoFornecedor({
       {linkSeguro(f.contract_url ?? null) && (
         <p className="mt-2">
           <a href={linkSeguro(f.contract_url ?? null)!} target="_blank" rel="noopener noreferrer"
-            className="versalete text-xs text-oliva underline underline-offset-4">
+            className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4">
             Ver contrato
           </a>
         </p>
@@ -510,22 +510,22 @@ function CartaoFornecedor({
       {f.notes && <p className="mt-3 text-sm leading-relaxed text-terra/85">{f.notes}</p>}
 
       <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-terra/15 pt-4">
-        <label className="versalete text-xs text-terra">
+        <label className="versalete flex min-h-11 items-center text-xs text-terra">
           Mover para{" "}
           <select
             value={f.status}
             onChange={(e) => aoMover(e.target.value as StatusFornecedor)}
-            className="ml-1 rounded-sm border border-terra/30 bg-creme-claro px-2 py-1 text-sm normal-case tracking-normal text-oliva"
+            className="ml-1 min-h-11 rounded-sm border border-terra/30 bg-creme-claro px-2 py-1 normal-case tracking-normal text-oliva"
           >
             {ETAPAS_FUNIL.map((s) => (
               <option key={s} value={s}>{ROTULOS_FORNECEDOR[s]}</option>
             ))}
           </select>
         </label>
-        <button type="button" onClick={aoEditar} className="versalete text-xs text-oliva underline underline-offset-4">
+        <button type="button" onClick={aoEditar} className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4">
           Editar
         </button>
-        <button type="button" onClick={aoRemover} className="versalete text-xs text-red-800 underline underline-offset-4">
+        <button type="button" onClick={aoRemover} className="versalete inline-flex min-h-11 items-center text-xs text-red-800 underline underline-offset-4">
           Remover
         </button>
       </div>

@@ -241,10 +241,10 @@ export function Importador({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="versalete titulo-serif text-xs text-terra">Convidados</p>
-          <h1 className="titulo-serif mt-2 text-4xl text-oliva">Importar planilha</h1>
+          <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Importar planilha</h1>
         </div>
         <Link href="/admin/convidados"
-          className="versalete text-xs text-oliva underline underline-offset-4">
+          className="inline-flex min-h-11 items-center versalete text-xs text-oliva underline underline-offset-4">
           Voltar para a lista
         </Link>
       </header>
@@ -339,7 +339,7 @@ export function Importador({
         <Bloco titulo="Ligue as colunas aos campos" descricao="O que não tiver campo correspondente é guardado como informação extra — nada da planilha se perde.">
           <ul className="space-y-3">
             {planilha.cabecalho.map((coluna, i) => (
-              <li key={coluna} className="grid items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+              <li key={coluna} className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
                 <span className="titulo-serif truncate text-base text-oliva" title={coluna}>
                   {coluna}
                 </span>

@@ -90,7 +90,7 @@ export function Personagens({ convidados }: { convidados: Personagem[] }) {
     <div className="space-y-8">
       <header>
         <p className="versalete titulo-serif text-xs text-terra">Mural e cerimônia</p>
-        <h1 className="titulo-serif mt-2 text-4xl text-oliva sm:text-5xl">
+        <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl lg:text-5xl">
           Personagens principais
         </h1>
         <p className="mt-3 max-w-2xl text-base text-terra">
@@ -203,7 +203,7 @@ export function Personagens({ convidados }: { convidados: Personagem[] }) {
                   )}
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_7rem_auto] sm:items-end">
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_7rem_auto] sm:items-end">
                   <div>
                     <Rotulo htmlFor={`papel-${c.id}`}>Papel na cerimônia</Rotulo>
                     <input

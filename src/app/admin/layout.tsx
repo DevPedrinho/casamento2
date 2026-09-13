@@ -31,7 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen bg-creme">
       <BarraTopo nome={perfil.full_name ?? ""} pendencias={pendencias} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 pt-6 pb-28 sm:px-6 sm:pt-10 sm:pb-32">{children}</main>
 
       {/* A cerimonialista só existe aqui dentro. */}
       <Assistente

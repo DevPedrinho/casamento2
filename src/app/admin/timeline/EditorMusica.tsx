@@ -187,7 +187,7 @@ export function EditorMusica({ musica }: { musica: MusicaDoSite }) {
           </Botao>
         </div>
 
-        <form onSubmit={salvarNomes} className="grid gap-4 sm:grid-cols-2">
+        <form onSubmit={salvarNomes} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Rotulo htmlFor="musica-titulo">Nome da música</Rotulo>
             <input

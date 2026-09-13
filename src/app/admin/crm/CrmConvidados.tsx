@@ -83,7 +83,7 @@ export function CrmConvidados({ convidados }: { convidados: ConvidadoCompleto[] 
     <div className="space-y-8">
       <header>
         <p className="versalete titulo-serif text-xs text-terra">Funil do convite</p>
-        <h1 className="titulo-serif mt-2 text-4xl text-oliva">CRM de convidados</h1>
+        <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">CRM de convidados</h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
           Arraste os cards entre as etapas. O status muda no mesmo cadastro que o
           gerenciador de convidados usa — não existe lista paralela.
@@ -211,7 +211,7 @@ function CardConvidado({
           href={`https://wa.me/55${fone}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 block truncate text-sm text-terra underline underline-offset-4 hover:text-oliva"
+          className="mt-2 flex min-h-11 items-center truncate text-sm text-terra underline underline-offset-4 hover:text-oliva"
         >
           {c.whatsapp ?? c.phone}
         </a>
@@ -236,7 +236,7 @@ function CardConvidado({
         <select
           value={c.invite_status}
           onChange={(e) => aoMover(e.target.value as StatusConvite)}
-          className="mt-1 w-full rounded-sm border border-terra/30 bg-creme-claro px-2 py-1.5 text-sm normal-case tracking-normal text-oliva"
+          className="mt-1 min-h-11 w-full rounded-sm border border-terra/30 bg-creme-claro px-2 py-1.5 normal-case tracking-normal text-oliva"
         >
           {ETAPAS_CONVITE.map((s) => (
             <option key={s} value={s}>{ROTULOS_CONVITE[s]}</option>

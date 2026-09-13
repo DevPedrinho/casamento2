@@ -143,7 +143,7 @@ export default async function Home() {
 
       {/* ---------- Detalhes do dia ---------- */}
       <Secao fundo="oliva" sobretitulo="Anote na agenda" titulo="O grande dia">
-        <div className="grid gap-10 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-3">
           {detalhes.map((item) => (
             <div key={item.titulo} className="text-center">
               <h3 className="versalete titulo-serif text-xs text-creme/70">{item.titulo}</h3>
@@ -160,7 +160,7 @@ export default async function Home() {
                   href={item.mapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="versalete titulo-serif mt-4 inline-block border-b border-creme/40 pb-1 text-xs text-creme-claro transition-colors hover:border-creme"
+                  className="versalete titulo-serif mt-4 inline-flex min-h-11 items-center border-b border-creme/40 pb-1 text-xs text-creme-claro transition-colors hover:border-creme"
                 >
                   Ver no mapa
                 </a>
@@ -179,7 +179,7 @@ export default async function Home() {
 
       {/* ---------- Chamadas finais ---------- */}
       <Secao fundo="claro" sobretitulo="Participe" titulo="Como estar com a gente">
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
           <article className="rounded-sm border border-terra/20 bg-creme p-9 text-center">
             <h3 className="titulo-serif text-2xl text-oliva">Confirme sua presença</h3>
             <p className="mt-4 text-base leading-relaxed text-terra">

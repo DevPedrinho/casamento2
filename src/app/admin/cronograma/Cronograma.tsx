@@ -160,7 +160,7 @@ export function Cronograma({
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="versalete titulo-serif text-xs text-terra">Organização do dia</p>
-          <h1 className="titulo-serif mt-2 text-4xl text-oliva">Cronograma</h1>
+          <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Cronograma</h1>
           <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
             Do primeiro pincel à última música. O que estiver marcado como
             &ldquo;os convidados veem&rdquo; aparece no site; o resto fica entre
@@ -185,7 +185,7 @@ export function Cronograma({
           <form onSubmit={salvar} className="space-y-5">
             {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
-            <div className="grid gap-4 sm:grid-cols-[8rem_8rem_1fr]">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[8rem_8rem_1fr]">
               <div>
                 <Rotulo htmlFor="c-inicio">Começa</Rotulo>
                 <input
@@ -232,7 +232,7 @@ export function Cronograma({
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Rotulo htmlFor="c-local">Onde</Rotulo>
                 <input

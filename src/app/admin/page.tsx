@@ -252,7 +252,7 @@ export default async function Dashboard() {
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="versalete titulo-serif text-xs text-terra">Central de controle</p>
-          <h1 className="titulo-serif mt-2 text-4xl text-oliva sm:text-5xl">
+          <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl lg:text-5xl">
             {CASAMENTO.noiva} &amp; {CASAMENTO.noivo}
           </h1>
         </div>
@@ -284,7 +284,7 @@ export default async function Dashboard() {
         <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">
           Quem vem para quê
         </h2>
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Bloco
               titulo="Cerimônia, festa ou as duas"
@@ -333,7 +333,7 @@ export default async function Dashboard() {
         <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">
           Quem são os convidados
         </h2>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Bloco
             titulo="Vínculo com vocês"
             descricao={
@@ -391,7 +391,7 @@ export default async function Dashboard() {
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* ---------- Próximas ações ---------- */}
         <div className="lg:col-span-2">
           <Bloco
@@ -458,7 +458,7 @@ export default async function Dashboard() {
         </Bloco>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* ---------- Gastos por categoria ---------- */}
         <Bloco
           titulo="Gastos por categoria"
@@ -489,7 +489,7 @@ export default async function Dashboard() {
           </ul>
           <Link
             href="/admin/locais"
-            className="versalete mt-5 inline-block text-xs text-oliva underline underline-offset-4"
+            className="versalete mt-5 inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4"
           >
             Editar informações do evento
           </Link>

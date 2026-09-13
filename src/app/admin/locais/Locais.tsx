@@ -14,7 +14,7 @@ export function Locais({ locais }: { locais: LocalEvento[] }) {
     <div className="space-y-8">
       <header>
         <p className="versalete titulo-serif text-xs text-terra">Informações do evento</p>
-        <h1 className="titulo-serif mt-2 text-4xl text-oliva">Onde é a festa</h1>
+        <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Onde é a festa</h1>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
           Estes dados aparecem para os convidados na página inicial e na área
           logada. O que estiver em branco simplesmente não é exibido.
@@ -99,7 +99,7 @@ function FormLocal({ local }: { local: LocalEvento }) {
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {ok && <Aviso tipo="ok">Salvo!</Aviso>}
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <Rotulo htmlFor={`nome-${local.id}`}>Nome do local</Rotulo>
             <input id={`nome-${local.id}`} required className="campo" value={form.name}
@@ -112,7 +112,7 @@ function FormLocal({ local }: { local: LocalEvento }) {
           </div>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <div>
             <Rotulo htmlFor={`end-${local.id}`}>Endereço</Rotulo>
             <input id={`end-${local.id}`} className="campo" placeholder="Rua, número, bairro"
@@ -131,7 +131,7 @@ function FormLocal({ local }: { local: LocalEvento }) {
             value={form.maps_url} onChange={(e) => set("maps_url", e.target.value)} />
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
             <Rotulo htmlFor={`insta-${local.id}`}>Instagram</Rotulo>
             <input id={`insta-${local.id}`} className="campo" placeholder="@perfil"
