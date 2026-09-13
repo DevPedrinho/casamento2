@@ -8,6 +8,8 @@ import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco, BarrasCategoria, Indicador, LinhaValor, Progresso, Selo, Vazio } from "@/components/painel";
+import { BarrasInterativas, type Fatia } from "@/components/graficos";
+import { Icone } from "@/components/Icones";
 
 /** Soma dos pagamentos já lançados em uma despesa. */
 function totalPago(despesa: Despesa): number {
@@ -57,10 +59,13 @@ export function Financeiro({
   despesas,
   fornecedores,
   orcamentoTotal,
+  categoriaInicial,
 }: {
   despesas: Despesa[];
   fornecedores: Fornecedor[];
   orcamentoTotal: number;
+  /** Categoria que já chega aberta, quando o clique veio do dashboard. */
+  categoriaInicial?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
@@ -69,6 +74,21 @@ export function Financeiro({
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [pagandoId, setPagandoId] = useState<string | null>(null);
+
+  // As categorias começam fechadas: o orçamento inteiro aberto vira uma
+  // parede de números. A que veio do gráfico já abre.
+  const [abertas, setAbertas] = useState<Set<string>>(
+    () => new Set(categoriaInicial ? [categoriaInicial] : []),
+  );
+
+  function alternarCategoria(categoria: string) {
+    setAbertas((atual) => {
+      const nova = new Set(atual);
+      if (nova.has(categoria)) nova.delete(categoria);
+      else nova.add(categoria);
+      return nova;
+    });
+  }
 
   const resumo = useMemo(() => {
     const previsto = despesas.reduce((s, d) => s + d.estimated_cents, 0);
@@ -189,7 +209,15 @@ export function Financeiro({
         />
       </div>
 
-      <AlertasEGraficos despesas={despesas} />
+      <AlertasEGraficos
+        despesas={despesas}
+        aoEscolherCategoria={(categoria) => {
+          setAbertas((atual) => new Set(atual).add(categoria));
+          document
+            .getElementById(`categoria-${encodeURIComponent(categoria)}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      />
 
       <OrcamentoTotal
         total={orcamentoTotal}
@@ -305,15 +333,30 @@ export function Financeiro({
             {porCategoria.map(([categoria, itens]) => {
               const catPrevisto = itens.reduce((s, d) => s + d.estimated_cents, 0);
               const catPago = itens.reduce((s, d) => s + totalPago(d), 0);
+              const aberta = abertas.has(categoria);
               return (
-                <section key={categoria}>
-                  <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3 border-b border-terra/20 pb-2">
-                    <h3 className="versalete titulo-serif text-xs text-lavanda">{categoria}</h3>
+                <section key={categoria} id={`categoria-${encodeURIComponent(categoria)}`}>
+                  <button
+                    type="button"
+                    onClick={() => alternarCategoria(categoria)}
+                    aria-expanded={aberta}
+                    className="mb-4 flex w-full flex-wrap items-baseline justify-between gap-3 border-b border-terra/20 pb-2 text-left transition-colors hover:border-oliva/40"
+                  >
+                    <h3 className="versalete titulo-serif flex items-center gap-2 text-xs text-lavanda">
+                      <Icone
+                        nome="recolher"
+                        className={`h-4 w-4 transition-transform ${aberta ? "-rotate-90" : ""}`}
+                      />
+                      {categoria}
+                      <span className="text-terra">
+                        {itens.length} {itens.length > 1 ? "itens" : "item"}
+                      </span>
+                    </h3>
                     <p className="text-sm text-terra tabular-nums lining-nums">
                       previsto {reais(catPrevisto)} · pago {reais(catPago)}
                     </p>
-                  </div>
-                  <ul className="space-y-3">
+                  </button>
+                  <ul className="space-y-3" hidden={!aberta}>
                     {itens.map((d) => (
                       <LinhaDespesa
                         key={d.id}
@@ -341,7 +384,13 @@ export function Financeiro({
 }
 
 /** Alertas de vencimento e os dois gráficos do financeiro. */
-function AlertasEGraficos({ despesas }: { despesas: Despesa[] }) {
+function AlertasEGraficos({
+  despesas,
+  aoEscolherCategoria,
+}: {
+  despesas: Despesa[];
+  aoEscolherCategoria: (categoria: string) => void;
+}) {
   const atrasadas = despesas.filter((d) => statusReal(d) === "atrasado");
   const proximas = despesas.filter((d) => {
     const dias = diasAte(d.due_date);
@@ -357,8 +406,14 @@ function AlertasEGraficos({ despesas }: { despesas: Despesa[] }) {
     return mapa;
   }, new Map<string, { previsto: number; pago: number }>())]
     .filter(([, v]) => v.previsto > 0 || v.pago > 0)
-    .sort((a, b) => b[1].previsto - a[1].previsto)
-    .map(([rotulo, v]) => ({ rotulo, valor: v.pago, secundario: v.previsto }));
+    .sort((a, b) => b[1].previsto - a[1].previsto);
+
+  const fatiasPorCategoria: Fatia[] = porCategoria.map(([rotulo, v]) => ({
+    chave: rotulo,
+    rotulo,
+    valor: v.previsto,
+    detalhe: `${reais(v.pago)} pagos de ${reais(v.previsto)} previstos`,
+  }));
 
   // Evolução: pagamentos acumulados mês a mês.
   const evolucao = (() => {
@@ -423,8 +478,15 @@ function AlertasEGraficos({ despesas }: { despesas: Despesa[] }) {
 
       {porCategoria.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-2">
-          <Bloco titulo="Planejado × realizado" descricao="Barra cheia é o pago; a clara, o previsto.">
-            <BarrasCategoria itens={porCategoria} formatar={reais} />
+          <Bloco
+            titulo="Planejado × realizado"
+            descricao="Toque numa categoria para abrir as despesas dela, logo abaixo."
+          >
+            <BarrasInterativas
+              itens={fatiasPorCategoria}
+              tom={2}
+              aoClicar={aoEscolherCategoria}
+            />
           </Bloco>
 
           <Bloco titulo="Evolução dos pagamentos" descricao="Quanto já saiu do bolso, acumulado por mês.">

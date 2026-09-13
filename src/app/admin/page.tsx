@@ -1,10 +1,28 @@
 import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
-import type { Despesa, Fornecedor, LocalEvento, StatusConvite, Tarefa } from "@/lib/tipos";
-import { ROTULOS_CONVITE, ROTULOS_LOCAL } from "@/lib/tipos";
+import type {
+  Acompanhante,
+  Despesa,
+  Fornecedor,
+  Genero,
+  LocalEvento,
+  Presenca,
+  StatusConvite,
+  Tarefa,
+  Vinculo,
+} from "@/lib/tipos";
+import {
+  PRESENCAS,
+  ROTULOS_CONVITE,
+  ROTULOS_LOCAL,
+  ROTULOS_PRESENCA,
+  ROTULOS_VINCULO,
+  VINCULOS,
+} from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
 import { diasAte, formatarData, reais } from "@/lib/formato";
-import { Anel, BarrasCategoria, Bloco, Indicador, Progresso, Selo, Vazio } from "@/components/painel";
+import { Anel, Bloco, Indicador, Progresso, Selo, Vazio } from "@/components/painel";
+import { BarrasInterativas, Rosca, type Fatia } from "@/components/graficos";
 import { Icone, type NomeIcone } from "@/components/Icones";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +32,11 @@ type Acao = { texto: string; detalhe: string; href: string; urgente: boolean; ic
 export default async function Dashboard() {
   const supabase = await criarClienteServidor();
 
-  const [convidados, tarefas, despesas, fornecedores, presentes, posts, config, locais] =
+  const [convidados, tarefas, despesas, fornecedores, presentes, posts, config, locais, acompanhantes] =
     await Promise.all([
       supabase.from("guests").select(
-        "id, full_name, invite_status, companions_planned, group_id, next_action, next_action_at",
+        `id, full_name, invite_status, companions_planned, group_id, next_action,
+         next_action_at, attends, gender, age, age_range, relationship_kind, side`,
       ),
       supabase.from("tasks").select("*").order("phase_order").order("sort_order"),
       supabase.from("expenses").select("*, payments(*)"),
@@ -26,6 +45,7 @@ export default async function Dashboard() {
       supabase.from("posts").select("id, kind, created_at, caption").order("created_at", { ascending: false }).limit(5),
       supabase.from("wedding_settings").select("budget_total_cents").eq("id", true).maybeSingle(),
       supabase.from("event_venues").select("*").order("sort_order"),
+      supabase.from("rsvp_companions").select("*"),
     ]);
 
   const listaConvidados = convidados.data ?? [];
@@ -37,8 +57,92 @@ export default async function Dashboard() {
   // ---------- Convidados ----------
   const conta = (s: StatusConvite) => listaConvidados.filter((c) => c.invite_status === s).length;
   const confirmados = listaConvidados.filter((c) => c.invite_status === "confirmado");
-  const pessoas = confirmados.reduce((s, c) => s + 1 + (c.companions_planned ?? 0), 0);
-  const familias = new Set(listaConvidados.map((c) => c.group_id).filter(Boolean)).size;
+  const familiasComGrupo = new Set(listaConvidados.map((c) => c.group_id).filter(Boolean)).size;
+
+  // ---------- Quem vem para quê ----------
+  //
+  // A conta é por pessoa, não por convite: o acompanhante come, senta e
+  // ocupa lugar igual ao de quem o trouxe. É esse número que o buffet pede.
+  type Pessoa = { attends: Presenca | null; gender: Genero | null; age: number | null };
+
+  const listaAcompanhantes = (acompanhantes.data ?? []) as Acompanhante[];
+
+  const pessoas: Pessoa[] = [
+    ...listaConvidados
+      .filter((c) => c.invite_status === "confirmado")
+      .map((c) => ({ attends: c.attends, gender: c.gender, age: c.age })),
+    ...listaAcompanhantes.map((a) => ({
+      attends: a.attends,
+      gender: a.gender,
+      age: a.age,
+    })),
+  ];
+
+  const responderam = pessoas.filter((p) => p.attends !== null);
+  const vaiPara = (p: Presenca) => responderam.filter((x) => x.attends === p).length;
+
+  const naRecepcao = responderam.filter(
+    (p) => p.attends === "ambos" || p.attends === "recepcao",
+  );
+  const criancasNaRecepcao = naRecepcao.filter((p) => p.age !== null && p.age < 12).length;
+  const adultosNaRecepcao = naRecepcao.length - criancasNaRecepcao;
+
+  const presenca: Fatia[] = PRESENCAS.map((chave) => ({
+    chave,
+    rotulo: ROTULOS_PRESENCA[chave],
+    valor: vaiPara(chave),
+    href: `/admin/convidados?presenca=${chave}`,
+  })).filter((f) => f.valor > 0);
+
+  // ---------- O retrato dos convidados ----------
+  const contarPor = <T extends string>(
+    valores: (T | null)[],
+    ordem: T[],
+    rotulos: Record<T, string>,
+    parametro: string,
+  ): Fatia[] =>
+    ordem
+      .map((chave) => ({
+        chave,
+        rotulo: rotulos[chave],
+        valor: valores.filter((v) => v === chave).length,
+        href: `/admin/convidados?${parametro}=${chave}`,
+      }))
+      .filter((f) => f.valor > 0);
+
+  const FAIXAS = ["Criança", "Adolescente", "Adulto", "Idoso"];
+  const porFaixa: Fatia[] = FAIXAS.map((faixa) => ({
+    chave: faixa,
+    rotulo: faixa,
+    valor: listaConvidados.filter((c) => c.age_range === faixa).length,
+    href: `/admin/convidados?faixa=${encodeURIComponent(faixa)}`,
+  })).filter((f) => f.valor > 0);
+
+  const porGenero = contarPor<Genero>(
+    listaConvidados.map((c) => c.gender),
+    ["feminino", "masculino", "outro"],
+    { feminino: "Feminino", masculino: "Masculino", outro: "Outro" },
+    "genero",
+  );
+
+  const porVinculo = contarPor<Vinculo>(
+    listaConvidados.map((c) => c.relationship_kind),
+    VINCULOS,
+    ROTULOS_VINCULO,
+    "vinculo",
+  ).sort((a, b) => b.valor - a.valor);
+
+  const porLado: Fatia[] = (["noiva", "noivo"] as const)
+    .map((lado) => ({
+      chave: lado,
+      rotulo: lado === "noiva" ? "Lado da noiva" : "Lado do noivo",
+      valor: listaConvidados.filter((c) => c.side === lado).length,
+      href: `/admin/convidados?lado=${lado}`,
+    }))
+    .filter((f) => f.valor > 0);
+
+  const semVinculo = listaConvidados.filter((c) => !c.relationship_kind).length;
+  const semFaixa = listaConvidados.filter((c) => !c.age_range).length;
 
   // ---------- Tarefas ----------
   const feitas = listaTarefas.filter((t) => t.status === "feito").length;
@@ -72,7 +176,13 @@ export default async function Dashboard() {
     .filter(([, v]) => v.previsto > 0 || v.pago > 0)
     .sort((a, b) => b[1].previsto - a[1].previsto)
     .slice(0, 8)
-    .map(([rotulo, v]) => ({ rotulo, valor: v.pago, secundario: v.previsto }));
+    .map(([rotulo, v]) => ({
+      chave: rotulo,
+      rotulo,
+      valor: v.previsto,
+      href: `/admin/financeiro?categoria=${encodeURIComponent(rotulo)}`,
+      detalhe: `${reais(v.pago)} pagos de ${reais(v.previsto)} previstos`,
+    }));
 
   // ---------- Próximas ações ----------
   const acoes: Acao[] = [];
@@ -161,11 +271,98 @@ export default async function Dashboard() {
         <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">Convidados</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
           <Indicador rotulo="Total" valor={listaConvidados.length} />
-          <Indicador rotulo="Confirmados" valor={confirmados.length} tom="oliva" detalhe={`${pessoas} pessoas`} />
+          <Indicador rotulo="Confirmados" valor={confirmados.length} tom="oliva" detalhe={`${pessoas.length} pessoas`} />
           <Indicador rotulo="Aguardando" valor={conta("aguardando") + conta("convite_enviado") + conta("visualizou")} tom="lavanda" />
           <Indicador rotulo="Não irão" valor={conta("nao_vai")} />
           <Indicador rotulo="Sem convite" valor={conta("nao_contatado")} tom={conta("nao_contatado") > 0 ? "alerta" : "oliva"} />
-          <Indicador rotulo="Famílias" valor={familias} />
+          <Indicador rotulo="Famílias" valor={familiasComGrupo} />
+        </div>
+      </section>
+
+      {/* ---------- Quem vem para quê ---------- */}
+      <section>
+        <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">
+          Quem vem para quê
+        </h2>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Bloco
+              titulo="Cerimônia, festa ou as duas"
+              descricao="Contado por pessoa, com os acompanhantes dentro. Toque para ver quem é."
+            >
+              <Rosca
+                itens={presenca}
+                total={responderam.length}
+                legendaCentro="pessoas já responderam"
+              />
+            </Bloco>
+          </div>
+
+          <Bloco titulo="Na festa" descricao="O número que o buffet vai pedir.">
+            <div className="space-y-5">
+              <div>
+                <span className="titulo-serif block text-5xl text-oliva tabular-nums lining-nums">
+                  {naRecepcao.length}
+                </span>
+                <span className="versalete block text-xs text-terra">
+                  pessoas no buffet
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Indicador rotulo="Adultos" valor={adultosNaRecepcao} />
+                <Indicador
+                  rotulo="Crianças"
+                  valor={criancasNaRecepcao}
+                  tom="lavanda"
+                  detalhe="até 11 anos"
+                />
+              </div>
+              {responderam.length === 0 && (
+                <p className="text-sm leading-relaxed text-terra">
+                  Ainda ninguém respondeu onde participa. O número aparece aqui
+                  conforme as confirmações chegam.
+                </p>
+              )}
+            </div>
+          </Bloco>
+        </div>
+      </section>
+
+      {/* ---------- O retrato dos convidados ---------- */}
+      <section>
+        <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">
+          Quem são os convidados
+        </h2>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Bloco
+            titulo="Vínculo com vocês"
+            descricao={
+              semVinculo > 0
+                ? `${semVinculo} ainda sem vínculo definido na ficha.`
+                : "Toque para ver a lista de cada grupo."
+            }
+          >
+            <BarrasInterativas itens={porVinculo} tom={1} sufixo="convidados" />
+          </Bloco>
+
+          <Bloco
+            titulo="Faixa etária"
+            descricao={
+              semFaixa > 0
+                ? `${semFaixa} ainda sem faixa preenchida.`
+                : "Toque para ver a lista de cada faixa."
+            }
+          >
+            <BarrasInterativas itens={porFaixa} tom={0} sufixo="convidados" />
+          </Bloco>
+
+          <Bloco titulo="Gênero" descricao="Como cada convidado se identifica na ficha.">
+            <BarrasInterativas itens={porGenero} tom={3} sufixo="convidados" />
+          </Bloco>
+
+          <Bloco titulo="De que lado" descricao="Quem veio da noiva e quem veio do noivo.">
+            <BarrasInterativas itens={porLado} tom={5} sufixo="convidados" />
+          </Bloco>
         </div>
       </section>
 
@@ -263,11 +460,14 @@ export default async function Dashboard() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* ---------- Gastos por categoria ---------- */}
-        <Bloco titulo="Gastos por categoria" descricao="Barra cheia é o pago; a clara, o previsto.">
+        <Bloco
+          titulo="Gastos por categoria"
+          descricao="Toque numa categoria para ver as despesas dela."
+        >
           {porCategoria.length === 0 ? (
             <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
           ) : (
-            <BarrasCategoria itens={porCategoria} />
+            <BarrasInterativas itens={porCategoria} tom={2} />
           )}
         </Bloco>
 

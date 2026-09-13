@@ -14,8 +14,24 @@ const SELECT = `
   mesa:wedding_tables!guests_table_id_fkey ( id, name, seats, notes, sort_order )
 `;
 
-export default async function ConvidadosPage() {
+/** Filtros que chegam pela URL, quando o clique veio de um gráfico. */
+export type FiltroInicial = {
+  vinculo?: string;
+  faixa?: string;
+  presenca?: string;
+  genero?: string;
+  lado?: string;
+};
+
+export default async function ConvidadosPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await criarClienteServidor();
+  const params = await searchParams;
+  const texto = (v: string | string[] | undefined) =>
+    typeof v === "string" && v.trim() ? v : undefined;
 
   const [{ data: convidados }, { data: grupos }, { data: mesas }, { data: acompanhantes }] =
     await Promise.all([
@@ -43,6 +59,13 @@ export default async function ConvidadosPage() {
       grupos={(grupos ?? []) as GrupoConvidados[]}
       mesas={(mesas ?? []) as Mesa[]}
       acompanhantes={acompanhantes ?? []}
+      inicial={{
+        vinculo: texto(params.vinculo),
+        faixa: texto(params.faixa),
+        presenca: texto(params.presenca),
+        genero: texto(params.genero),
+        lado: texto(params.lado),
+      }}
     />
   );
 }

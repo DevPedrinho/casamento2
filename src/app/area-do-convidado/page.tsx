@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
+import { carregarCasamento } from "@/lib/configuracoes";
 import { meuConvidado } from "@/lib/convidado";
-import { ROTULOS_RSVP, type Acompanhante, type Rsvp } from "@/lib/tipos";
-import { CASAMENTO } from "@/lib/config";
+import type {
+  Acompanhante,
+  LocalEvento,
+  Mesa,
+  MomentoDoDia,
+  Rsvp,
+} from "@/lib/tipos";
 import { Secao } from "@/components/Secao";
-import { BotaoLink } from "@/components/Botao";
-import { Divisor } from "@/components/Ornamentos";
-import { BotaoSair } from "@/components/BotaoSair";
 import { ResgatarCodigo } from "./ResgatarCodigo";
+import { MinhaArea, type MinhaFicha } from "./MinhaArea";
 
 export const metadata: Metadata = { title: "Minha área" };
 export const dynamic = "force-dynamic";
@@ -34,93 +38,45 @@ export default async function AreaDoConvidado() {
     );
   }
 
-  const [{ data: rsvp }, { data: acompanhantes }] = await Promise.all([
-    supabase.from("rsvps").select("*").eq("guest_id", eu.id).maybeSingle(),
-    supabase.from("rsvp_companions").select("*").eq("guest_id", eu.id).order("created_at"),
-  ]);
+  const [{ data: ficha }, { data: rsvp }, { data: acompanhantes }, { data: momentos }, { data: locais }] =
+    await Promise.all([
+      supabase
+        .from("guests")
+        .select(
+          `full_name, phone, whatsapp, email, age, gender, attends, relationship,
+           relationship_kind, ceremony_role, is_featured, dietary_notes, is_admin, table_id,
+           mesa:wedding_tables!guests_table_id_fkey ( id, name, seats, notes, sort_order )`,
+        )
+        .eq("id", eu.id)
+        .maybeSingle(),
+      supabase.from("rsvps").select("*").eq("guest_id", eu.id).maybeSingle(),
+      supabase.from("rsvp_companions").select("*").eq("guest_id", eu.id).order("created_at"),
+      supabase
+        .from("day_schedule")
+        .select("*")
+        .eq("audience", "convidados")
+        .order("starts_at")
+        .order("sort_order"),
+      supabase.from("event_venues").select("*").order("sort_order"),
+    ]);
 
-  const convidadosPorMim = (acompanhantes ?? []) as Acompanhante[];
-  const perfil = eu;
+  const casamento = await carregarCasamento();
 
-  const resposta = rsvp as Rsvp | null;
-  const primeiroNome = (perfil?.full_name ?? "").trim().split(" ")[0];
+  const bruto = ficha as (Omit<MinhaFicha, "mesa"> & { mesa: Mesa | Mesa[] | null }) | null;
+  const minhaFicha: MinhaFicha | null = bruto
+    ? { ...bruto, mesa: Array.isArray(bruto.mesa) ? (bruto.mesa[0] ?? null) : bruto.mesa }
+    : null;
 
   return (
-    <Secao
-      sobretitulo="Área do convidado"
-      titulo={primeiroNome ? `Oi, ${primeiroNome}` : "Sua área"}
-    >
-      <div className="mx-auto max-w-xl">
-        <div className="rounded-sm border border-terra/20 bg-creme-claro p-8 text-center">
-          <p className="versalete text-xs text-terra">Sua resposta</p>
-
-          {resposta ? (
-            <>
-              <p className="titulo-serif mt-4 text-3xl text-oliva">
-                {ROTULOS_RSVP[resposta.status]}
-              </p>
-              {resposta.status !== "nao_vou" && (
-                <>
-                  <p className="mt-3 text-sm text-terra">
-                    {convidadosPorMim.length === 0
-                      ? "Você vem sozinho(a)."
-                      : `Com ${convidadosPorMim.length} acompanhante${convidadosPorMim.length > 1 ? "s" : ""}.`}
-                  </p>
-                  {convidadosPorMim.length > 0 && (
-                    <ul className="mt-3 space-y-1">
-                      {convidadosPorMim.map((a) => (
-                        <li key={a.id} className="titulo-serif text-lg text-oliva">
-                          {a.full_name}
-                          {a.age !== null && (
-                            <span className="text-sm text-terra"> · {a.age} anos</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-              {resposta.message && (
-                <>
-                  <Divisor className="my-6" />
-                  <p className="titulo-serif text-base text-terra italic">
-                    “{resposta.message}”
-                  </p>
-                </>
-              )}
-            </>
-          ) : (
-            <p className="titulo-serif mt-4 text-xl text-terra italic">
-              Você ainda não confirmou presença.
-            </p>
-          )}
-
-          <BotaoLink href="/confirmar" className="mt-8" variante={resposta ? "contorno" : "solido"}>
-            {resposta ? "Alterar resposta" : "Confirmar presença"}
-          </BotaoLink>
-        </div>
-
-        <div className="mt-8 rounded-sm border border-terra/20 bg-creme-claro p-8 text-center">
-          <p className="versalete text-xs text-terra">O grande dia</p>
-          <p className="titulo-serif mt-4 text-2xl text-oliva">{CASAMENTO.dataExtenso}</p>
-          <p className="mt-2 text-sm text-terra">
-            Cerimônia às {CASAMENTO.horaCerimonia} · {CASAMENTO.local.nome}
-          </p>
-          <p className="mt-1 text-sm text-terra">Traje: {CASAMENTO.trajes}</p>
-        </div>
-
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <BotaoLink href="/presentes" variante="lavanda">
-            Lista de presentes
-          </BotaoLink>
-          {perfil?.is_admin && (
-            <BotaoLink href="/admin" variante="contorno">
-              Painel dos noivos
-            </BotaoLink>
-          )}
-          <BotaoSair />
-        </div>
-      </div>
-    </Secao>
+    <MinhaArea
+      guestId={eu.id}
+      ficha={minhaFicha}
+      rsvp={(rsvp as Rsvp | null) ?? null}
+      acompanhantes={(acompanhantes ?? []) as Acompanhante[]}
+      momentos={(momentos ?? []) as MomentoDoDia[]}
+      locais={(locais ?? []) as LocalEvento[]}
+      dataExtenso={casamento.dataExtenso}
+      trajes={casamento.trajes}
+    />
   );
 }

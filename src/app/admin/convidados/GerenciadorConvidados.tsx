@@ -23,6 +23,7 @@ import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
 import { FichaConvidado } from "./FichaConvidado";
+import type { FiltroInicial } from "./page";
 
 export const TOM_STATUS: Record<StatusConvite, "neutro" | "oliva" | "lavanda" | "alerta" | "apagado"> = {
   nao_contatado: "neutro",
@@ -52,17 +53,26 @@ export function GerenciadorConvidados({
   grupos,
   mesas,
   acompanhantes,
+  inicial,
 }: {
   convidados: ConvidadoCompleto[];
   grupos: GrupoConvidados[];
   mesas: Mesa[];
   acompanhantes: Acompanhante[];
+  /** Vem preenchido quando o clique partiu de um gráfico do dashboard. */
+  inicial: FiltroInicial;
 }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState<StatusConvite | "todos">("todos");
   const [grupo, setGrupo] = useState<string>("todos");
-  const [lado, setLado] = useState<"todos" | "noivo" | "noiva">("todos");
+  const [lado, setLado] = useState<"todos" | "noivo" | "noiva">(
+    inicial.lado === "noivo" || inicial.lado === "noiva" ? inicial.lado : "todos",
+  );
+  const [vinculo, setVinculo] = useState<string>(inicial.vinculo ?? "todos");
+  const [faixa, setFaixa] = useState<string>(inicial.faixa ?? "todos");
+  const [presenca, setPresenca] = useState<string>(inicial.presenca ?? "todos");
+  const [genero, setGenero] = useState<string>(inicial.genero ?? "todos");
   const [ordem, setOrdem] = useState<Ordem>("nome");
   const [filtroCodigo, setFiltroCodigo] = useState<FiltroCodigo>("todos");
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -71,7 +81,9 @@ export function GerenciadorConvidados({
   const [aberto, setAberto] = useState<ConvidadoCompleto | null>(null);
   const [novo, setNovo] = useState(false);
   const [salvandoLote, setSalvandoLote] = useState(false);
-  const [visao, setVisao] = useState<Visao>("ficha");
+  const [visao, setVisao] = useState<Visao>(
+    inicial.presenca || inicial.vinculo ? "respostas" : "ficha",
+  );
 
   /** Acompanhantes agrupados por quem os trouxe. */
   const porTitular = useMemo(() => {
@@ -110,6 +122,10 @@ export function GerenciadorConvidados({
       if (status !== "todos" && c.invite_status !== status) return false;
       if (grupo !== "todos" && c.group_id !== grupo) return false;
       if (lado !== "todos" && c.side !== lado) return false;
+      if (vinculo !== "todos" && c.relationship_kind !== vinculo) return false;
+      if (faixa !== "todos" && c.age_range !== faixa) return false;
+      if (genero !== "todos" && c.gender !== genero) return false;
+      if (presenca !== "todos" && c.attends !== presenca) return false;
       if (filtroCodigo === "sem_codigo" && c.access_code) return false;
       if (filtroCodigo === "nao_enviado" && (!c.access_code || c.code_sent_at)) return false;
       if (filtroCodigo === "enviado" && !c.code_sent_at) return false;
@@ -135,7 +151,7 @@ export function GerenciadorConvidados({
       if (ordem === "idade") return (b.age ?? -1) - (a.age ?? -1);
       return a.full_name.localeCompare(b.full_name, "pt-BR");
     });
-  }, [busca, convidados, filtroCodigo, grupo, lado, ordem, status]);
+  }, [busca, convidados, faixa, filtroCodigo, genero, grupo, lado, ordem, presenca, status, vinculo]);
 
   function alternarSelecao(id: string) {
     setSelecionados((atual) => {
@@ -145,6 +161,24 @@ export function GerenciadorConvidados({
       return novo;
     });
   }
+
+  /** Os filtros que vieram de um clique no dashboard, prontos para desfazer. */
+  const recortes: { rotulo: string; limpar: () => void }[] = [
+    vinculo !== "todos" && {
+      rotulo: ROTULOS_VINCULO[vinculo as keyof typeof ROTULOS_VINCULO] ?? vinculo,
+      limpar: () => setVinculo("todos"),
+    },
+    faixa !== "todos" && { rotulo: faixa, limpar: () => setFaixa("todos") },
+    presenca !== "todos" && {
+      rotulo: ROTULOS_PRESENCA_CURTO[presenca as keyof typeof ROTULOS_PRESENCA_CURTO] ?? presenca,
+      limpar: () => setPresenca("todos"),
+    },
+    genero !== "todos" && { rotulo: genero, limpar: () => setGenero("todos") },
+    lado !== "todos" && {
+      rotulo: lado === "noiva" ? "Lado da noiva" : "Lado do noivo",
+      limpar: () => setLado("todos"),
+    },
+  ].filter(Boolean) as { rotulo: string; limpar: () => void }[];
 
   const todosVisiveisSelecionados =
     visiveis.length > 0 && visiveis.every((c) => selecionados.has(c.id));
@@ -379,6 +413,25 @@ export function GerenciadorConvidados({
             </select>
           </div>
         </div>
+
+        {/* Quem chega aqui por um gráfico do dashboard precisa ver por que a
+            lista está curta — e desfazer o recorte num toque. */}
+        {recortes.length > 0 && (
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <span className="versalete text-xs text-terra">Recorte</span>
+            {recortes.map((r) => (
+              <button
+                key={r.rotulo}
+                type="button"
+                onClick={r.limpar}
+                className="versalete inline-flex min-h-9 items-center gap-2 rounded-full border border-lavanda/40 bg-lavanda/10 px-3 text-xs text-lavanda transition-colors hover:border-lavanda"
+              >
+                {r.rotulo}
+                <Icone nome="fechar" className="h-3.5 w-3.5" />
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="mb-5 flex flex-wrap items-center gap-2.5">
           {(["todos", "noivo", "noiva"] as const).map((l) => (

@@ -4,8 +4,14 @@ import { Financeiro } from "./Financeiro";
 
 export const dynamic = "force-dynamic";
 
-export default async function FinanceiroPage() {
+export default async function FinanceiroPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await criarClienteServidor();
+  const params = await searchParams;
+  const categoria = typeof params.categoria === "string" ? params.categoria : undefined;
 
   const [{ data: despesas }, { data: fornecedores }, { data: config }] = await Promise.all([
     supabase
@@ -22,6 +28,7 @@ export default async function FinanceiroPage() {
       despesas={(despesas ?? []) as Despesa[]}
       fornecedores={(fornecedores ?? []) as Fornecedor[]}
       orcamentoTotal={config?.budget_total_cents ?? 0}
+      categoriaInicial={categoria}
     />
   );
 }
