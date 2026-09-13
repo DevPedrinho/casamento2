@@ -109,13 +109,21 @@ export function FormCadastrar() {
       return;
     }
 
-    // Se a confirmação de e-mail estiver ligada no Supabase, não vem sessão.
+    // O código do convite já é a autenticação: o cadastro nasce confirmado no
+    // banco e a pessoa entra direto, sem procurar e-mail nenhum. Só que o
+    // Supabase pode não devolver a sessão junto do cadastro — nesse caso,
+    // abrimos a sessão aqui mesmo, com a senha que ela acabou de escolher.
     if (!data.session) {
-      setAviso(
-        "Cadastro criado! Enviamos um e-mail de confirmação — confirme e depois entre no site.",
-      );
-      setEnviando(false);
-      return;
+      const { error: erroEntrada } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: senha,
+      });
+
+      if (erroEntrada) {
+        setAviso("Cadastro criado! Agora é só entrar com seu e-mail e senha.");
+        setEnviando(false);
+        return;
+      }
     }
 
     router.push(proximo);

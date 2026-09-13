@@ -235,22 +235,26 @@ constante `CAPITULOS`.
 
 ### 4. Apontar o Supabase para o endereço do site
 
-Os e-mails de confirmação de cadastro levam o convidado de volta para o
-site. Por padrão esse endereço é `localhost:3000`, que não funciona para
-quem está de fora. No painel do Supabase, em *Authentication → URL
-Configuration*, preencha:
+No painel do Supabase, em *Authentication → URL Configuration*, preencha:
 
 - **Site URL:** `https://casamento-deysiane-pedro.vercel.app`
 - **Redirect URLs:** adicione o mesmo endereço
 
-Sem isso, o link do e-mail de confirmação não abre o site.
+É o endereço que o Supabase usa em qualquer link que mande para o
+convidado (recuperação de senha, por exemplo). Por padrão ele vem como
+`localhost:3000`, que não funciona para quem está de fora.
 
-### 5. Confirmação de e-mail (opcional)
+### 5. Desligar a confirmação de e-mail
 
-Por padrão o Supabase pede confirmação de e-mail no cadastro. Se vocês
-preferirem que o convidado entre na hora, desliguem em
-*Authentication → Providers → Email → Confirm email*. O site já trata os
-dois casos.
+O cadastro não pede confirmação por e-mail: o código do convite já faz
+esse papel, e a pessoa sai do formulário com a sessão aberta. Isso está
+garantido no banco pelo gatilho `confirmar_email_no_cadastro`.
+
+Falta só desligar o envio, em *Authentication → Providers → Email →
+Confirm email*. Enquanto essa chave estiver ligada, o Supabase continua
+disparando um e-mail que ninguém precisa abrir — e o SMTP de cortesia
+dele entrega poucos por hora, o que pode derrubar o cadastro num dia de
+muita gente se inscrevendo.
 
 ---
 
