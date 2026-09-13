@@ -160,12 +160,27 @@ export function Assistente({
             {!ativo && (
               <div className="rounded-sm border border-lavanda/35 bg-lavanda/10 px-4 py-3 text-sm leading-relaxed text-terra">
                 <p className="titulo-serif text-base text-oliva">Falta ligar a assistente</p>
-                <p className="mt-2">
-                  Ela precisa de uma chave da API da Anthropic. Crie a chave em
-                  console.anthropic.com, e cadastre na Vercel, nas variáveis de
-                  ambiente do projeto, com o nome{" "}
-                  <code className="font-mono text-oliva">ANTHROPIC_API_KEY</code>.
-                  Depois disso ela acorda sozinha, aqui e no site.
+                <ol className="mt-3 space-y-2">
+                  <li>
+                    1. Crie uma chave de API em <strong>console.anthropic.com</strong>,
+                    em API Keys.
+                  </li>
+                  <li>
+                    2. Na Vercel, no projeto do site: Settings → Environment
+                    Variables. Nome{" "}
+                    <code className="font-mono text-oliva">ANTHROPIC_API_KEY</code>,
+                    valor a chave, ambiente Production.
+                  </li>
+                  <li>
+                    3. <strong>Republique o site</strong> (Deployments →
+                    Redeploy). A Vercel só passa a enxergar a variável na
+                    publicação seguinte — sem esse passo, ela continua
+                    desligada.
+                  </li>
+                </ol>
+                <p className="mt-3">
+                  A chave fica só no servidor: ela nunca é enviada para o
+                  navegador de ninguém.
                 </p>
               </div>
             )}
