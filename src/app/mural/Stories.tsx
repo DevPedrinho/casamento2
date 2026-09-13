@@ -6,6 +6,7 @@ import { tempoRelativo, tempoRestante } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { EMOJIS_REACAO } from "@/lib/tipos";
 import { Avatar } from "@/components/Avatar";
+import { EtiquetaPapel } from "@/components/EtiquetaPapel";
 import { ListaDePessoas } from "./Feed";
 
 /** Quanto tempo cada story fica na tela antes de passar sozinho. */
@@ -211,6 +212,7 @@ export function VisualizadorStories({
           <div className="min-w-0 flex-1">
             <p className="titulo-serif truncate text-base text-creme-claro">
               {meu ? "Você" : grupo.autor.full_name}
+              <EtiquetaPapel autor={grupo.autor} tom="escuro" />
             </p>
             {story.expires_at && (
               <p className="text-xs text-creme/70">some em {tempoRestante(story.expires_at)}</p>

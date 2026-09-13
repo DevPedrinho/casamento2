@@ -5,6 +5,7 @@ import type { Publicacao } from "@/lib/tipos";
 import { formatarDataHora, tempoRelativo } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
+import { EtiquetaPapel } from "@/components/EtiquetaPapel";
 import { Icone } from "@/components/Icones";
 import { Coracao } from "@/components/Ornamentos";
 
@@ -109,7 +110,10 @@ function CartaoPost({
       <header className="flex items-center gap-3 px-6 py-4">
         <Avatar nome={nome} />
         <div className="min-w-0 flex-1">
-          <p className="titulo-serif truncate text-lg text-oliva">{meu ? "Você" : nome}</p>
+          <p className="titulo-serif truncate text-lg text-oliva">
+            {meu ? "Você" : nome}
+            <EtiquetaPapel autor={post.autor} />
+          </p>
           <p className="text-xs text-terra">{tempoRelativo(post.created_at)}</p>
         </div>
         {post.is_hidden && (
@@ -346,6 +350,7 @@ function Comentarios({
                     <span className="titulo-serif text-base text-oliva">
                       {meuComentario ? "Você" : nome}
                     </span>
+                    <EtiquetaPapel autor={c.autor} />
                     <span className="ml-2 text-xs text-terra/75">
                       {tempoRelativo(c.created_at)}
                     </span>

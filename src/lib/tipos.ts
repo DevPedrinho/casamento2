@@ -246,6 +246,10 @@ export type TipoPost = "feed" | "story";
 export type Autor = {
   id: string;
   full_name: string;
+  /** "Madrinha", "Padrinho": vira etiqueta ao lado do nome, no mural. */
+  ceremony_role?: string | null;
+  /** Personagem principal: sobe no feed e abre a fila dos stories. */
+  is_featured?: boolean;
 };
 
 export type Comentario = {
