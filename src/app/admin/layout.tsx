@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { BarraTopo, type Pendencias } from "./BarraTopo";
+import { Assistente } from "@/components/assistente/Assistente";
 
 export const metadata: Metadata = { title: "Painel dos noivos" };
 
@@ -31,6 +32,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="min-h-screen bg-creme">
       <BarraTopo nome={perfil.full_name ?? ""} pendencias={pendencias} />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+
+      {/* A cerimonialista só existe aqui dentro. */}
+      <Assistente
+        modo="painel"
+        ativo={Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN)}
+        nome="Aurora, sua cerimonialista"
+        saudacao={`Oi, ${(perfil.full_name ?? "").trim().split(" ")[0] || "tudo bem"}! Estou aqui para ajudar a organizar o casamento. Pode perguntar o que quiser — inclusive "o que eu faço agora?".`}
+        sugestoes={[
+          "O que eu preciso resolver essa semana?",
+          "Como está o orçamento?",
+          "Quantos convidados ainda não responderam?",
+          "Me ajuda a montar o cronograma do dia",
+        ]}
+      />
     </div>
   );
 }

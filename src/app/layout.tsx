@@ -5,6 +5,7 @@ import { urlDoSite } from "@/lib/storage";
 import { Cabecalho } from "@/components/Cabecalho";
 import { Rodape } from "@/components/Rodape";
 import { SomenteNoSite } from "@/components/CasulaSite";
+import { Assistente } from "@/components/assistente/Assistente";
 import "./globals.css";
 
 // Serifada de traço fino e elegante, no espírito do monograma da IDV.
@@ -95,6 +96,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="flex-1">{children}</main>
         <SomenteNoSite>
           <Rodape />
+          <Assistente
+            modo="convidado"
+            ativo={Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN)}
+            nome={`Tira-dúvidas de ${casamento.noiva} e ${casamento.noivo}`}
+            saudacao={`Oi! Posso ajudar com qualquer dúvida sobre o casamento de ${casamento.noiva} e ${casamento.noivo} — horário, lugar, traje, presentes ou como confirmar presença.`}
+            sugestoes={[
+              "Que horas começa e onde é?",
+              "Quantas pessoas meu convite permite?",
+              "Como eu confirmo minha presença?",
+              "O que eu visto?",
+            ]}
+          />
         </SomenteNoSite>
       </body>
     </html>
