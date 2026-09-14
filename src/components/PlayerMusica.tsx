@@ -19,8 +19,12 @@ import { Icone } from "@/components/Icones";
  * capítulo — ou usar um controle e depois o outro — nunca reinicia a
  * música.
  *
- * Navegador nenhum deixa tocar áudio sem um clique, então nem tentamos:
- * a música só começa quando a pessoa manda.
+ * A música toca sozinha e em laço. Só que navegador nenhum deixa um site
+ * começar a tocar som antes de a pessoa encostar na tela — é regra do
+ * Chrome e do Safari, não escolha nossa. Então tentamos tocar assim que a
+ * página abre e, se o navegador recusar (que é o normal no celular), a
+ * música entra no primeiro toque, em qualquer lugar da página. Quem pausar
+ * na mão não é interrompido de novo.
  */
 
 type Contexto = {
@@ -62,6 +66,9 @@ export function ProvedorMusica({
   const [erro, setErro] = useState(false);
   const [controleVisivel, setControleVisivel] = useState(false);
 
+  /** Quem pausou de propósito não quer a música de volta no próximo toque. */
+  const pausouNaMao = useRef(false);
+
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
@@ -71,10 +78,13 @@ export function ProvedorMusica({
     if (!audio) return;
 
     if (!audio.paused) {
+      pausouNaMao.current = true;
       audio.pause();
       setTocando(false);
       return;
     }
+
+    pausouNaMao.current = false;
 
     setCarregando(true);
     audio
@@ -95,6 +105,49 @@ export function ProvedorMusica({
     (visivel: boolean) => setControleVisivel(visivel),
     [],
   );
+
+  // ---------- Começar sozinha ----------
+  useEffect(() => {
+    if (!arquivo) return;
+
+    let encerrado = false;
+
+    async function tentar() {
+      const audio = audioRef.current;
+      if (!audio || encerrado || pausouNaMao.current || !audio.paused) return false;
+      try {
+        await audio.play();
+        setTocando(true);
+        setComecou(true);
+        return true;
+      } catch {
+        // Bloqueio de autoplay: é o caminho normal no celular.
+        return false;
+      }
+    }
+
+    // Alguns navegadores de computador deixam, se o som estiver baixo.
+    void tentar();
+
+    // No celular, o primeiro toque em qualquer lugar libera o som.
+    async function aoEncostar() {
+      if (await tentar()) desarmar();
+    }
+    function desarmar() {
+      document.removeEventListener("pointerdown", aoEncostar);
+      document.removeEventListener("keydown", aoEncostar);
+      document.removeEventListener("touchstart", aoEncostar);
+    }
+
+    document.addEventListener("pointerdown", aoEncostar);
+    document.addEventListener("keydown", aoEncostar);
+    document.addEventListener("touchstart", aoEncostar);
+
+    return () => {
+      encerrado = true;
+      desarmar();
+    };
+  }, [arquivo]);
 
   // Sem arquivo (ou com arquivo quebrado) não há player nenhum.
   const disponivel = Boolean(arquivo) && !erro;
@@ -121,7 +174,9 @@ export function ProvedorMusica({
             ref={audioRef}
             src={arquivo}
             loop
-            preload="none"
+            // "auto" e não "none": para começar sozinha, o arquivo precisa
+            // estar pronto no instante do primeiro toque.
+            preload="auto"
             onPlay={() => setTocando(true)}
             onPause={() => setTocando(false)}
             onWaiting={() => setCarregando(true)}

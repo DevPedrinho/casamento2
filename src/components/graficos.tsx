@@ -46,6 +46,7 @@ export function BarrasInterativas({
   tom = 0,
   vazio = "Sem dados ainda.",
   sufixo,
+  formatar,
   aoClicar,
 }: {
   itens: Fatia[];
@@ -54,6 +55,11 @@ export function BarrasInterativas({
   vazio?: string;
   /** Palavra que acompanha o número: "pessoas", "convidados". */
   sufixo?: string;
+  /**
+   * Como escrever o valor. Sem isto o número sai cru — e dinheiro, que é
+   * guardado em centavos, viraria "1817900" em vez de "R$ 18.179,00".
+   */
+  formatar?: (valor: number) => string;
   /** Quando o destino está na mesma tela, em vez de em outra página. */
   aoClicar?: (chave: string) => void;
 }) {
@@ -75,10 +81,12 @@ export function BarrasInterativas({
 
         const conteudo = (
           <>
-            <span className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className="truncate text-sm text-oliva">{item.rotulo}</span>
-              <span className="shrink-0 text-sm text-terra tabular-nums lining-nums">
-                <span className="titulo-serif text-base text-oliva">{item.valor}</span>
+            <span className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="titulo-serif truncate text-lg text-oliva">{item.rotulo}</span>
+              <span className="shrink-0 text-base text-terra tabular-nums lining-nums">
+                <span className="titulo-serif text-xl text-oliva">
+                  {formatar ? formatar(item.valor) : item.valor}
+                </span>
                 {sufixo ? ` ${sufixo}` : ""} · {parte}%
               </span>
             </span>
@@ -95,7 +103,7 @@ export function BarrasInterativas({
             </span>
 
             {item.detalhe && (
-              <span className="mt-1 block text-xs text-terra/80">{item.detalhe}</span>
+              <span className="mt-1.5 block text-sm text-terra/85">{item.detalhe}</span>
             )}
           </>
         );

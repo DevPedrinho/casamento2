@@ -412,7 +412,7 @@ function AlertasEGraficos({
     chave: rotulo,
     rotulo,
     valor: v.previsto,
-    detalhe: `${reais(v.pago)} pagos de ${reais(v.previsto)} previstos`,
+    detalhe: `${reais(v.pago)} já pagos`,
   }));
 
   // Evolução: pagamentos acumulados mês a mês.
@@ -485,6 +485,7 @@ function AlertasEGraficos({
             <BarrasInterativas
               itens={fatiasPorCategoria}
               tom={2}
+              formatar={reais}
               aoClicar={aoEscolherCategoria}
             />
           </Bloco>

@@ -181,7 +181,7 @@ export default async function Dashboard() {
       rotulo,
       valor: v.previsto,
       href: `/admin/financeiro?categoria=${encodeURIComponent(rotulo)}`,
-      detalhe: `${reais(v.pago)} pagos de ${reais(v.previsto)} previstos`,
+      detalhe: `${reais(v.pago)} já pagos`,
     }));
 
   // ---------- Próximas ações ----------
@@ -467,7 +467,7 @@ export default async function Dashboard() {
           {porCategoria.length === 0 ? (
             <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
           ) : (
-            <BarrasInterativas itens={porCategoria} tom={2} />
+            <BarrasInterativas itens={porCategoria} tom={2} formatar={reais} />
           )}
         </Bloco>
 
