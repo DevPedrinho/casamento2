@@ -173,7 +173,7 @@ export function BarraTopo({ nome, pendencias }: { nome: string; pendencias: Pend
               </button>
 
               {maisAberto && (
-                <ul className="absolute left-0 top-full z-10 mt-2 w-56 overflow-hidden rounded-sm border border-terra/20 bg-creme-claro shadow-lg">
+                <ul className="absolute left-0 top-full z-10 mt-2 max-h-[70vh] w-56 overflow-y-auto overscroll-contain rounded-sm border border-terra/20 bg-creme-claro shadow-lg">
                   {SECUNDARIOS.map((item) => {
                     const ativo = estaAtivo(caminho, item.href);
                     const badge = item.chave ? pendencias[item.chave] : undefined;
@@ -262,9 +262,19 @@ export function BarraTopo({ nome, pendencias }: { nome: string; pendencias: Pend
         </button>
       </div>
 
-      {/* Painel de módulos no compacto: some ao navegar, mas a barra fica. */}
-      <div id="menu-modulos" hidden={!menuAberto} className="border-t border-terra/15 lg:hidden">
-        <ul className="grid grid-cols-1 gap-1 px-3 py-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
+      {/* Painel de módulos no compacto: some ao navegar, mas a barra fica.
+          São 15 módulos. Numa coluna eles passam de 700px e o menu vive
+          dentro de um cabeçalho grudado no topo — sem altura máxima e sem
+          rolagem própria, os últimos da lista (Configurações entre eles)
+          ficavam fora da tela, sem jeito de alcançar.
+          A conta do 4.5rem é a altura da barra de cima; dvh, e não vh,
+          porque no celular a barra do navegador entra e sai. */}
+      <div
+        id="menu-modulos"
+        hidden={!menuAberto}
+        className="max-h-[calc(100dvh-4.5rem)] overflow-y-auto overscroll-contain border-t border-terra/15 pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        <ul className="grid grid-cols-2 gap-1 px-3 py-3 sm:grid-cols-3">
           {ITENS.map((item) => {
             const ativo = estaAtivo(caminho, item.href);
             const badge = item.chave ? pendencias[item.chave] : undefined;
