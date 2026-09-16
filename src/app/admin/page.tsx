@@ -467,7 +467,7 @@ export default async function Dashboard() {
           {porCategoria.length === 0 ? (
             <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
           ) : (
-            <BarrasInterativas itens={porCategoria} tom={2} formatar={reais} />
+            <BarrasInterativas itens={porCategoria} tom={2} moeda />
           )}
         </Bloco>
 

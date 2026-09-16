@@ -485,7 +485,7 @@ function AlertasEGraficos({
             <BarrasInterativas
               itens={fatiasPorCategoria}
               tom={2}
-              formatar={reais}
+              moeda
               aoClicar={aoEscolherCategoria}
             />
           </Bloco>

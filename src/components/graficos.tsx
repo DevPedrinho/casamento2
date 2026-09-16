@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { reais } from "@/lib/formato";
 
 /**
  * Gráficos do painel.
@@ -46,7 +47,7 @@ export function BarrasInterativas({
   tom = 0,
   vazio = "Sem dados ainda.",
   sufixo,
-  formatar,
+  moeda = false,
   aoClicar,
 }: {
   itens: Fatia[];
@@ -56,10 +57,13 @@ export function BarrasInterativas({
   /** Palavra que acompanha o número: "pessoas", "convidados". */
   sufixo?: string;
   /**
-   * Como escrever o valor. Sem isto o número sai cru — e dinheiro, que é
-   * guardado em centavos, viraria "1817900" em vez de "R$ 18.179,00".
+   * Liga a formatação em reais. É um booleano, e não a função de formatar,
+   * porque este componente roda no navegador e quem o usa quase sempre roda
+   * no servidor — e função não atravessa essa fronteira. Dinheiro é guardado
+   * em centavos, então sem isto "1817900" apareceria no lugar de
+   * "R$ 18.179,00".
    */
-  formatar?: (valor: number) => string;
+  moeda?: boolean;
   /** Quando o destino está na mesma tela, em vez de em outra página. */
   aoClicar?: (chave: string) => void;
 }) {
@@ -85,7 +89,7 @@ export function BarrasInterativas({
               <span className="titulo-serif truncate text-lg text-oliva">{item.rotulo}</span>
               <span className="shrink-0 text-base text-terra tabular-nums lining-nums">
                 <span className="titulo-serif text-xl text-oliva">
-                  {formatar ? formatar(item.valor) : item.valor}
+                  {moeda ? reais(item.valor) : item.valor}
                 </span>
                 {sufixo ? ` ${sufixo}` : ""} · {parte}%
               </span>
