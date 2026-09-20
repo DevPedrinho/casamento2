@@ -33,7 +33,10 @@ import type { FiltroInicial } from "./page";
 export { TOM_STATUS };
 
 type Ordem = "nome" | "grupo" | "status" | "idade";
-type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado";
+type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado" | "cadastrado";
+/** "em_espera" junta os três status de quem já recebeu e ainda não respondeu. */
+type FiltroStatus = StatusConvite | "todos" | "em_espera";
+const EM_ESPERA: StatusConvite[] = ["aguardando", "convite_enviado", "visualizou"];
 
 /**
  * Três leituras da mesma lista.
@@ -66,9 +69,10 @@ export function GerenciadorConvidados({
 }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
-  const [status, setStatus] = useState<StatusConvite | "todos">(
+  const [status, setStatus] = useState<FiltroStatus>(
     ETAPAS_CONVITE.includes(inicial.status as StatusConvite) ? (inicial.status as StatusConvite) : "todos",
   );
+  const [excederam, setExcederam] = useState(false);
   const [grupo, setGrupo] = useState<string>("todos");
   const [lado, setLado] = useState<"todos" | "noivo" | "noiva">(
     inicial.lado === "noivo" || inicial.lado === "noiva" ? inicial.lado : "todos",
@@ -129,7 +133,9 @@ export function GerenciadorConvidados({
   const visiveis = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const lista = convidados.filter((c) => {
-      if (status !== "todos" && c.invite_status !== status) return false;
+      if (status === "em_espera" && !EM_ESPERA.includes(c.invite_status)) return false;
+      if (status !== "todos" && status !== "em_espera" && c.invite_status !== status) return false;
+      if (excederam && (porTitular.get(c.id)?.length ?? 0) <= c.companions_planned) return false;
       if (grupo !== "todos" && c.group_id !== grupo) return false;
       if (lado !== "todos" && c.side !== lado) return false;
       if (vinculo !== "todos" && c.relationship_kind !== vinculo) return false;
@@ -139,6 +145,7 @@ export function GerenciadorConvidados({
       if (filtroCodigo === "sem_codigo" && c.access_code) return false;
       if (filtroCodigo === "nao_enviado" && (!c.access_code || c.code_sent_at)) return false;
       if (filtroCodigo === "enviado" && !c.code_sent_at) return false;
+      if (filtroCodigo === "cadastrado" && !c.user_id) return false;
       if (!termo) return true;
       return (
         c.full_name.toLowerCase().includes(termo) ||
@@ -161,7 +168,7 @@ export function GerenciadorConvidados({
       if (ordem === "idade") return (b.age ?? -1) - (a.age ?? -1);
       return a.full_name.localeCompare(b.full_name, "pt-BR");
     });
-  }, [busca, convidados, faixa, filtroCodigo, genero, grupo, lado, ordem, presenca, status, vinculo]);
+  }, [busca, convidados, excederam, faixa, filtroCodigo, genero, grupo, lado, ordem, porTitular, presenca, status, vinculo]);
 
   function alternarSelecao(id: string) {
     setSelecionados((atual) => {
@@ -172,15 +179,32 @@ export function GerenciadorConvidados({
     });
   }
 
+  /** Um número da faixa clicado: zera os filtros irmãos e aplica o dele; de novo, desfaz. */
+  function recortarPor(alvo: { status?: FiltroStatus; codigo?: FiltroCodigo; excederam?: boolean }) {
+    const jaAtivo =
+      (alvo.status ? status === alvo.status : true) &&
+      (alvo.codigo ? filtroCodigo === alvo.codigo : true) &&
+      (alvo.excederam ? excederam : true) &&
+      (alvo.status || alvo.codigo || alvo.excederam ? true : status === "todos" && filtroCodigo === "todos" && !excederam);
+    setStatus(jaAtivo ? "todos" : (alvo.status ?? "todos"));
+    setFiltroCodigo(jaAtivo ? "todos" : (alvo.codigo ?? "todos"));
+    setExcederam(jaAtivo ? false : Boolean(alvo.excederam));
+  }
+  const semRecorteDeStatus = status === "todos" && filtroCodigo === "todos" && !excederam;
+
   /** Tudo que está filtrando a lista, em chips, para ver e desfazer sem abrir o painel. */
   const recortes: { rotulo: string; limpar: () => void }[] = [
-    status !== "todos" && { rotulo: ROTULOS_CONVITE[status], limpar: () => setStatus("todos") },
+    status !== "todos" && {
+      rotulo: status === "em_espera" ? "Aguardando resposta" : ROTULOS_CONVITE[status],
+      limpar: () => setStatus("todos"),
+    },
+    excederam && { rotulo: "Passaram do previsto", limpar: () => setExcederam(false) },
     grupo !== "todos" && {
       rotulo: grupos.find((g) => g.id === grupo)?.name ?? "Família",
       limpar: () => setGrupo("todos"),
     },
     filtroCodigo !== "todos" && {
-      rotulo: { sem_codigo: "Sem código", nao_enviado: "Código não entregue", enviado: "Código entregue" }[filtroCodigo],
+      rotulo: { sem_codigo: "Sem código", nao_enviado: "Código não entregue", enviado: "Código entregue", cadastrado: "Com cadastro" }[filtroCodigo],
       limpar: () => setFiltroCodigo("todos"),
     },
     vinculo !== "todos" && {
@@ -374,24 +398,38 @@ export function GerenciadorConvidados({
       </header>
 
       {/* ---------- Os números, numa faixa só ---------- */}
-      <dl className="flex flex-wrap gap-x-7 gap-y-3 rounded-sm border border-terra/20 bg-creme-claro px-5 py-4">
-        <Numero rotulo="Convidados" valor={resumo.total} />
-        <Numero rotulo="Confirmados" valor={resumo.confirmados} detalhe={`${resumo.pessoas} pessoas`} tom="oliva" />
-        <Numero rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" />
-        <Numero rotulo="Não irão" valor={resumo.naoVao} />
-        <Numero rotulo="Sem convite" valor={resumo.semConvite} tom={resumo.semConvite > 0 ? "alerta" : "oliva"} />
-        {resumo.excederam > 0 && <Numero rotulo="Passaram do previsto" valor={resumo.excederam} tom="alerta" />}
-      </dl>
+      <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-sm border border-terra/20 bg-creme-claro px-3 py-2.5" role="group" aria-label="Filtrar pelos números">
+        <Numero rotulo="Convidados" valor={resumo.total} ativo={semRecorteDeStatus} aoClicar={() => recortarPor({})} />
+        <Numero rotulo="Confirmados" valor={resumo.confirmados} detalhe={`${resumo.pessoas} pessoas`} tom="oliva" ativo={status === "confirmado"} aoClicar={() => recortarPor({ status: "confirmado" })} />
+        <Numero rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" ativo={status === "em_espera"} aoClicar={() => recortarPor({ status: "em_espera" })} />
+        <Numero rotulo="Não irão" valor={resumo.naoVao} ativo={status === "nao_vai"} aoClicar={() => recortarPor({ status: "nao_vai" })} />
+        <Numero rotulo="Sem convite" valor={resumo.semConvite} tom={resumo.semConvite > 0 ? "alerta" : "oliva"} ativo={status === "nao_contatado"} aoClicar={() => recortarPor({ status: "nao_contatado" })} />
+        {resumo.excederam > 0 && <Numero rotulo="Passaram do previsto" valor={resumo.excederam} tom="alerta" ativo={excederam} aoClicar={() => recortarPor({ excederam: true })} />}
+      </div>
 
       {/* ---------- Convites: a fila e os códigos, numa faixa ---------- */}
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-sm border border-oliva/25 bg-oliva/5 px-5 py-4">
         <div className="min-w-0">
-          <p className="titulo-serif text-xl text-oliva">
+          <button
+            type="button"
+            onClick={() => recortarPor({ codigo: "enviado" })}
+            aria-pressed={filtroCodigo === "enviado"}
+            className={`titulo-serif text-left text-xl text-oliva underline-offset-4 hover:underline ${filtroCodigo === "enviado" ? "underline" : ""}`}
+          >
             {resumo.codigoEnviado} de {resumo.total} convites entregues
-          </p>
+          </button>
           <p className="mt-0.5 text-sm text-terra">
-            {resumo.semCodigo > 0 && `${resumo.semCodigo} sem código · `}
-            {resumo.jaEntraram} já se cadastraram no site
+            {resumo.semCodigo > 0 && (
+              <>
+                <button type="button" onClick={() => recortarPor({ codigo: "sem_codigo" })} aria-pressed={filtroCodigo === "sem_codigo"} className={`underline-offset-4 hover:underline ${filtroCodigo === "sem_codigo" ? "underline" : ""}`}>
+                  {resumo.semCodigo} sem código
+                </button>
+                {" · "}
+              </>
+            )}
+            <button type="button" onClick={() => recortarPor({ codigo: "cadastrado" })} aria-pressed={filtroCodigo === "cadastrado"} className={`underline-offset-4 hover:underline ${filtroCodigo === "cadastrado" ? "underline" : ""}`}>
+              {resumo.jaEntraram} já se cadastraram no site
+            </button>
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -477,8 +515,9 @@ export function GerenciadorConvidados({
         >
           <div>
             <Rotulo htmlFor="f-status">Status</Rotulo>
-            <select id="f-status" className="campo" value={status} onChange={(e) => setStatus(e.target.value as StatusConvite | "todos")}>
+            <select id="f-status" className="campo" value={status} onChange={(e) => setStatus(e.target.value as FiltroStatus)}>
               <option value="todos">Todos</option>
+              <option value="em_espera">Aguardando resposta (os três)</option>
               {ETAPAS_CONVITE.map((s) => (
                 <option key={s} value={s}>{ROTULOS_CONVITE[s]}</option>
               ))}
@@ -505,6 +544,7 @@ export function GerenciadorConvidados({
               <option value="sem_codigo">Ainda sem código</option>
               <option value="nao_enviado">Com código, não entregue</option>
               <option value="enviado">Já entreguei</option>
+              <option value="cadastrado">Já se cadastraram</option>
             </select>
           </div>
           <div>
@@ -709,27 +749,41 @@ export function GerenciadorConvidados({
   );
 }
 
-/** Um número da faixa do topo: rótulo pequeno, valor grande, sem cartão. */
+/**
+ * Um número da faixa do topo, que também é o filtro dele: clicar mostra na
+ * lista exatamente quem está sendo contado; clicar de novo desfaz.
+ */
 function Numero({
   rotulo,
   valor,
   detalhe,
   tom = "neutro",
+  ativo,
+  aoClicar,
 }: {
   rotulo: string;
   valor: number;
   detalhe?: string;
   tom?: "neutro" | "oliva" | "lavanda" | "alerta";
+  ativo: boolean;
+  aoClicar: () => void;
 }) {
   const cores = { neutro: "text-oliva", oliva: "text-oliva", lavanda: "text-lavanda", alerta: "text-red-800" } as const;
   return (
-    <div>
-      <dt className="versalete text-xs text-terra">{rotulo}</dt>
-      <dd className={`titulo-serif text-2xl leading-tight tabular-nums lining-nums ${cores[tom]}`}>
+    <button
+      type="button"
+      onClick={aoClicar}
+      aria-pressed={ativo}
+      className={`rounded-sm border-b-2 px-2 py-1.5 text-left transition-colors hover:bg-oliva/10 ${
+        ativo ? "border-oliva bg-oliva/10" : "border-transparent"
+      }`}
+    >
+      <span className="versalete block text-xs text-terra">{rotulo}</span>
+      <span className={`titulo-serif block text-2xl leading-tight tabular-nums lining-nums ${cores[tom]}`}>
         {valor}
         {detalhe && <span className="ml-1.5 font-sans text-xs text-terra">{detalhe}</span>}
-      </dd>
-    </div>
+      </span>
+    </button>
   );
 }
 
