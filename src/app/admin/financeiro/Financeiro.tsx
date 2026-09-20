@@ -10,16 +10,8 @@ import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco, BarrasCategoria, Indicador, LinhaValor, Progresso, Selo, Vazio } from "@/components/painel";
 import { BarrasInterativas, type Fatia } from "@/components/graficos";
 import { Icone } from "@/components/Icones";
-
-/** Soma dos pagamentos já lançados em uma despesa. */
-function totalPago(despesa: Despesa): number {
-  return (despesa.payments ?? []).reduce((s, p) => s + p.amount_cents, 0);
-}
-
-/** O valor que vale para o caixa: o contratado quando existe, senão o previsto. */
-function valorDeReferencia(despesa: Despesa): number {
-  return despesa.contracted_cents ?? despesa.estimated_cents;
-}
+import { statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
+import { FichaDespesa } from "./FichaDespesa";
 
 const VAZIO = {
   description: "",
@@ -32,27 +24,6 @@ const VAZIO = {
   status: "previsto" as StatusDespesa,
   payment_method: "",
   installments: "1",
-};
-
-/** O status guardado, corrigido pela realidade: quitado é pago; vencido e
- *  não quitado é atrasado. Evita depender de alguém lembrar de atualizar. */
-function statusReal(despesa: Despesa): StatusDespesa {
-  if (despesa.status === "cancelado") return "cancelado";
-  const pago = totalPago(despesa);
-  const referencia = valorDeReferencia(despesa);
-  if (referencia > 0 && pago >= referencia) return "pago";
-  const dias = diasAte(despesa.due_date);
-  if (dias !== null && dias < 0) return "atrasado";
-  if (despesa.contracted_cents !== null) return "a_pagar";
-  return "previsto";
-}
-
-const TOM_DESPESA: Record<StatusDespesa, "neutro" | "oliva" | "lavanda" | "alerta" | "apagado"> = {
-  previsto: "neutro",
-  a_pagar: "lavanda",
-  pago: "oliva",
-  atrasado: "alerta",
-  cancelado: "apagado",
 };
 
 export function Financeiro({
@@ -76,7 +47,10 @@ export function Financeiro({
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const [pagandoId, setPagandoId] = useState<string | null>(null);
+  /** A despesa aberta na ficha. Guardamos o id, não o objeto: quando a
+   *  lista recarrega depois de um pagamento, a ficha lê a versão nova. */
+  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const detalhe = despesas.find((d) => d.id === detalheId) ?? null;
 
   // Quando se chega pela ficha de um fornecedor, a tela mostra só o que é
   // dele — é a pergunta que a pessoa trouxe da outra tela.
@@ -209,12 +183,14 @@ export function Financeiro({
     router.refresh();
   }
 
-  async function remover(d: Despesa) {
-    if (!confirm(`Remover "${d.description}" do orçamento? Os pagamentos lançados nele também somem.`)) return;
+  /** Devolve se removeu de fato — quem chamou decide o que fechar. */
+  async function remover(d: Despesa): Promise<boolean> {
+    if (!confirm(`Remover "${d.description}" do orçamento? Os pagamentos lançados nele também somem.`)) return false;
     const supabase = criarClienteNavegador();
     await supabase.from("expenses").delete().eq("id", d.id);
     if (editando === d.id) limpar();
     router.refresh();
+    return true;
   }
 
   return (
@@ -402,14 +378,7 @@ export function Financeiro({
                         key={d.id}
                         despesa={d}
                         fornecedor={fornecedores.find((f) => f.id === d.vendor_id) ?? null}
-                        pagando={pagandoId === d.id}
-                        aoAbrirPagamento={() => setPagandoId(pagandoId === d.id ? null : d.id)}
-                        aoEditar={() => editar(d)}
-                        aoRemover={() => remover(d)}
-                        aoSalvarPagamento={() => {
-                          setPagandoId(null);
-                          router.refresh();
-                        }}
+                        aoAbrir={() => setDetalheId(d.id)}
                       />
                     ))}
                   </ul>
@@ -419,6 +388,22 @@ export function Financeiro({
           </div>
         )}
       </Bloco>
+
+      {detalhe && (
+        <FichaDespesa
+          despesa={detalhe}
+          fornecedor={fornecedores.find((f) => f.id === detalhe.vendor_id) ?? null}
+          aoFechar={() => setDetalheId(null)}
+          aoEditar={() => {
+            setDetalheId(null);
+            editar(detalhe);
+          }}
+          aoRemover={() => {
+            void remover(detalhe).then((removeu) => removeu && setDetalheId(null));
+          }}
+          aoAtualizar={() => router.refresh()}
+        />
+      )}
     </div>
   );
 }
@@ -648,177 +633,75 @@ function OrcamentoTotal({
 function LinhaDespesa({
   despesa,
   fornecedor,
-  pagando,
-  aoAbrirPagamento,
-  aoEditar,
-  aoRemover,
-  aoSalvarPagamento,
+  aoAbrir,
 }: {
   despesa: Despesa;
   fornecedor: Fornecedor | null;
-  pagando: boolean;
-  aoAbrirPagamento: () => void;
-  aoEditar: () => void;
-  aoRemover: () => void;
-  aoSalvarPagamento: () => void;
+  aoAbrir: () => void;
 }) {
   const pago = totalPago(despesa);
   const referencia = valorDeReferencia(despesa);
   const falta = Math.max(0, referencia - pago);
   const quitado = referencia > 0 && falta === 0;
+  const situacao = statusReal(despesa);
   const dias = diasAte(despesa.due_date);
   const vencendo = !quitado && dias !== null && dias <= 30;
 
+  // O cartão é só o resumo: tudo o mais fica na ficha, com espaço. No
+  // celular o valor desce para baixo do nome em vez de disputar a linha —
+  // era essa disputa que fazia o título atropelar o "pago … falta …".
   return (
-    <li className="rounded-sm border border-terra/20 bg-creme p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h4 className="titulo-serif text-lg text-oliva">{despesa.description}</h4>
-            <Selo tom={TOM_DESPESA[statusReal(despesa)]}>
-              {ROTULOS_DESPESA[statusReal(despesa)]}
-            </Selo>
-            {!quitado && pago > 0 && <Selo tom="lavanda">parcial</Selo>}
-            {despesa.installments > 1 && (
-              <Selo>{despesa.payments.length}/{despesa.installments} parcelas</Selo>
-            )}
+    <li>
+      <button
+        type="button"
+        onClick={aoAbrir}
+        aria-label={`Abrir ${despesa.description}`}
+        className="block w-full rounded-sm border border-terra/20 bg-creme p-4 text-left transition-colors hover:border-oliva/40 focus-visible:border-oliva sm:p-5"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h4 className="titulo-serif text-lg leading-snug text-oliva">{despesa.description}</h4>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Selo tom={TOM_DESPESA[situacao]}>{ROTULOS_DESPESA[situacao]}</Selo>
+              {!quitado && pago > 0 && <Selo tom="lavanda">parcial</Selo>}
+              {despesa.installments > 1 && (
+                <Selo>{despesa.payments.length}/{despesa.installments} parcelas</Selo>
+              )}
+            </div>
+            {fornecedor && <p className="mt-1.5 truncate text-sm text-terra">{fornecedor.name}</p>}
           </div>
 
-          {fornecedor && <p className="mt-1.5 text-sm text-terra">{fornecedor.name}</p>}
-          {despesa.notes && <p className="mt-1.5 text-sm text-terra/85">{despesa.notes}</p>}
+          <div className="flex items-baseline justify-between gap-3 sm:block sm:shrink-0 sm:text-right">
+            <p className="titulo-serif text-xl text-oliva tabular-nums lining-nums">{reais(referencia)}</p>
+            <p className="text-sm text-terra">
+              {despesa.contracted_cents === null ? "previsto" : "contratado"}
+            </p>
+          </div>
+        </div>
 
+        {referencia > 0 && (
+          <div className="mt-3">
+            <Progresso atual={pago} total={referencia} tom={quitado ? "oliva" : "lavanda"} />
+          </div>
+        )}
+
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+          <span className="text-terra tabular-nums lining-nums">
+            {quitado
+              ? "Quitada"
+              : pago > 0
+                ? `Falta ${reais(falta)}`
+                : "Nada pago ainda"}
+          </span>
           {despesa.due_date && (
-            <p className={`mt-1.5 text-sm ${vencendo ? "font-medium text-red-800" : "text-terra"}`}>
-              Vence em {formatarData(despesa.due_date)}
-              {vencendo && dias !== null && (dias < 0 ? " (vencido)" : ` (${dias}d)`)}
-            </p>
+            <span className={vencendo ? "font-medium text-red-800" : "text-terra"}>
+              {dias !== null && dias < 0 && !quitado ? "Venceu em " : "Vence em "}
+              {formatarData(despesa.due_date)}
+              {vencendo && dias !== null && dias >= 0 && ` (${dias}d)`}
+            </span>
           )}
         </div>
-
-        <div className="text-right">
-          <p className="titulo-serif text-xl text-oliva tabular-nums lining-nums">{reais(referencia)}</p>
-          <p className="mt-1 text-sm text-terra tabular-nums lining-nums">
-            {despesa.contracted_cents === null ? "previsto" : "contratado"}
-          </p>
-          {pago > 0 && (
-            <p className="mt-1.5 text-sm text-terra tabular-nums lining-nums">
-              pago {reais(pago)} · falta {reais(falta)}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {referencia > 0 && (
-        <div className="mt-4">
-          <Progresso atual={pago} total={referencia} tom={quitado ? "oliva" : "lavanda"} />
-        </div>
-      )}
-
-      {despesa.payments.length > 0 && (
-        <ul className="mt-4 space-y-1 border-t border-terra/15 pt-3">
-          {despesa.payments
-            .slice()
-            .sort((a, b) => a.paid_at.localeCompare(b.paid_at))
-            .map((p) => (
-              <li key={p.id} className="flex justify-between gap-4 text-sm text-terra">
-                <span>
-                  {formatarData(p.paid_at)}
-                  {p.method && ` · ${p.method}`}
-                </span>
-                <span className="tabular-nums lining-nums">{reais(p.amount_cents)}</span>
-              </li>
-            ))}
-        </ul>
-      )}
-
-      {pagando ? (
-        <FormPagamento despesaId={despesa.id} sugestao={falta} aoSalvar={aoSalvarPagamento} aoCancelar={aoAbrirPagamento} />
-      ) : (
-        <div className="mt-2 flex flex-wrap items-center gap-x-5 border-t border-terra/15">
-          <button type="button" onClick={aoAbrirPagamento} className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4">
-            Lançar pagamento
-          </button>
-          <button type="button" onClick={aoEditar} className="versalete inline-flex min-h-11 items-center text-xs text-terra underline underline-offset-4">
-            Editar
-          </button>
-          <button type="button" onClick={aoRemover} className="versalete inline-flex min-h-11 items-center text-xs text-red-800 underline underline-offset-4">
-            Remover
-          </button>
-        </div>
-      )}
+      </button>
     </li>
-  );
-}
-
-function FormPagamento({
-  despesaId,
-  sugestao,
-  aoSalvar,
-  aoCancelar,
-}: {
-  despesaId: string;
-  sugestao: number;
-  aoSalvar: () => void;
-  aoCancelar: () => void;
-}) {
-  const [valor, setValor] = useState(sugestao > 0 ? paraCampo(sugestao) : "");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
-  const [metodo, setMetodo] = useState("");
-  const [erro, setErro] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-
-  async function enviar(evento: FormEvent) {
-    evento.preventDefault();
-    setErro(null);
-
-    const centavos = paraCentavos(valor);
-    if (centavos === null || centavos <= 0) {
-      setErro("Informe um valor maior que zero.");
-      return;
-    }
-
-    setSalvando(true);
-    const supabase = criarClienteNavegador();
-    const { error } = await supabase.from("payments").insert({
-      expense_id: despesaId,
-      amount_cents: centavos,
-      paid_at: data,
-      method: metodo.trim() || null,
-    });
-    setSalvando(false);
-
-    if (error) {
-      setErro("Não foi possível lançar o pagamento.");
-      return;
-    }
-    aoSalvar();
-  }
-
-  return (
-    <form onSubmit={enviar} className="mt-4 space-y-4 border-t border-terra/15 pt-4">
-      {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <Rotulo htmlFor={`p-valor-${despesaId}`}>Valor (R$)</Rotulo>
-          <input id={`p-valor-${despesaId}`} inputMode="decimal" className="campo" value={valor} onChange={(e) => setValor(e.target.value)} />
-        </div>
-        <div>
-          <Rotulo htmlFor={`p-data-${despesaId}`}>Data</Rotulo>
-          <input id={`p-data-${despesaId}`} type="date" className="campo" value={data} onChange={(e) => setData(e.target.value)} />
-        </div>
-        <div>
-          <Rotulo htmlFor={`p-metodo-${despesaId}`}>Forma</Rotulo>
-          <input id={`p-metodo-${despesaId}`} className="campo" placeholder="Pix, cartão…" value={metodo} onChange={(e) => setMetodo(e.target.value)} />
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <Botao type="submit" disabled={salvando}>
-          {salvando ? "Lançando…" : "Lançar"}
-        </Botao>
-        <Botao type="button" variante="contorno" onClick={aoCancelar}>
-          Cancelar
-        </Botao>
-      </div>
-    </form>
   );
 }
