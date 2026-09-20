@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
@@ -60,38 +59,6 @@ export function Fornecedores({
 
   /** O que o financeiro sabe de cada um: contratado, pago e os lançamentos. */
   const contas = useMemo(() => contasPorFornecedor(despesas), [despesas]);
-
-  /**
-   * Fichas que discordam do financeiro.
-   *
-   * O campo "pago" da ficha era digitado à mão e envelheceu. Em vez de
-   * apagá-lo em silêncio — o que sumiria com dinheiro que alguém registrou —
-   * ele vira uma lista de pendências para vocês acertarem.
-   */
-  const conciliar = useMemo(() => {
-    return fornecedores
-      .map((f) => {
-        const conta = contas.get(f.id) ?? CONTA_VAZIA;
-        const fichaDizia = f.paid_cents ?? 0;
-        const semDespesa = f.status === "contratado" && conta.despesas.length === 0;
-        const divergeNoPago = fichaDizia > 0 && fichaDizia !== conta.pago;
-        const divergeNoFechado =
-          f.agreed_cents !== null &&
-          conta.despesas.length > 0 &&
-          conta.contratado !== f.agreed_cents;
-
-        if (!semDespesa && !divergeNoPago && !divergeNoFechado) return null;
-        return { fornecedor: f, conta, fichaDizia, semDespesa, divergeNoPago, divergeNoFechado };
-      })
-      .filter(Boolean) as {
-        fornecedor: Fornecedor;
-        conta: ContaDoFornecedor;
-        fichaDizia: number;
-        semDespesa: boolean;
-        divergeNoPago: boolean;
-        divergeNoFechado: boolean;
-      }[];
-  }, [contas, fornecedores]);
 
   const resumo = useMemo(() => {
     const contratados = fornecedores.filter((f) => f.status === "contratado");
@@ -251,60 +218,6 @@ export function Fornecedores({
             tom={resumo.aPagar > 0 ? "lavanda" : "oliva"}
           />
         </div>
-      )}
-
-      {/* ---------- Onde a ficha e o financeiro discordam ---------- */}
-      {conciliar.length > 0 && (
-        <Bloco
-          titulo="Conferir com o financeiro"
-          descricao="Estas fichas não batem com os lançamentos. O financeiro é quem manda — a ficha só reflete."
-        >
-          <ul className="space-y-2.5">
-            {conciliar.map(({ fornecedor: f, conta, fichaDizia, semDespesa, divergeNoPago, divergeNoFechado }) => (
-              <li
-                key={f.id}
-                className="rounded-sm border border-red-800/25 bg-red-50/50 px-4 py-3"
-              >
-                <p className="titulo-serif text-lg text-oliva">{f.name}</p>
-
-                {semDespesa && (
-                  <p className="mt-1 text-sm text-red-900">
-                    Contrato fechado em {reais(f.agreed_cents ?? 0)}, mas nenhuma
-                    despesa lançada. Todo esse valor está fora do orçamento.
-                    {fichaDizia > 0 && (
-                      <> A ficha ainda diz {reais(fichaDizia)} pagos — lance a despesa
-                      e registre o pagamento com a data real.</>
-                    )}
-                  </p>
-                )}
-
-                {divergeNoPago && !semDespesa && (
-                  <p className="mt-1 text-sm text-red-900">
-                    A ficha dizia {reais(fichaDizia)} pagos; o financeiro registra{" "}
-                    {reais(conta.pago)}.{" "}
-                    {conta.pago > fichaDizia
-                      ? "A ficha ficou para trás — o número certo é o do financeiro."
-                      : "Falta lançar pagamento no financeiro, ou a ficha estava otimista."}
-                  </p>
-                )}
-
-                {divergeNoFechado && (
-                  <p className="mt-1 text-sm text-red-900">
-                    Fechado na ficha: {reais(f.agreed_cents ?? 0)}. Contratado nas
-                    despesas: {reais(conta.contratado)}.
-                  </p>
-                )}
-
-                <Link
-                  href={`/admin/financeiro?fornecedor=${f.id}`}
-                  className="versalete mt-2 inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4"
-                >
-                  Resolver no financeiro
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Bloco>
       )}
 
       <Bloco
