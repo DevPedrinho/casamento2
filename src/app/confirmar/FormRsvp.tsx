@@ -50,6 +50,7 @@ export function FormRsvp({
   nome,
   rsvpInicial,
   acompanhantesIniciais,
+  limite,
   vinculoInicial,
   presencaInicial,
   idadeInicial,
@@ -62,6 +63,8 @@ export function FormRsvp({
   nome: string;
   rsvpInicial: Rsvp | null;
   acompanhantesIniciais: Acompanhante[];
+  /** Quantos acompanhantes o convite comporta — decisão dos noivos, na ficha. */
+  limite: number;
   vinculoInicial: Vinculo | null;
   presencaInicial: Presenca | null;
   idadeInicial: number | null;
@@ -102,8 +105,10 @@ export function FormRsvp({
   const vai = status !== "nao_vou";
   const preenchidos = acompanhantes.filter((a) => a.nome.trim().length > 0);
   const total = vai ? 1 + preenchidos.length : 0;
+  const vagas = Math.max(0, limite - acompanhantes.length);
 
   function adicionar() {
+    if (vagas === 0) return;
     // O acompanhante entra já com o vínculo de quem o convidou: quase sempre
     // é o mesmo, e quem quiser troca em um clique.
     setAcompanhantes((atual) => [...atual, { ...LINHA_VAZIA, vinculo }]);
@@ -126,6 +131,14 @@ export function FormRsvp({
 
     if (vai && acompanhantes.some((a) => !a.nome.trim())) {
       setErro("Falta o nome de um acompanhante. Escreva ou remova a linha.");
+      return;
+    }
+    if (vai && preenchidos.length > limite) {
+      setErro(
+        limite === 0
+          ? "Seu convite é individual. Se precisar levar alguém, fale com os noivos."
+          : `Seu convite comporta ${limite} acompanhante${limite === 1 ? "" : "s"}. Se precisar de mais, fale com os noivos.`,
+      );
       return;
     }
 
@@ -214,7 +227,11 @@ export function FormRsvp({
 
       if (resposta.error) {
         console.error("Falha ao salvar acompanhante:", resposta.error);
-        setErro("Não foi possível salvar os acompanhantes. Tente de novo.");
+        setErro(
+          resposta.error.message.includes("LIMITE_DO_CONVITE")
+            ? `Seu convite comporta ${limite} acompanhante${limite === 1 ? "" : "s"}. Se precisar de mais, fale com os noivos.`
+            : "Não foi possível salvar os acompanhantes. Tente de novo.",
+        );
         setEnviando(false);
         router.refresh();
         return;
@@ -357,7 +374,13 @@ export function FormRsvp({
                 Quem vem com você
               </legend>
 
-              {acompanhantes.length === 0 && (
+              <p className="text-sm text-terra">
+                {limite === 0
+                  ? "Seu convite é individual. Se precisar levar alguém, fale com os noivos."
+                  : `Seu convite comporta ${limite} acompanhante${limite === 1 ? "" : "s"} além de você.`}
+              </p>
+
+              {acompanhantes.length === 0 && limite > 0 && (
                 <p className="rounded-sm border border-dashed border-terra/30 px-5 py-4 text-center text-sm text-terra">
                   Ninguém adicionado ainda. Se você vem sozinho(a), é só seguir.
                 </p>
@@ -477,10 +500,17 @@ export function FormRsvp({
                 </div>
               ))}
 
-              <Botao type="button" variante="contorno" onClick={adicionar} className="w-full">
-                <Icone nome="mais" className="h-4 w-4" />
-                Adicionar acompanhante
-              </Botao>
+              {vagas > 0 && (
+                <Botao type="button" variante="contorno" onClick={adicionar} className="w-full">
+                  <Icone nome="mais" className="h-4 w-4" />
+                  Adicionar acompanhante
+                </Botao>
+              )}
+              {vagas === 0 && limite > 0 && (
+                <p className="text-center text-sm text-terra">
+                  Você já usou {limite === 1 ? "a vaga" : `as ${limite} vagas`} do convite.
+                </p>
+              )}
             </fieldset>
           </>
         )}

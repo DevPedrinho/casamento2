@@ -70,7 +70,7 @@ export default async function Confirmar() {
         .order("created_at"),
       supabase
         .from("guests")
-        .select("relationship_kind, attends, age, gender")
+        .select("relationship_kind, attends, age, gender, companions_planned")
         .eq("id", eu.id)
         .maybeSingle(),
       supabase.from("event_venues").select("kind, name").order("sort_order"),
@@ -93,6 +93,7 @@ export default async function Confirmar() {
       nome={eu.full_name}
       rsvpInicial={(rsvp as Rsvp | null) ?? null}
       acompanhantesIniciais={(acompanhantes ?? []) as Acompanhante[]}
+      limite={ficha?.companions_planned ?? 0}
       vinculoInicial={minhaFicha?.relationship_kind ?? null}
       presencaInicial={minhaFicha?.attends ?? null}
       idadeInicial={minhaFicha?.age ?? null}
