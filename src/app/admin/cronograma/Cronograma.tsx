@@ -369,7 +369,7 @@ export function Cronograma({
                       </span>
                     )}
                     {(momento.location || momento.owner) && (
-                      <span className="mt-0.5 block text-sm text-terra/80">
+                      <span className="mt-0.5 block text-sm text-terra/90">
                         {[momento.location, momento.owner].filter(Boolean).join(" · ")}
                       </span>
                     )}

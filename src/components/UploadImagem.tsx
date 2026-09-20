@@ -139,11 +139,11 @@ export function UploadImagem({
               : "border-terra/30 hover:border-oliva hover:bg-creme-escuro/30"
           } disabled:opacity-60`}
         >
-          <Icone nome="mural" className="h-8 w-8 text-terra/70" />
+          <Icone nome="mural" className="h-8 w-8 text-terra/85" />
           <span className="titulo-serif text-base text-oliva">
             {enviando ? "Enviando…" : "Selecionar ou arrastar imagem"}
           </span>
-          <span className="text-sm text-terra/80">JPG, PNG ou WebP · até 25 MB</span>
+          <span className="text-sm text-terra/90">JPG, PNG ou WebP · até 25 MB</span>
         </button>
       )}
 

@@ -178,13 +178,13 @@ export function EditorPersonagens({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={p.url} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          <span className="flex h-full w-full items-center justify-center text-xs text-terra/60">
+                          <span className="flex h-full w-full items-center justify-center text-xs text-terra/85">
                             sem foto
                           </span>
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className={`titulo-serif block truncate text-lg ${p.is_active ? "text-oliva" : "text-terra/60"}`}>
+                        <span className={`titulo-serif block truncate text-lg ${p.is_active ? "text-oliva" : "text-terra/85"}`}>
                           {p.name}
                         </span>
                         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-terra">

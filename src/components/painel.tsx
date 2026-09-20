@@ -107,7 +107,7 @@ export function Selo({
     oliva: "bg-oliva text-creme-claro",
     lavanda: "bg-lavanda text-creme-claro",
     alerta: "bg-red-800/15 text-red-900",
-    apagado: "bg-creme-escuro text-terra/70",
+    apagado: "bg-creme-escuro text-terra/85",
   } as const;
 
   return (

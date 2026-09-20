@@ -346,7 +346,7 @@ function LinhaTarefa({
         aria-label={`Abrir ${tarefa.title}`}
         className="min-w-0 flex-1 text-left"
       >
-        <p className={`titulo-serif text-lg leading-snug ${feita ? "text-terra/60 line-through" : "text-oliva"}`}>
+        <p className={`titulo-serif text-lg leading-snug ${feita ? "text-terra/85 line-through" : "text-oliva"}`}>
           {tarefa.title}
         </p>
         <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-terra/85">
@@ -415,11 +415,11 @@ function QuadroTarefas({
             >
               <h3 className="versalete titulo-serif mb-3 flex items-center justify-between px-1 text-xs text-lavanda">
                 <span>{ROTULOS_TAREFA[status]}</span>
-                <span className="text-terra/70">{itens.length}</span>
+                <span className="text-terra/85">{itens.length}</span>
               </h3>
 
               {itens.length === 0 ? (
-                <p className="px-1 py-8 text-center text-sm text-terra/60">Solte uma tarefa aqui.</p>
+                <p className="px-1 py-8 text-center text-sm text-terra/85">Solte uma tarefa aqui.</p>
               ) : (
                 <ul className="space-y-2.5">
                   {itens.map((tarefa) => (
@@ -477,10 +477,10 @@ function CartaoTarefa({
         } ${salvando ? "opacity-50" : ""}`}
       >
         <button type="button" onClick={aoAbrir} className="block w-full text-left">
-          <p className={`titulo-serif text-base leading-snug ${feita ? "text-terra/60 line-through" : "text-oliva"}`}>
+          <p className={`titulo-serif text-base leading-snug ${feita ? "text-terra/85 line-through" : "text-oliva"}`}>
             {tarefa.title}
           </p>
-          <p className="versalete mt-1 text-xs text-terra/70">{tarefa.phase}</p>
+          <p className="versalete mt-1 text-xs text-terra/85">{tarefa.phase}</p>
 
           <span className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-terra/85">
             {tarefa.priority === "alta" && <Selo tom="alerta">{ROTULOS_PRIORIDADE.alta}</Selo>}

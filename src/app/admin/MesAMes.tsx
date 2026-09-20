@@ -123,9 +123,9 @@ export function MesAMes({
             <div key={primeiro.chave} className="grid grid-cols-[5.25rem_1fr] gap-3.5 border-t border-terra/15 py-3.5 sm:gap-4">
               <div className="titulo-serif text-xl leading-tight text-oliva">
                 {rotulo}
-                <span className="block font-sans text-xs text-terra/70">{primeiro.sub}</span>
+                <span className="block font-sans text-xs text-terra/85">{primeiro.sub}</span>
               </div>
-              <p className="self-center rounded-sm border border-dashed border-terra/25 px-3 py-2.5 text-sm text-terra/80">
+              <p className="self-center rounded-sm border border-dashed border-terra/25 px-3 py-2.5 text-sm text-terra/90">
                 Nada com data.
                 {semPrazo > 0 && (
                   <>
@@ -151,11 +151,11 @@ export function MesAMes({
           >
             <div className={`titulo-serif text-xl leading-tight ${linha.atual || linha.ultimo ? "text-lavanda" : "text-oliva"}`}>
               {linha.rotulo}
-              <span className="block font-sans text-xs text-terra/70">{linha.sub}</span>
+              <span className="block font-sans text-xs text-terra/85">{linha.sub}</span>
             </div>
 
             {linha.itens.length === 0 ? (
-              <p className="self-center text-sm text-terra/70">Nada marcado.</p>
+              <p className="self-center text-sm text-terra/85">Nada marcado.</p>
             ) : (
               <ul className="space-y-2">
                 {linha.itens.map((item, i) => {

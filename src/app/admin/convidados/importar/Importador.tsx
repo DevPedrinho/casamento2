@@ -259,7 +259,7 @@ export function Importador({
                   ? "border-oliva bg-oliva text-creme-claro"
                   : i < etapa
                     ? "border-oliva/40 text-oliva"
-                    : "border-terra/25 text-terra/60"
+                    : "border-terra/25 text-terra/85"
               }`}
             >
               <span className="tabular-nums lining-nums">{i + 1}</span>
@@ -284,7 +284,7 @@ export function Importador({
             }}
             className="flex w-full flex-col items-center gap-3 rounded-sm border-2 border-dashed border-terra/30 px-6 py-14 transition-colors hover:border-oliva hover:bg-creme-escuro/30"
           >
-            <Icone nome="convidados" className="h-8 w-8 text-terra/70" />
+            <Icone nome="convidados" className="h-8 w-8 text-terra/85" />
             <span className="titulo-serif text-lg text-oliva">
               Selecionar ou arrastar a planilha
             </span>
@@ -323,7 +323,7 @@ export function Importador({
             </table>
           </div>
           {planilha.linhas.length > 8 && (
-            <p className="mt-4 text-sm text-terra/80">
+            <p className="mt-4 text-sm text-terra/90">
               …e mais {planilha.linhas.length - 8} linhas.
             </p>
           )}
@@ -343,7 +343,7 @@ export function Importador({
                 <span className="titulo-serif truncate text-base text-oliva" title={coluna}>
                   {coluna}
                 </span>
-                <span className="hidden text-terra/50 sm:block" aria-hidden="true">→</span>
+                <span className="hidden text-terra/85 sm:block" aria-hidden="true">→</span>
                 <select
                   className="campo"
                   aria-label={`Campo para a coluna ${coluna}`}

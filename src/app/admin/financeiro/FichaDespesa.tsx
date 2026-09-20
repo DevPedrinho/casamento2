@@ -166,7 +166,7 @@ export function FichaDespesa({
               <li key={p.id} className="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
                 <span className="min-w-0 text-sm text-terra">
                   <span className="block text-oliva">{formatarData(p.paid_at)}</span>
-                  {p.method && <span className="block truncate text-terra/80">{p.method}</span>}
+                  {p.method && <span className="block truncate text-terra/90">{p.method}</span>}
                 </span>
                 <span className="titulo-serif shrink-0 text-lg text-oliva tabular-nums lining-nums">
                   {reais(p.amount_cents)}

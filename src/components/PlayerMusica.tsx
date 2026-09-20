@@ -296,7 +296,7 @@ function ControleVolume() {
   return (
     <label className="hidden items-center gap-2 sm:flex">
       <span className="sr-only">Volume</span>
-      <Icone nome="volume" className="h-4 w-4 text-terra/60" />
+      <Icone nome="volume" className="h-4 w-4 text-terra/85" />
       <input
         type="range"
         min={0}

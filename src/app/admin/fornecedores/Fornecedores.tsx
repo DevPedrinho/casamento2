@@ -402,7 +402,7 @@ export function Fornecedores({
                 <Rotulo htmlFor="f-fech">Valor fechado (R$)</Rotulo>
                 <input id="f-fech" inputMode="decimal" className="campo" placeholder="Só quando contratar" value={form.agreed} onChange={(e) => setForm({ ...form, agreed: e.target.value })} />
               </div>
-              <p className="self-end text-xs leading-relaxed text-terra/80">
+              <p className="self-end text-xs leading-relaxed text-terra/90">
                 O quanto já foi pago não se digita aqui — ele é somado dos
                 lançamentos do financeiro, e por isso nunca fica desencontrado.
               </p>
@@ -458,7 +458,7 @@ export function Fornecedores({
                   {ROTULOS_FORNECEDOR[etapa]} · {itens.length}
                 </h3>
                 {itens.length === 0 ? (
-                  <p className="text-sm text-terra/70">Ninguém nesta etapa.</p>
+                  <p className="text-sm text-terra/85">Ninguém nesta etapa.</p>
                 ) : (
                   <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     {itens.map((f) => (

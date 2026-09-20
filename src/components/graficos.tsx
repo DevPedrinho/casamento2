@@ -225,7 +225,7 @@ export function Rosca({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm text-oliva">{item.rotulo}</span>
                 {item.detalhe && (
-                  <span className="block text-xs text-terra/80">{item.detalhe}</span>
+                  <span className="block text-xs text-terra/90">{item.detalhe}</span>
                 )}
               </span>
               <span className="titulo-serif shrink-0 text-lg text-oliva tabular-nums lining-nums">

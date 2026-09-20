@@ -103,7 +103,7 @@ export function DetalheConvidado({
         titulo="Convite"
         acao={
           c.access_code ? (
-            <button type="button" onClick={aoGerar} disabled={gerando} className={`${ACAO_FICHA} text-terra/70 hover:text-red-800`} title="Sorteia outro código; o anterior deixa de valer">
+            <button type="button" onClick={aoGerar} disabled={gerando} className={`${ACAO_FICHA} text-terra/85 hover:text-red-800`} title="Sorteia outro código; o anterior deixa de valer">
               trocar código
             </button>
           ) : null
@@ -208,7 +208,7 @@ export function DetalheConvidado({
                   {a.relationship_kind && ` · ${ROTULOS_VINCULO[a.relationship_kind]}`}
                   {a.attends && ` · ${ROTULOS_PRESENCA_CURTO[a.attends]}`}
                 </span>
-                {a.notes && <span className="block text-xs text-terra/80">{a.notes}</span>}
+                {a.notes && <span className="block text-xs text-terra/90">{a.notes}</span>}
               </li>
             ))}
           </ul>

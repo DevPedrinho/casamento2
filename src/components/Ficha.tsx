@@ -131,7 +131,7 @@ export function LinhaFicha({
           {valor}
         </span>
         {detalhe && (
-          <span className={`block text-xs ${alerta ? "text-red-800" : "text-terra/80"}`}>{detalhe}</span>
+          <span className={`block text-xs ${alerta ? "text-red-800" : "text-terra/90"}`}>{detalhe}</span>
         )}
       </span>
     </div>

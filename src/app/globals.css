@@ -11,10 +11,12 @@
   --color-oliva: #666a46;
   --color-oliva-claro: #7d8159;
   --color-oliva-escuro: #4c4f33;
-  --color-lavanda: #9581a6;
+  /* Escurecidos um tom em relação ao PDF: os originais não passavam de
+     3,4:1 sobre o creme, e texto de apoio e rótulo pequeno ficavam apagados. */
+  --color-lavanda: #6e5a80;
   --color-lavanda-claro: #b7a8c4;
-  --color-terra: #876f58;
-  --color-terra-claro: #a58a71;
+  --color-terra: #5e4a3b;
+  --color-terra-claro: #85705d;
 
   --font-titulo: var(--fonte-titulo);
   --font-corpo: var(--fonte-corpo);
@@ -113,6 +115,12 @@ body {
   font-weight: 400;
 }
 
+/* Versalete pequena na Cormorant é traço fino demais em 13px: os rótulos de
+   seção e os selos ganham um peso a mais para ler sem esforço. */
+.titulo-serif.versalete {
+  font-weight: 500;
+}
+
 /* -------- Entrada suave das seções conforme aparecem na tela --------
    O conteúdo só começa escondido quando o JavaScript confirma que está
    rodando (classe .js-ativo). Sem JS — ou se o script falhar — o site
@@ -175,7 +183,7 @@ body {
 }
 @utility campo {
   &::placeholder {
-    color: color-mix(in srgb, var(--color-terra) 65%, transparent);
+    color: color-mix(in srgb, var(--color-terra) 80%, transparent);
   }
   &:focus {
     border-color: var(--color-oliva);

@@ -199,7 +199,7 @@ export function FichaFornecedor({
                   <li key={p.id} className="flex items-baseline justify-between gap-4 py-2.5">
                     <span className="min-w-0 text-sm text-terra">
                       <span className="block text-oliva">{formatarData(p.paid_at)}</span>
-                      <span className="block truncate text-terra/80">
+                      <span className="block truncate text-terra/90">
                         {p.despesa}
                         {p.method && ` · ${p.method}`}
                       </span>

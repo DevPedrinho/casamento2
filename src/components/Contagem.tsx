@@ -62,7 +62,7 @@ export function Contagem({ dataISO }: { dataISO?: string }) {
     >
       {blocos.map((bloco, i) => (
         <div key={bloco.rotulo} className="flex items-start gap-3 sm:gap-8">
-          {i > 0 && <span className="titulo-serif mt-1 text-2xl text-terra/40 sm:text-3xl">·</span>}
+          {i > 0 && <span className="titulo-serif mt-1 text-2xl text-terra/85 sm:text-3xl">·</span>}
           <div className="min-w-14 text-center sm:min-w-20">
             <span className="titulo-serif block text-3xl leading-none text-oliva tabular-nums lining-nums sm:text-5xl">
               {String(bloco.valor).padStart(2, "0")}

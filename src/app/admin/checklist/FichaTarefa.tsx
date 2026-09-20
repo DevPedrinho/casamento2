@@ -63,7 +63,7 @@ export function FichaTarefa({
       cabecalho={
         <>
           <p className="versalete text-xs text-terra">{tarefa.phase}</p>
-          <h2 className={`titulo-serif mt-1 text-2xl leading-tight ${feita ? "text-terra/70 line-through" : "text-oliva"}`}>
+          <h2 className={`titulo-serif mt-1 text-2xl leading-tight ${feita ? "text-terra/85 line-through" : "text-oliva"}`}>
             {tarefa.title}
           </h2>
         </>
@@ -178,14 +178,14 @@ function SubTarefas({ tarefa, aoMudar }: { tarefa: Tarefa; aoMudar: () => void }
                 className="h-5 w-5 shrink-0 accent-[var(--color-oliva)]"
                 aria-label={item.title}
               />
-              <span className={`min-w-0 flex-1 text-sm ${item.done ? "text-terra/60 line-through" : "text-terra"}`}>
+              <span className={`min-w-0 flex-1 text-sm ${item.done ? "text-terra/85 line-through" : "text-terra"}`}>
                 {item.title}
               </span>
               <button
                 type="button"
                 onClick={() => remover(item.id)}
                 aria-label={`Remover ${item.title}`}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-terra/50 hover:text-red-800"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center text-terra/85 hover:text-red-800"
               >
                 ×
               </button>

@@ -197,7 +197,7 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
             <textarea id="regras" rows={2} className="campo resize-y"
               value={form.companion_rules ?? ""}
               onChange={(e) => set("companion_rules", e.target.value)} />
-            <p className="mt-1.5 text-xs leading-relaxed text-terra/80">
+            <p className="mt-1.5 text-xs leading-relaxed text-terra/90">
               O site não limita quantas pessoas alguém traz. Quem passar do
               planejado aparece marcado na lista de convidados.
             </p>

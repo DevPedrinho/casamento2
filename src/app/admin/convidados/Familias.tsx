@@ -166,7 +166,7 @@ export function Familias({
             {aberta && (
               <div className="border-t border-terra/15 px-4 py-4">
                 {membros.length === 0 ? (
-                  <p className="text-sm text-terra/70">Ninguém nesta família com os filtros atuais.</p>
+                  <p className="text-sm text-terra/85">Ninguém nesta família com os filtros atuais.</p>
                 ) : (
                   <ul className="space-y-2.5">{membros.map((c) => linha(c))}</ul>
                 )}
@@ -193,7 +193,7 @@ export function Familias({
         {abertas.has(chaveSoltos) && (
           <div className="border-t border-terra/15 px-4 py-4">
             {soltos.length === 0 ? (
-              <p className="text-sm text-terra/70">Todo mundo já tem família.</p>
+              <p className="text-sm text-terra/85">Todo mundo já tem família.</p>
             ) : (
               <>
                 <p className="mb-3 text-sm text-terra">

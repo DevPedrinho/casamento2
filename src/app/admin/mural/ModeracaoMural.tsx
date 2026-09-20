@@ -235,7 +235,7 @@ function ListaDenuncias({
                 <LinhaPost post={alvo} aoMudar={aoMudar} />
               </div>
             ) : (
-              <p className="mt-3 text-sm text-terra/80">
+              <p className="mt-3 text-sm text-terra/90">
                 A publicação denunciada já não existe mais.
               </p>
             )}

@@ -198,7 +198,7 @@ function CartaoPost({
               type="button"
               onClick={denunciar}
               disabled={denunciado}
-              className="inline-flex min-h-11 items-center versalete text-xs text-terra/70 underline underline-offset-4 disabled:no-underline"
+              className="inline-flex min-h-11 items-center versalete text-xs text-terra/85 underline underline-offset-4 disabled:no-underline"
             >
               {denunciado ? "Denunciado" : "Denunciar"}
             </button>
@@ -352,7 +352,7 @@ function Comentarios({
                       {meuComentario ? "Você" : nome}
                     </span>
                     <EtiquetaPapel autor={c.autor} />
-                    <span className="ml-2 text-xs text-terra/75">
+                    <span className="ml-2 text-xs text-terra/85">
                       {tempoRelativo(c.created_at)}
                     </span>
                   </p>
@@ -365,7 +365,7 @@ function Comentarios({
                     type="button"
                     onClick={() => apagar(c.id)}
                     aria-label="Apagar comentário"
-                    className="inline-flex min-h-11 items-center versalete shrink-0 text-xs text-terra/60 underline underline-offset-4 hover:text-red-800"
+                    className="inline-flex min-h-11 items-center versalete shrink-0 text-xs text-terra/85 underline underline-offset-4 hover:text-red-800"
                   >
                     Apagar
                   </button>

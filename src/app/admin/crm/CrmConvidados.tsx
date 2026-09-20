@@ -138,7 +138,7 @@ export function CrmConvidados({ convidados }: { convidados: ConvidadoCompleto[] 
 
               <div className="flex-1 space-y-2.5 p-3">
                 {itens.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-terra/60">Vazio</p>
+                  <p className="py-6 text-center text-sm text-terra/85">Vazio</p>
                 ) : (
                   itens.map((c) => (
                     <CardConvidado
@@ -226,7 +226,7 @@ function CardConvidado({
       )}
 
       {c.last_contact_at && (
-        <p className="mt-1.5 text-xs text-terra/70">
+        <p className="mt-1.5 text-xs text-terra/85">
           último contato {formatarData(c.last_contact_at)}
         </p>
       )}

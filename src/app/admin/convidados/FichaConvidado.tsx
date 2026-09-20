@@ -512,7 +512,7 @@ function Acompanhantes({ convidadoId }: { convidadoId: string }) {
                   <option value="">onde?</option>
                   {PRESENCAS.map((p) => <option key={p} value={p}>{ROTULOS_PRESENCA_CURTO[p]}</option>)}
                 </select>
-                <button type="button" onClick={() => remover(a.id)} aria-label={`Remover ${a.full_name}`} className="inline-flex h-10 w-10 items-center justify-center text-terra/60 hover:text-red-800">×</button>
+                <button type="button" onClick={() => remover(a.id)} aria-label={`Remover ${a.full_name}`} className="inline-flex h-10 w-10 items-center justify-center text-terra/85 hover:text-red-800">×</button>
               </div>
             </li>
           ))}
@@ -556,7 +556,7 @@ function Campo({
     <div>
       <Rotulo htmlFor={id}>{rotulo}</Rotulo>
       {children}
-      {dica && <p className="mt-1.5 text-xs leading-relaxed text-terra/80">{dica}</p>}
+      {dica && <p className="mt-1.5 text-xs leading-relaxed text-terra/90">{dica}</p>}
     </div>
   );
 }

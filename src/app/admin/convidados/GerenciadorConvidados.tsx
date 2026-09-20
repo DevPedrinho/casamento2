@@ -407,7 +407,7 @@ export function GerenciadorConvidados({
         {/* ---------- Busca sempre à mão; o resto dos filtros, num painel ---------- */}
         <div className="mb-4 flex gap-2.5">
           <div className="relative min-w-0 flex-1">
-            <Icone nome="busca" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-terra/60" />
+            <Icone nome="busca" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-terra/85" />
             <input
               id="busca"
               className="campo pl-10"
@@ -759,7 +759,7 @@ function LinhaConvidado({
             {visao === "ficha" && (
               c.access_code ? (
                 <span
-                  className={`versalete text-xs ${c.code_sent_at ? "text-oliva" : "text-terra/70"}`}
+                  className={`versalete text-xs ${c.code_sent_at ? "text-oliva" : "text-terra/85"}`}
                   title={c.code_sent_at ? "código entregue" : "código ainda não entregue"}
                 >
                   {c.code_sent_at ? "✓ código entregue" : "código não entregue"}

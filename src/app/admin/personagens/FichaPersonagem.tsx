@@ -207,7 +207,7 @@ export function FichaPersonagem({
                   <option key={c.id} value={c.id}>{c.full_name}</option>
                 ))}
               </select>
-              <p className="mt-1.5 text-xs leading-relaxed text-terra/80">
+              <p className="mt-1.5 text-xs leading-relaxed text-terra/90">
                 Ligado a um convidado, ganha a etiqueta do papel no mural e o que publicar sobe no feed.
               </p>
             </div>
