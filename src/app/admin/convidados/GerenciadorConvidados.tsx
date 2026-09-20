@@ -17,6 +17,7 @@ import { formatarData } from "@/lib/formato";
 import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { confirmarExclusao, excluirConvidado } from "@/lib/excluirConvidado";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
@@ -272,11 +273,41 @@ export function GerenciadorConvidados({
   }
 
   async function remover(convidado: ConvidadoCompleto): Promise<boolean> {
-    if (!confirm(`Remover ${convidado.full_name} da lista? Isso não pode ser desfeito.`)) return false;
-    const supabase = criarClienteNavegador();
-    await supabase.from("guests").delete().eq("id", convidado.id);
+    if (!confirmarExclusao(convidado)) return false;
+    const erro = await excluirConvidado(convidado);
+    if (erro) {
+      alert(erro);
+      return false;
+    }
     router.refresh();
     return true;
+  }
+
+  /** Ação em massa: exclui todos os selecionados, um a um, com uma confirmação só. */
+  async function excluirSelecionados() {
+    const alvo = convidados.filter((c) => selecionados.has(c.id));
+    if (alvo.length === 0) return;
+    const comCadastro = alvo.filter((c) => c.user_id).length;
+    const aviso = [
+      `Excluir ${alvo.length} convidado${alvo.length === 1 ? "" : "s"}?`,
+      "",
+      "Saem da lista, das famílias e das mesas; respostas, acompanhantes e publicações no mural vão junto.",
+      comCadastro > 0 ? `\n${comCadastro} já ${comCadastro === 1 ? "tem" : "têm"} cadastro: o login também é apagado.` : "",
+      "",
+      "Isso não pode ser desfeito.",
+    ].join("\n");
+    if (!confirm(aviso)) return;
+    setSalvandoLote(true);
+    for (const c of alvo) {
+      const erro = await excluirConvidado(c);
+      if (erro) {
+        alert(`${c.full_name}: ${erro}`);
+        break;
+      }
+    }
+    setSalvandoLote(false);
+    setSelecionados(new Set());
+    router.refresh();
   }
 
   function baixarCsv() {
@@ -579,6 +610,14 @@ export function GerenciadorConvidados({
               className="versalete inline-flex min-h-11 items-center text-xs text-terra underline underline-offset-4"
             >
               Limpar seleção
+            </button>
+            <button
+              type="button"
+              onClick={excluirSelecionados}
+              disabled={salvandoLote}
+              className="versalete inline-flex min-h-11 items-center text-xs text-red-800 underline underline-offset-4 disabled:opacity-50 sm:ml-auto"
+            >
+              Excluir selecionados
             </button>
           </div>
         )}

@@ -90,11 +90,9 @@ export function DetalheConvidado({
           <Botao type="button" variante="contorno" onClick={() => aoEditar()} className="flex-1 sm:flex-none">
             Editar
           </Botao>
-          {!c.user_id && (
-            <button type="button" onClick={aoRemover} className={`${ACAO_FICHA} ml-auto px-3 text-red-800`}>
-              Remover
-            </button>
-          )}
+          <button type="button" onClick={aoRemover} className={`${ACAO_FICHA} ml-auto px-3 text-red-800`}>
+            Excluir
+          </button>
         </>
       }
     >

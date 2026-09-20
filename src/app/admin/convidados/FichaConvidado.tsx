@@ -17,6 +17,7 @@ import {
   type StatusConvite,
 } from "@/lib/tipos";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { confirmarExclusao, excluirConvidado } from "@/lib/excluirConvidado";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { formatarCodigo } from "@/lib/codigo";
@@ -173,9 +174,12 @@ export function FichaConvidado({
 
   async function remover() {
     if (!convidado) return;
-    if (!confirm(`Remover ${convidado.full_name} da lista? Isso não pode ser desfeito.`)) return;
-    const supabase = criarClienteNavegador();
-    await supabase.from("guests").delete().eq("id", convidado.id);
+    if (!confirmarExclusao(convidado)) return;
+    const falha = await excluirConvidado(convidado);
+    if (falha) {
+      setErro(falha);
+      return;
+    }
     aoSalvar();
   }
 
@@ -220,9 +224,9 @@ export function FichaConvidado({
           <Botao type="button" variante="contorno" onClick={aoFechar}>
             Cancelar
           </Botao>
-          {convidado && !convidado.user_id && (
+          {convidado && (
             <button type="button" onClick={remover} className={`${ACAO_FICHA} ml-auto px-3 text-red-800`}>
-              Remover
+              Excluir
             </button>
           )}
         </>
