@@ -4,8 +4,14 @@ import { Checklist } from "./Checklist";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChecklistPage() {
+export default async function ChecklistPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await criarClienteServidor();
+  const params = await searchParams;
+  const texto = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
   const { data } = await supabase
     .from("tasks")
     .select("*, itens:task_items(*)")
@@ -18,5 +24,11 @@ export default async function ChecklistPage() {
     return { ...bruto, itens: (bruto.itens ?? []).sort((a, b) => a.sort_order - b.sort_order) };
   });
 
-  return <Checklist tarefas={tarefas} />;
+  return (
+    <Checklist
+      tarefas={tarefas}
+      filtroInicial={texto(params.filtro)}
+      prazoInicial={texto(params.prazo)}
+    />
+  );
 }

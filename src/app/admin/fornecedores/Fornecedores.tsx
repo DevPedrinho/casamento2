@@ -43,9 +43,12 @@ const VAZIO = {
 export function Fornecedores({
   fornecedores,
   despesas,
+  etapaInicial,
 }: {
   fornecedores: Fornecedor[];
   despesas: Despesa[];
+  /** Vinda do dashboard pela URL: a lista já abre naquela etapa do funil. */
+  etapaInicial?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
@@ -53,7 +56,9 @@ export function Fornecedores({
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const [etapaVisivel, setEtapaVisivel] = useState<StatusFornecedor | "todas">("todas");
+  const [etapaVisivel, setEtapaVisivel] = useState<StatusFornecedor | "todas">(() =>
+    ETAPAS_FUNIL.includes(etapaInicial as StatusFornecedor) ? (etapaInicial as StatusFornecedor) : "todas",
+  );
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const detalhe = fornecedores.find((f) => f.id === detalheId) ?? null;
 

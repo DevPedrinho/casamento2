@@ -83,7 +83,9 @@ export function Bloco({
   return (
     <section className="rounded-sm border border-terra/20 bg-creme-claro p-6 sm:p-8">
       <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
+        {/* A descrição cede espaço à ação em vez de empurrá-la para baixo;
+            no celular (menos de 14rem sobrando) a ação desce como antes. */}
+        <div className="min-w-0 flex-1 basis-56">
           <h2 className="titulo-serif text-2xl text-oliva">{titulo}</h2>
           {descricao && <p className="mt-1.5 text-sm text-terra">{descricao}</p>}
         </div>

@@ -42,11 +42,24 @@ function noPrazo(tarefa: Tarefa, prazo: Prazo): boolean {
   return dias > 0;
 }
 
-export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
+export function Checklist({
+  tarefas: doServidor,
+  filtroInicial,
+  prazoInicial,
+}: {
+  tarefas: Tarefa[];
+  /** Vindos do dashboard pela URL: a lista já abre no recorte do gráfico. */
+  filtroInicial?: string;
+  prazoInicial?: string;
+}) {
   const router = useRouter();
   const [visao, setVisao] = useState<Visao>("lista");
-  const [filtro, setFiltro] = useState<Filtro>("Tudo");
-  const [prazo, setPrazo] = useState<Prazo>("Qualquer prazo");
+  const [filtro, setFiltro] = useState<Filtro>(() =>
+    FILTROS.includes(filtroInicial as Filtro) ? (filtroInicial as Filtro) : "Tudo",
+  );
+  const [prazo, setPrazo] = useState<Prazo>(() =>
+    PRAZOS.includes(prazoInicial as Prazo) ? (prazoInicial as Prazo) : "Qualquer prazo",
+  );
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [formAberto, setFormAberto] = useState(false);
   const [editando, setEditando] = useState<Tarefa | null>(null);

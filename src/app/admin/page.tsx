@@ -1,40 +1,44 @@
-import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import type {
   Despesa,
   Fornecedor,
   LocalEvento,
   StatusConvite,
+  StatusFornecedor,
+  StatusTarefa,
   Tarefa,
 } from "@/lib/tipos";
 import {
-  ROTULOS_CONVITE,
+  ETAPAS_FUNIL,
+  ROTULOS_FORNECEDOR,
   ROTULOS_LOCAL,
+  ROTULOS_TAREFA,
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
 import { diasAte, reais } from "@/lib/formato";
 import { contaNoTotal } from "@/lib/idade";
-import { AnelCompacto, Bloco, Indicador, Vazio } from "@/components/painel";
+import { AnelCompacto, Bloco } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
-import { BarrasInterativas } from "@/components/graficos";
-import { Icone, type NomeIcone } from "@/components/Icones";
+import { ResumoModulos, type DadosResumo, type NumeroChave } from "./ResumoModulos";
+import type { Fatia, Semana } from "@/components/graficos";
 
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
   const supabase = await criarClienteServidor();
 
-  const [convidados, tarefas, despesas, fornecedores, presentes, posts, config, locais] =
+  const [convidados, tarefas, despesas, fornecedores, posts, comentarios, denuncias, config, locais] =
     await Promise.all([
       supabase.from("guests").select(
-        `id, full_name, invite_status, companions_planned, group_id, next_action,
+        `id, full_name, invite_status, companions_planned, group_id, invited_by, next_action,
          next_action_at, attends, gender, age, age_range, relationship_kind, side`,
       ),
       supabase.from("tasks").select("*").order("phase_order").order("sort_order"),
       supabase.from("expenses").select("*, payments(*)"),
       supabase.from("vendors").select("*"),
-      supabase.from("gifts").select("id, is_active"),
-      supabase.from("posts").select("id, kind, created_at, caption").order("created_at", { ascending: false }).limit(5),
+      supabase.from("posts").select("id, kind, created_at, is_hidden, expires_at"),
+      supabase.from("post_comments").select("id", { count: "exact", head: true }),
+      supabase.from("post_reports").select("id", { count: "exact", head: true }),
       supabase.from("wedding_settings").select("budget_total_cents").eq("id", true).maybeSingle(),
       supabase.from("event_venues").select("*").order("sort_order"),
     ]);
@@ -78,7 +82,7 @@ export default async function Dashboard() {
   }, new Map<string, { previsto: number; pago: number }>())]
     .filter(([, v]) => v.previsto > 0 || v.pago > 0)
     .sort((a, b) => b[1].previsto - a[1].previsto)
-    .slice(0, 8)
+    .slice(0, 6)
     .map(([rotulo, v]) => ({
       chave: rotulo,
       rotulo,
@@ -174,6 +178,162 @@ export default async function Dashboard() {
 
   const sobraDoOrcamento = orcamentoTotal - comprometido;
 
+  // ---------- Resumo por módulo ----------
+  const emEspera: StatusConvite[] = ["aguardando", "convite_enviado", "visualizou", "follow_up"];
+  const acompanhantesCadastrados = listaConvidados.filter((c) => c.invited_by).length;
+  const acompanhantesPrevistos = listaConvidados.reduce(
+    (s, c) => s + (c.invited_by ? 0 : c.companions_planned ?? 0),
+    0,
+  );
+  const resumoConvidados: DadosResumo["convidados"] = {
+    total: listaConvidados.length,
+    fatias: [
+      { chave: "confirmado", rotulo: "Confirmados", valor: confirmados.length, href: "/admin/convidados?status=confirmado" },
+      { chave: "em_espera", rotulo: "Aguardando resposta", valor: listaConvidados.filter((c) => emEspera.includes(c.invite_status)).length, href: "/admin/convidados?status=em_espera" },
+      { chave: "nao_vai", rotulo: "Não irão", valor: conta("nao_vai"), href: "/admin/convidados?status=nao_vai" },
+      { chave: "nao_contatado", rotulo: "Sem convite", valor: conta("nao_contatado"), href: "/admin/convidados?status=nao_contatado" },
+    ],
+    numeros: [
+      { rotulo: "Famílias", valor: familiasComGrupo },
+      { rotulo: "Acompanhantes", valor: `${acompanhantesCadastrados} de ${acompanhantesPrevistos}`, tom: "lavanda" },
+      ...(noColo > 0 ? [{ rotulo: "No colo", valor: noColo } satisfies NumeroChave] : []),
+    ],
+  };
+
+  const contaTarefa = (st: StatusTarefa) => listaTarefas.filter((t) => t.status === st).length;
+  const fases = new Map<string, { ordem: number; total: number; feitas: number }>();
+  for (const t of listaTarefas) {
+    const atual = fases.get(t.phase) ?? { ordem: t.phase_order, total: 0, feitas: 0 };
+    atual.total += 1;
+    if (t.status === "feito") atual.feitas += 1;
+    fases.set(t.phase, atual);
+  }
+  const altaPendente = listaTarefas.filter((t) => t.status !== "feito" && t.priority === "alta").length;
+  const resumoTarefas: DadosResumo["tarefas"] = {
+    status: (["pendente", "fazendo", "feito"] as StatusTarefa[]).map((st) => ({
+      chave: st,
+      rotulo: ROTULOS_TAREFA[st],
+      valor: contaTarefa(st),
+      href: `/admin/checklist?filtro=${encodeURIComponent(ROTULOS_TAREFA[st])}`,
+    })),
+    fases: [...fases.entries()]
+      .filter(([, v]) => v.total > v.feitas)
+      .sort((a, b) => a[1].ordem - b[1].ordem)
+      .slice(0, 6)
+      .map(([fase, v]) => ({
+        chave: fase,
+        rotulo: fase,
+        valor: v.total - v.feitas,
+        detalhe: `${v.feitas} de ${v.total} feitas`,
+        href: "/admin/checklist?filtro=A%20fazer",
+      })),
+    numeros: [
+      { rotulo: "Atrasadas", valor: atrasadas.length, tom: atrasadas.length > 0 ? "alerta" : "oliva" },
+      { rotulo: "Sem prazo", valor: semPrazo },
+      { rotulo: "Alta prioridade", valor: altaPendente, tom: altaPendente > 0 ? "lavanda" : "oliva" },
+    ],
+  };
+
+  const contaFornecedor = (st: StatusFornecedor) => listaFornecedores.filter((f) => f.status === st).length;
+  const contratados = listaFornecedores.filter((f) => f.status === "contratado");
+  const totalFechado = contratados.reduce((s, f) => s + (f.agreed_cents ?? 0), 0);
+  const retornosVencidos = listaFornecedores.filter(
+    (f) => f.next_action_at && f.next_action_at < hoje && f.status !== "contratado" && f.status !== "descartado",
+  ).length;
+  const categoriasFornecedor = new Set(listaFornecedores.map((f) => f.category));
+  const categoriasSemContrato = [...categoriasFornecedor].filter(
+    (cat) => !contratados.some((f) => f.category === cat),
+  ).length;
+  const resumoFornecedores: DadosResumo["fornecedores"] = {
+    funil: ETAPAS_FUNIL.map((st) => ({
+      chave: st,
+      rotulo: ROTULOS_FORNECEDOR[st],
+      valor: contaFornecedor(st),
+      href: `/admin/fornecedores?etapa=${st}`,
+    })),
+    numeros: [
+      { rotulo: "Contratados", valor: contratados.length, tom: "oliva" },
+      { rotulo: "Total fechado", valor: reais(totalFechado), tom: "oliva" },
+      { rotulo: "Retornos vencidos", valor: retornosVencidos, tom: retornosVencidos > 0 ? "alerta" : "oliva" },
+      { rotulo: "Áreas sem contrato", valor: categoriasSemContrato, tom: categoriasSemContrato > 0 ? "lavanda" : "oliva" },
+    ],
+  };
+
+  const contasAtrasadas = listaDespesas.filter((d) => {
+    if (d.status === "cancelado" || pagoDe(d) >= refDe(d)) return false;
+    const dias = diasAte(d.due_date);
+    return dias !== null && dias < 0;
+  }).length;
+  const contasVencendo = listaDespesas.filter((d) => {
+    if (d.status === "cancelado" || pagoDe(d) >= refDe(d)) return false;
+    const dias = diasAte(d.due_date);
+    return dias !== null && dias >= 0 && dias <= 30;
+  }).length;
+  const orcamentoFatias: Fatia[] = [
+    { chave: "pago", rotulo: "Já pago", valor: pago, href: "/admin/financeiro" },
+    { chave: "a_pagar", rotulo: "Falta pagar", valor: pendente, href: "/admin/financeiro" },
+  ];
+  if (orcamentoTotal > 0) {
+    orcamentoFatias.push(
+      sobraDoOrcamento >= 0
+        ? { chave: "livre", rotulo: "Ainda cabe", valor: sobraDoOrcamento, href: "/admin/financeiro" }
+        : { chave: "estouro", rotulo: "Passou do orçamento", valor: -sobraDoOrcamento, href: "/admin/financeiro" },
+    );
+  }
+  const resumoFinanceiro: DadosResumo["financeiro"] = {
+    orcamento: orcamentoFatias,
+    orcamentoTotal: sobraDoOrcamento < 0 ? comprometido : orcamentoTotal,
+    categorias: porCategoria,
+    numeros: [
+      { rotulo: "Comprometido", valor: reais(comprometido), tom: "lavanda" },
+      { rotulo: "Em atraso", valor: contasAtrasadas, tom: contasAtrasadas > 0 ? "alerta" : "oliva" },
+      { rotulo: "Vencem em 30 dias", valor: contasVencendo, tom: contasVencendo > 0 ? "lavanda" : "oliva" },
+    ],
+  };
+
+  const listaPosts = posts.data ?? [];
+  const agora = Date.now();
+  const inicioDaSemana = (d: Date) => {
+    const s = new Date(d);
+    s.setHours(0, 0, 0, 0);
+    s.setDate(s.getDate() - ((s.getDay() + 6) % 7)); // segunda-feira
+    return s;
+  };
+  const semanas: Semana[] = Array.from({ length: 8 }, (_, i) => {
+    const inicio = inicioDaSemana(new Date(agora - (7 - i) * 7 * 86_400_000));
+    const fim = inicio.getTime() + 7 * 86_400_000;
+    return {
+      rotulo: inicio.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+      valor: listaPosts.filter((p) => {
+        const t = new Date(p.created_at).getTime();
+        return t >= inicio.getTime() && t < fim;
+      }).length,
+    };
+  });
+  const storiesNoAr = listaPosts.filter(
+    (p) => p.kind === "story" && !p.is_hidden && (!p.expires_at || new Date(p.expires_at).getTime() > agora),
+  ).length;
+  const ocultas = listaPosts.filter((p) => p.is_hidden).length;
+  const totalDenuncias = denuncias.count ?? 0;
+  const resumoMural: DadosResumo["mural"] = {
+    semanas,
+    numeros: [
+      { rotulo: "No feed", valor: listaPosts.filter((p) => p.kind === "feed" && !p.is_hidden).length, tom: "oliva" },
+      { rotulo: "Stories no ar", valor: storiesNoAr, tom: "lavanda" },
+      { rotulo: "Comentários", valor: comentarios.count ?? 0 },
+      { rotulo: "Denúncias", valor: totalDenuncias, tom: totalDenuncias > 0 ? "alerta" : "oliva" },
+      ...(ocultas > 0 ? [{ rotulo: "Ocultas", valor: ocultas } satisfies NumeroChave] : []),
+    ],
+  };
+
+  const dadosResumo: DadosResumo = {
+    convidados: resumoConvidados,
+    tarefas: resumoTarefas,
+    fornecedores: resumoFornecedores,
+    financeiro: resumoFinanceiro,
+    mural: resumoMural,
+  };
+
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-6">
@@ -235,12 +395,6 @@ export default async function Dashboard() {
                   : `Orçamento no limite: sobram ${reais(sobraDoOrcamento)}.`}
               </p>
             )}
-
-            <div className="flex flex-wrap gap-2">
-              <Atalho href="/admin/convidados" icone="convidados">Convidados</Atalho>
-              <Atalho href="/admin/financeiro" icone="financeiro">Financeiro</Atalho>
-              <Atalho href="/admin/checklist" icone="tarefas">Tarefas</Atalho>
-            </div>
           </div>
         </Bloco>
 
@@ -255,56 +409,7 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* ---------- Gastos por categoria (fechado por padrão) ---------- */}
-      <details className="group rounded-sm border border-terra/20 bg-creme-claro">
-        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-6 py-5 sm:px-8 [&::-webkit-details-marker]:hidden">
-          <span>
-            <span className="titulo-serif block text-2xl text-oliva">Gastos por categoria</span>
-            <span className="mt-1 block text-sm text-terra">
-              O orçamento por área, e os números do financeiro.
-            </span>
-          </span>
-          <span className="versalete inline-flex min-h-11 items-center gap-2 text-xs text-oliva">
-            <span className="group-open:hidden">abrir</span>
-            <span className="hidden group-open:inline">fechar</span>
-            <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
-          </span>
-        </summary>
-
-        <div className="space-y-6 border-t border-terra/15 px-6 py-6 sm:px-8">
-          <Bloco
-            titulo="Gastos por categoria"
-            descricao="Toque numa categoria para ver as despesas dela."
-          >
-            {porCategoria.length === 0 ? (
-              <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
-            ) : (
-              <BarrasInterativas itens={porCategoria} tom={2} moeda />
-            )}
-          </Bloco>
-
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <Indicador rotulo="Orçamento" valor={reais(orcamentoTotal)} />
-            <Indicador rotulo="Comprometido" valor={reais(comprometido)} tom="lavanda" />
-            <Indicador rotulo="Contratado" valor={reais(contratado)} tom="lavanda" />
-            <Indicador rotulo="Pago" valor={reais(pago)} tom="oliva" />
-            <Indicador rotulo="Pendente" valor={reais(pendente)} tom={pendente > 0 ? "alerta" : "oliva"} />
-          </div>
-        </div>
-      </details>
+      <ResumoModulos dados={dadosResumo} />
     </div>
-  );
-}
-
-/** Atalho pequeno para um módulo, com o ícone dele. */
-function Atalho({ href, icone, children }: { href: string; icone: NomeIcone; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="titulo-serif inline-flex min-h-11 items-center gap-2 rounded-sm border border-terra/25 bg-creme px-3.5 text-base text-oliva transition-colors hover:border-oliva/50"
-    >
-      <Icone nome={icone} className="h-4 w-4" />
-      {children}
-    </Link>
   );
 }

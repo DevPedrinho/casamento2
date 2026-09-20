@@ -272,3 +272,156 @@ export function Rosca({
     </div>
   );
 }
+
+/**
+ * Uma barra só, dividida em pedaços: para "de que é feito este total".
+ *
+ * Serve ao funil de fornecedores, ao status das tarefas e ao orçamento:
+ * a barra mostra a proporção de relance, e a legenda embaixo dá o número
+ * e leva ao recorte. Um pedaço nunca fica com menos de 1,5% — senão some.
+ */
+export function BarraEmpilhada({
+  itens,
+  total,
+  sufixo,
+  moeda = false,
+  vazio = "Sem dados ainda.",
+}: {
+  itens: Fatia[];
+  /** Quando os pedaços não somam o todo (ex.: orçamento), o todo vem daqui. */
+  total?: number;
+  sufixo?: string;
+  moeda?: boolean;
+  vazio?: string;
+}) {
+  const soma = itens.reduce((s, i) => s + i.valor, 0);
+  const todo = Math.max(total ?? 0, soma);
+
+  if (todo === 0) {
+    return (
+      <p className="titulo-serif py-6 text-center text-lg text-terra italic">{vazio}</p>
+    );
+  }
+
+  const formatar = (v: number) => (moeda ? reais(v) : `${v}${sufixo ? ` ${sufixo}` : ""}`);
+
+  return (
+    <div>
+      <div
+        className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-terra/15"
+        role="img"
+        aria-label={itens.map((i) => `${i.rotulo}: ${formatar(i.valor)}`).join("; ")}
+      >
+        {itens.map((item, i) =>
+          item.valor > 0 ? (
+            <span
+              key={item.chave}
+              className="block h-full transition-[width] duration-500"
+              style={{
+                width: `${Math.max(1.5, (item.valor / todo) * 100)}%`,
+                backgroundColor: TONS[i % TONS.length],
+              }}
+            />
+          ) : null,
+        )}
+      </div>
+
+      {/* Valores em reais são largos: uma coluna só, senão o rótulo trunca. */}
+      <ul className={`mt-3 grid grid-cols-1 gap-x-4 ${moeda ? "" : "sm:grid-cols-2"}`}>
+        {itens.map((item, i) => {
+          const parte = Math.round((item.valor / todo) * 100);
+          const conteudo = (
+            <>
+              <span
+                aria-hidden="true"
+                className="mt-2 h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: TONS[i % TONS.length] }}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm text-oliva">{item.rotulo}</span>
+                {item.detalhe && (
+                  <span className="block text-xs text-terra/90">{item.detalhe}</span>
+                )}
+              </span>
+              <span className="shrink-0 text-sm text-terra tabular-nums lining-nums">
+                <span className="titulo-serif text-lg text-oliva">{formatar(item.valor)}</span>
+                {" · "}
+                {parte}%
+              </span>
+            </>
+          );
+          return (
+            <li key={item.chave}>
+              {item.href ? (
+                <Link
+                  href={item.href}
+                  className="flex items-start gap-3 rounded-sm px-2 py-1.5 transition-colors hover:bg-oliva/5 focus-visible:bg-oliva/5"
+                >
+                  {conteudo}
+                </Link>
+              ) : (
+                <span className="flex items-start gap-3 px-2 py-1.5">{conteudo}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+export type Semana = {
+  /** "22/09" — a segunda-feira daquela semana. */
+  rotulo: string;
+  valor: number;
+};
+
+/**
+ * Colunas por semana: o ritmo de algo no tempo (o mural, por exemplo).
+ *
+ * Vertical, ao contrário das outras, porque aqui o eixo é o tempo e os
+ * rótulos são curtos. É HTML, não SVG: assim o texto fica no tamanho da
+ * página em qualquer largura, em vez de encolher junto com o desenho.
+ */
+export function BarrasSemanais({
+  semanas,
+  tom = 0,
+  legenda,
+}: {
+  semanas: Semana[];
+  tom?: number;
+  /** O que está sendo contado — vai para o leitor de tela. */
+  legenda: string;
+}) {
+  const cor = TONS[tom % TONS.length];
+  const maior = Math.max(1, ...semanas.map((s) => s.valor));
+
+  return (
+    <div
+      role="img"
+      aria-label={`${legenda}: ${semanas.map((s) => `semana de ${s.rotulo}, ${s.valor}`).join("; ")}`}
+      className="flex w-full max-w-xl items-end gap-1.5 sm:gap-3"
+    >
+      {semanas.map((s) => (
+        <div key={s.rotulo} className="flex min-w-0 flex-1 flex-col items-center">
+          {/* O número senta em cima da própria coluna: a coluna mais alta
+              ocupa 80% da altura e deixa o resto para ele. */}
+          <span className="flex h-32 w-full flex-col items-center justify-end">
+            <span className="text-sm font-medium text-oliva tabular-nums lining-nums">{s.valor}</span>
+            <span
+              className="mt-1 block w-full rounded-t-sm transition-[height] duration-500"
+              style={{
+                height: s.valor === 0 ? "2px" : `${Math.max(3, (s.valor / maior) * 80)}%`,
+                backgroundColor: s.valor === 0 ? "var(--color-terra)" : cor,
+                opacity: s.valor === 0 ? 0.25 : 1,
+              }}
+            />
+          </span>
+          <span className="mt-1.5 w-full border-t border-terra/25 pt-1.5 text-center text-xs text-terra tabular-nums lining-nums">
+            {s.rotulo}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
