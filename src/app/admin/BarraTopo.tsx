@@ -34,7 +34,6 @@ const SECUNDARIOS: Item[] = [
   { href: "/admin/mesas", rotulo: "Mesas", icone: "mesas" },
   { href: "/admin/personagens", rotulo: "Personagens", icone: "personagens" },
   { href: "/admin/cronograma", rotulo: "Cronograma", icone: "cronograma" },
-  { href: "/admin/kanban", rotulo: "Kanban", icone: "kanban" },
   { href: "/admin/timeline", rotulo: "Timeline", icone: "timeline" },
   { href: "/admin/mural", rotulo: "Mural", icone: "mural", chave: "mural" },
   { href: "/admin/presentes", rotulo: "Presentes", icone: "presentes" },

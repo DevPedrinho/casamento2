@@ -436,7 +436,7 @@ export const ROTULOS_LOCAL: Record<TipoLocal, string> = {
   recepcao: "Recepção",
 };
 
-/* ===================== Kanban e tarefas ===================== */
+/* ===================== Tarefas ===================== */
 
 export type Prioridade = "baixa" | "media" | "alta";
 
@@ -453,40 +453,6 @@ export type SubTarefa = {
   done: boolean;
   sort_order: number;
 };
-
-export type ColunaKanban = {
-  id: string;
-  name: string;
-  sort_order: number;
-  is_done: boolean;
-};
-
-export type ItemCard = {
-  id: string;
-  card_id: string;
-  title: string;
-  done: boolean;
-  sort_order: number;
-};
-
-export type CardKanban = {
-  id: string;
-  column_id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  owner: string | null;
-  vendor_id: string | null;
-  priority: Prioridade;
-  due_date: string | null;
-  sort_order: number;
-  itens: ItemCard[];
-};
-
-export const CATEGORIAS_KANBAN = [
-  "Cerimônia", "Buffet", "Decoração", "Fotografia", "Música",
-  "Documentação", "Convidados", "Lua de Mel", "Financeiro", "Outros",
-];
 
 /* ===================== Financeiro ===================== */
 

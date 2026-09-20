@@ -35,7 +35,7 @@ export async function contextoDoPainel(): Promise<string> {
   const casamento = await carregarCasamento();
   const dia = hoje();
 
-  const [convidados, grupos, tarefas, despesas, fornecedores, cronograma, presentes, cards, orcamento] =
+  const [convidados, grupos, tarefas, despesas, fornecedores, cronograma, presentes, orcamento] =
     await Promise.all([
       supabase
         .from("guests")
@@ -46,7 +46,6 @@ export async function contextoDoPainel(): Promise<string> {
       supabase.from("vendors").select("name, category, status, agreed_cents, next_action, next_action_at"),
       supabase.from("day_schedule").select("starts_at, title, audience, owner").order("starts_at"),
       supabase.from("gifts").select("title, price_cents, is_active"),
-      supabase.from("kanban_cards").select("title, column_id, due_date, priority"),
       supabase.from("wedding_settings").select("budget_total_cents").eq("id", true).maybeSingle(),
     ]);
 
@@ -142,9 +141,8 @@ export async function contextoDoPainel(): Promise<string> {
       ),
     ),
 
-    bloco("Presentes e quadro", [
+    bloco("Presentes", [
       `Presentes ativos na lista: ${(presentes.data ?? []).filter((p) => p.is_active).length}`,
-      `Cards no quadro do projeto: ${(cards.data ?? []).length}`,
     ]),
   ]
     .filter(Boolean)
