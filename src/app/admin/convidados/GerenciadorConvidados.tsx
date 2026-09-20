@@ -35,7 +35,7 @@ import type { FiltroInicial } from "./page";
 export { TOM_STATUS };
 
 type Ordem = "nome" | "grupo" | "status" | "idade";
-type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado" | "cadastrado";
+type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado" | "cadastrado" | "sem_acesso";
 /** "em_espera" junta os três status de quem já recebeu e ainda não respondeu. */
 type FiltroStatus = StatusConvite | "todos" | "em_espera";
 const EM_ESPERA: StatusConvite[] = ["aguardando", "convite_enviado", "visualizou"];
@@ -153,6 +153,7 @@ export function GerenciadorConvidados({
       if (filtroCodigo === "nao_enviado" && (!c.access_code || c.code_sent_at)) return false;
       if (filtroCodigo === "enviado" && !c.code_sent_at) return false;
       if (filtroCodigo === "cadastrado" && !c.user_id) return false;
+      if (filtroCodigo === "sem_acesso" && temAcessoAoSite(c)) return false;
       if (!termo) return true;
       return (
         c.full_name.toLowerCase().includes(termo) ||
@@ -221,7 +222,7 @@ export function GerenciadorConvidados({
       limpar: () => setGrupo("todos"),
     },
     filtroCodigo !== "todos" && {
-      rotulo: { sem_codigo: "Sem código", nao_enviado: "Código não entregue", enviado: "Código entregue", cadastrado: "Com cadastro" }[filtroCodigo],
+      rotulo: { sem_codigo: "Sem código", nao_enviado: "Código não entregue", enviado: "Código entregue", cadastrado: "Com cadastro", sem_acesso: "Crianças sem acesso" }[filtroCodigo],
       limpar: () => setFiltroCodigo("todos"),
     },
     vinculo !== "todos" && {
@@ -439,7 +440,14 @@ export function GerenciadorConvidados({
             {resumo.codigoEnviado} de {resumo.total} convites entregues
           </button>
           <p className="mt-0.5 text-sm text-terra">
-            {resumo.semAcesso > 0 && `${resumo.semAcesso} criança${resumo.semAcesso === 1 ? "" : "s"} sem acesso · `}
+            {resumo.semAcesso > 0 && (
+              <>
+                <button type="button" onClick={() => recortarPor({ codigo: "sem_acesso" })} aria-pressed={filtroCodigo === "sem_acesso"} className={`underline-offset-4 hover:underline ${filtroCodigo === "sem_acesso" ? "underline" : ""}`}>
+                  {resumo.semAcesso} criança{resumo.semAcesso === 1 ? "" : "s"} sem acesso
+                </button>
+                {" · "}
+              </>
+            )}
             {resumo.semCodigo > 0 && (
               <>
                 <button type="button" onClick={() => recortarPor({ codigo: "sem_codigo" })} aria-pressed={filtroCodigo === "sem_codigo"} className={`underline-offset-4 hover:underline ${filtroCodigo === "sem_codigo" ? "underline" : ""}`}>
@@ -569,6 +577,7 @@ export function GerenciadorConvidados({
               <option value="nao_enviado">Com código, não entregue</option>
               <option value="enviado">Já entreguei</option>
               <option value="cadastrado">Já se cadastraram</option>
+              <option value="sem_acesso">Crianças sem acesso (menos de 10)</option>
             </select>
           </div>
           <div>
