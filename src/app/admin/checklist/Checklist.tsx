@@ -1,21 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "react";
-import { ROTULOS_PRIORIDADE, ROTULOS_TAREFA, type StatusTarefa, type Tarefa } from "@/lib/tipos";
+import { useMemo, useState, type DragEvent, type FormEvent } from "react";
+import {
+  ROTULOS_PRIORIDADE,
+  ROTULOS_TAREFA,
+  type Prioridade,
+  type StatusTarefa,
+  type Tarefa,
+} from "@/lib/tipos";
 import { diasAte, formatarData } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Icone } from "@/components/Icones";
 import { Bloco, Indicador, Progresso, Selo, Vazio } from "@/components/painel";
-
-/** Ciclo do clique no status: a fazer → em andamento → concluído → a fazer. */
-const PROXIMO: Record<StatusTarefa, StatusTarefa> = {
-  pendente: "fazendo",
-  fazendo: "feito",
-  feito: "pendente",
-};
+import { FichaTarefa, PROXIMO, TOM_TAREFA } from "./FichaTarefa";
 
 const FILTROS = ["Tudo", "A fazer", "Em andamento", "Concluído"] as const;
 type Filtro = (typeof FILTROS)[number];
@@ -23,11 +23,10 @@ type Filtro = (typeof FILTROS)[number];
 const PRAZOS = ["Qualquer prazo", "Hoje", "Esta semana", "Atrasadas", "Próximas"] as const;
 type Prazo = (typeof PRAZOS)[number];
 
-/** Duas formas de olhar o mesmo checklist. A escolha fica guardada no navegador. */
+/** Duas formas de olhar o mesmo checklist. A lista é a padrão; o quadro, opção. */
 const VISOES = ["lista", "kanban"] as const;
 type Visao = (typeof VISOES)[number];
 const ROTULOS_VISAO: Record<Visao, string> = { lista: "Lista", kanban: "Kanban" };
-const CHAVE_VISAO = "checklist.visao";
 
 /** Colunas do quadro, na ordem do fluxo. */
 const COLUNAS: StatusTarefa[] = ["pendente", "fazendo", "feito"];
@@ -49,29 +48,13 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
   const [filtro, setFiltro] = useState<Filtro>("Tudo");
   const [prazo, setPrazo] = useState<Prazo>("Qualquer prazo");
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
-  const [novaAberta, setNovaAberta] = useState(false);
+  const [formAberto, setFormAberto] = useState(false);
+  const [editando, setEditando] = useState<Tarefa | null>(null);
+  const [detalheId, setDetalheId] = useState<string | null>(null);
   // Movimentos que a tela já mostra enquanto o servidor não responde.
   // Cada um lembra de onde saiu: quando o dado do servidor muda, o registro
   // deixa de valer sozinho, sem precisar limpar nada.
   const [movidas, setMovidas] = useState<Record<string, { de: StatusTarefa; para: StatusTarefa }>>({});
-
-  // Recupera a visão escolhida da última vez; sem armazenamento, fica na lista.
-  useEffect(() => {
-    try {
-      if (localStorage.getItem(CHAVE_VISAO) === "kanban") setVisao("kanban");
-    } catch {
-      /* navegação privada ou armazenamento bloqueado */
-    }
-  }, []);
-
-  function escolherVisao(nova: Visao) {
-    setVisao(nova);
-    try {
-      localStorage.setItem(CHAVE_VISAO, nova);
-    } catch {
-      /* segue sem lembrar */
-    }
-  }
 
   const tarefas = useMemo(
     () =>
@@ -81,6 +64,8 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
       }),
     [doServidor, movidas],
   );
+
+  const detalhe = tarefas.find((t) => t.id === detalheId) ?? null;
 
   const resumo = useMemo(() => {
     const feitas = tarefas.filter((t) => t.status === "feito").length;
@@ -135,11 +120,23 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
     router.refresh();
   }
 
-  async function remover(tarefa: Tarefa) {
-    if (!confirm(`Remover "${tarefa.title}" do checklist?`)) return;
+  async function remover(tarefa: Tarefa): Promise<boolean> {
+    if (!confirm(`Remover "${tarefa.title}" do checklist?`)) return false;
     const supabase = criarClienteNavegador();
     await supabase.from("tasks").delete().eq("id", tarefa.id);
     router.refresh();
+    return true;
+  }
+
+  function abrirForm(tarefa: Tarefa | null) {
+    setEditando(tarefa);
+    setFormAberto(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function fecharForm() {
+    setFormAberto(false);
+    setEditando(null);
   }
 
   return (
@@ -167,8 +164,8 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
         titulo="Checklist do casamento"
         descricao={
           visao === "kanban"
-            ? "Arraste o cartão para outra coluna. No celular, use as setas."
-            : "Clique no status para avançar: a fazer → em andamento → concluído."
+            ? "Arraste o cartão para outra coluna — no celular, use as setas. Toque no título para abrir a ficha."
+            : "Toque na tarefa para abrir a ficha. O selo de status avança a tarefa: a fazer → em andamento → concluído."
         }
         acao={
           <div className="flex flex-wrap items-center gap-3">
@@ -181,7 +178,7 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
                 <button
                   key={v}
                   type="button"
-                  onClick={() => escolherVisao(v)}
+                  onClick={() => setVisao(v)}
                   aria-pressed={visao === v}
                   className={`versalete titulo-serif inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-xs transition-colors ${
                     visao === v ? "bg-oliva text-creme-claro" : "text-terra hover:text-oliva"
@@ -192,18 +189,25 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
                 </button>
               ))}
             </div>
-            <Botao type="button" variante="contorno" onClick={() => setNovaAberta((v) => !v)}>
-              {novaAberta ? "Fechar" : "Nova tarefa"}
+            <Botao
+              type="button"
+              variante="contorno"
+              onClick={() => (formAberto ? fecharForm() : abrirForm(null))}
+            >
+              {formAberto ? "Fechar" : "Nova tarefa"}
             </Botao>
           </div>
         }
       >
-        {novaAberta && (
-          <FormNovaTarefa
+        {formAberto && (
+          <FormTarefa
+            key={editando?.id ?? "nova"}
+            tarefa={editando}
             aoSalvar={() => {
-              setNovaAberta(false);
+              fecharForm();
               router.refresh();
             }}
+            aoCancelar={fecharForm}
           />
         )}
 
@@ -252,7 +256,7 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
             tarefas={visiveis}
             salvandoId={salvandoId}
             aoMover={mover}
-            aoRemover={remover}
+            aoAbrir={(t) => setDetalheId(t.id)}
           />
         ) : (
           <div className="space-y-9">
@@ -267,8 +271,8 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
                       key={tarefa.id}
                       tarefa={tarefa}
                       salvando={salvandoId === tarefa.id}
-                      aoAlternar={() => mover(tarefa, PROXIMO[tarefa.status])}
-                      aoRemover={() => remover(tarefa)}
+                      aoAvancar={() => mover(tarefa, PROXIMO[tarefa.status])}
+                      aoAbrir={() => setDetalheId(tarefa.id)}
                     />
                   ))}
                 </ul>
@@ -277,7 +281,90 @@ export function Checklist({ tarefas: doServidor }: { tarefas: Tarefa[] }) {
           </div>
         )}
       </Bloco>
+
+      {detalhe && (
+        <FichaTarefa
+          tarefa={detalhe}
+          salvando={salvandoId === detalhe.id}
+          aoFechar={() => setDetalheId(null)}
+          aoEditar={() => {
+            setDetalheId(null);
+            abrirForm(detalhe);
+          }}
+          aoMover={(para) => mover(detalhe, para)}
+          aoRemover={() => {
+            void remover(detalhe).then((removeu) => removeu && setDetalheId(null));
+          }}
+          aoAtualizar={() => router.refresh()}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * O cartão da lista é só o resumo: título, onde está, prazo. O selo de
+ * status é um botão à parte — avança sem abrir a ficha — e o resto da linha
+ * abre a ficha. Botão dentro de botão não existe, por isso são irmãos.
+ */
+function LinhaTarefa({
+  tarefa,
+  salvando,
+  aoAvancar,
+  aoAbrir,
+}: {
+  tarefa: Tarefa;
+  salvando: boolean;
+  aoAvancar: () => void;
+  aoAbrir: () => void;
+}) {
+  const dias = diasAte(tarefa.due_date);
+  const feita = tarefa.status === "feito";
+  const atrasada = !feita && dias !== null && dias < 0;
+  const subtarefas = tarefa.itens ?? [];
+  const feitos = subtarefas.filter((i) => i.done).length;
+
+  return (
+    <li
+      className={`flex items-start gap-3 rounded-sm border px-4 py-3.5 transition-colors ${
+        feita ? "border-terra/15 bg-creme/60" : "border-terra/20 bg-creme hover:border-oliva/40"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={aoAvancar}
+        disabled={salvando}
+        aria-label={`Marcar ${tarefa.title} como ${ROTULOS_TAREFA[PROXIMO[tarefa.status]].toLowerCase()}`}
+        className="-my-2 inline-flex min-h-11 shrink-0 items-center py-2 disabled:opacity-50"
+      >
+        <Selo tom={TOM_TAREFA[tarefa.status]}>{ROTULOS_TAREFA[tarefa.status]}</Selo>
+      </button>
+
+      <button
+        type="button"
+        onClick={aoAbrir}
+        aria-label={`Abrir ${tarefa.title}`}
+        className="min-w-0 flex-1 text-left"
+      >
+        <p className={`titulo-serif text-lg leading-snug ${feita ? "text-terra/60 line-through" : "text-oliva"}`}>
+          {tarefa.title}
+        </p>
+        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-terra/85">
+          {tarefa.priority === "alta" && !feita && <span className="font-medium text-red-800">Alta</span>}
+          <span>{tarefa.category}</span>
+          {tarefa.owner && <span>· {tarefa.owner}</span>}
+          {tarefa.due_date && (
+            <span className={atrasada ? "font-medium text-red-800" : ""}>
+              · {formatarData(tarefa.due_date)}
+              {atrasada && ` (atrasada ${Math.abs(dias!)}d)`}
+            </span>
+          )}
+          {subtarefas.length > 0 && (
+            <span>· {feitos}/{subtarefas.length} subtarefas</span>
+          )}
+        </p>
+      </button>
+    </li>
   );
 }
 
@@ -289,12 +376,12 @@ function QuadroTarefas({
   tarefas,
   salvandoId,
   aoMover,
-  aoRemover,
+  aoAbrir,
 }: {
   tarefas: Tarefa[];
   salvandoId: string | null;
   aoMover: (tarefa: Tarefa, para: StatusTarefa) => void;
-  aoRemover: (tarefa: Tarefa) => void;
+  aoAbrir: (tarefa: Tarefa) => void;
 }) {
   const [colunaAlvo, setColunaAlvo] = useState<StatusTarefa | null>(null);
 
@@ -341,7 +428,7 @@ function QuadroTarefas({
                       tarefa={tarefa}
                       salvando={salvandoId === tarefa.id}
                       aoMover={(para) => aoMover(tarefa, para)}
-                      aoRemover={() => aoRemover(tarefa)}
+                      aoAbrir={() => aoAbrir(tarefa)}
                     />
                   ))}
                 </ul>
@@ -358,12 +445,12 @@ function CartaoTarefa({
   tarefa,
   salvando,
   aoMover,
-  aoRemover,
+  aoAbrir,
 }: {
   tarefa: Tarefa;
   salvando: boolean;
   aoMover: (para: StatusTarefa) => void;
-  aoRemover: () => void;
+  aoAbrir: () => void;
 }) {
   const dias = diasAte(tarefa.due_date);
   const feita = tarefa.status === "feito";
@@ -389,230 +476,52 @@ function CartaoTarefa({
           feita ? "border-terra/15" : "border-terra/20"
         } ${salvando ? "opacity-50" : ""}`}
       >
-        <p className={`titulo-serif text-base leading-snug ${feita ? "text-terra/60 line-through" : "text-oliva"}`}>
-          {tarefa.title}
-        </p>
-        <p className="versalete mt-1 text-xs text-terra/70">{tarefa.phase}</p>
+        <button type="button" onClick={aoAbrir} className="block w-full text-left">
+          <p className={`titulo-serif text-base leading-snug ${feita ? "text-terra/60 line-through" : "text-oliva"}`}>
+            {tarefa.title}
+          </p>
+          <p className="versalete mt-1 text-xs text-terra/70">{tarefa.phase}</p>
 
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-terra/85">
-          {tarefa.priority === "alta" && <Selo tom="alerta">{ROTULOS_PRIORIDADE.alta}</Selo>}
-          <span>{tarefa.category}</span>
-          {tarefa.owner && <span>· {tarefa.owner}</span>}
-          {tarefa.due_date && (
-            <span className={atrasada ? "font-medium text-red-800" : ""}>
-              · {formatarData(tarefa.due_date)}
-              {atrasada && ` (atrasada ${Math.abs(dias!)}d)`}
-            </span>
-          )}
-          {subtarefas.length > 0 && (
-            <span>
-              · {feitos}/{subtarefas.length} subtarefas
-            </span>
-          )}
-        </div>
+          <span className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-terra/85">
+            {tarefa.priority === "alta" && <Selo tom="alerta">{ROTULOS_PRIORIDADE.alta}</Selo>}
+            <span>{tarefa.category}</span>
+            {tarefa.owner && <span>· {tarefa.owner}</span>}
+            {tarefa.due_date && (
+              <span className={atrasada ? "font-medium text-red-800" : ""}>
+                · {formatarData(tarefa.due_date)}
+                {atrasada && ` (atrasada ${Math.abs(dias!)}d)`}
+              </span>
+            )}
+            {subtarefas.length > 0 && (
+              <span>
+                · {feitos}/{subtarefas.length} subtarefas
+              </span>
+            )}
+          </span>
+        </button>
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              disabled={!anterior || salvando}
-              onClick={() => anterior && aoMover(anterior)}
-              aria-label={anterior ? `Mover para ${ROTULOS_TAREFA[anterior]}` : "Já está na primeira coluna"}
-              className={seta}
-            >
-              ←
-            </button>
-            <button
-              type="button"
-              disabled={!proxima || salvando}
-              onClick={() => proxima && aoMover(proxima)}
-              aria-label={proxima ? `Mover para ${ROTULOS_TAREFA[proxima]}` : "Já está na última coluna"}
-              className={seta}
-            >
-              →
-            </button>
-          </div>
+        <div className="mt-3 flex gap-1.5">
           <button
             type="button"
-            onClick={aoRemover}
-            className="versalete inline-flex min-h-10 items-center text-xs text-red-800 underline underline-offset-4"
+            disabled={!anterior || salvando}
+            onClick={() => anterior && aoMover(anterior)}
+            aria-label={anterior ? `Mover para ${ROTULOS_TAREFA[anterior]}` : "Já está na primeira coluna"}
+            className={seta}
           >
-            Remover
+            ←
+          </button>
+          <button
+            type="button"
+            disabled={!proxima || salvando}
+            onClick={() => proxima && aoMover(proxima)}
+            aria-label={proxima ? `Mover para ${ROTULOS_TAREFA[proxima]}` : "Já está na última coluna"}
+            className={seta}
+          >
+            →
           </button>
         </div>
       </article>
     </li>
-  );
-}
-
-function LinhaTarefa({
-  tarefa,
-  salvando,
-  aoAlternar,
-  aoRemover,
-}: {
-  tarefa: Tarefa;
-  salvando: boolean;
-  aoAlternar: () => void;
-  aoRemover: () => void;
-}) {
-  const dias = diasAte(tarefa.due_date);
-  const atrasada = tarefa.status !== "feito" && dias !== null && dias < 0;
-  const feita = tarefa.status === "feito";
-
-  return (
-    <li
-      className={`flex flex-wrap items-start justify-between gap-4 rounded-sm border px-5 py-4 transition-colors ${
-        feita ? "border-terra/15 bg-creme/60" : "border-terra/20 bg-creme"
-      }`}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={aoAlternar}
-            disabled={salvando}
-            aria-label={`Mudar status de ${tarefa.title}`}
-            className="-my-2 inline-flex min-h-11 items-center py-2 disabled:opacity-50"
-          >
-            <Selo tom={feita ? "oliva" : tarefa.status === "fazendo" ? "lavanda" : "neutro"}>
-              {ROTULOS_TAREFA[tarefa.status]}
-            </Selo>
-          </button>
-          <p className={`titulo-serif text-lg ${feita ? "text-terra/60 line-through" : "text-oliva"}`}>
-            {tarefa.title}
-          </p>
-        </div>
-
-        {tarefa.notes && <p className="mt-2 text-sm leading-relaxed text-terra">{tarefa.notes}</p>}
-
-        <SubTarefas tarefa={tarefa} />
-
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-terra/85">
-          <span>{tarefa.category}</span>
-          {tarefa.owner && <span>· {tarefa.owner}</span>}
-          {tarefa.due_date && (
-            <span className={atrasada ? "font-medium text-red-800" : ""}>
-              · {formatarData(tarefa.due_date)}
-              {atrasada && ` (atrasada ${Math.abs(dias!)}d)`}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={aoRemover}
-        className="inline-flex min-h-11 items-center versalete shrink-0 text-xs text-red-800 underline underline-offset-4"
-      >
-        Remover
-      </button>
-    </li>
-  );
-}
-
-/** Checklist interno da tarefa, com progresso. */
-function SubTarefas({ tarefa }: { tarefa: Tarefa }) {
-  const [itens, setItens] = useState(tarefa.itens ?? []);
-  const [novo, setNovo] = useState("");
-  const [abrindo, setAbrindo] = useState(false);
-
-  const feitos = itens.filter((i) => i.done).length;
-
-  async function alternar(id: string, done: boolean) {
-    setItens((l) => l.map((i) => (i.id === id ? { ...i, done: !done } : i)));
-    const supabase = criarClienteNavegador();
-    await supabase.from("task_items").update({ done: !done }).eq("id", id);
-  }
-
-  async function adicionar() {
-    const titulo = novo.trim();
-    if (!titulo) return;
-    const supabase = criarClienteNavegador();
-    const { data } = await supabase
-      .from("task_items")
-      .insert({ task_id: tarefa.id, title: titulo, sort_order: itens.length + 1 })
-      .select()
-      .single();
-    if (data) setItens((l) => [...l, data]);
-    setNovo("");
-  }
-
-  async function remover(id: string) {
-    setItens((l) => l.filter((i) => i.id !== id));
-    const supabase = criarClienteNavegador();
-    await supabase.from("task_items").delete().eq("id", id);
-  }
-
-  if (itens.length === 0 && !abrindo) {
-    return (
-      <button
-        type="button"
-        onClick={() => setAbrindo(true)}
-        className="inline-flex min-h-11 items-center versalete mt-2 text-xs text-terra/70 underline underline-offset-4 hover:text-oliva"
-      >
-        + subtarefa
-      </button>
-    );
-  }
-
-  return (
-    <div className="mt-3 rounded-sm border border-terra/15 bg-creme-claro/60 p-3.5">
-      {itens.length > 0 && (
-        <p className="versalete mb-2.5 text-xs text-terra">
-          {feitos} de {itens.length} concluídas ·{" "}
-          {Math.round((feitos / itens.length) * 100)}%
-        </p>
-      )}
-
-      <ul className="space-y-1.5">
-        {itens.map((item) => (
-          <li key={item.id} className="flex items-center gap-2.5">
-            <input
-              type="checkbox"
-              checked={item.done}
-              onChange={() => alternar(item.id, item.done)}
-              className="h-4 w-4 shrink-0 accent-[var(--color-oliva)]"
-              aria-label={item.title}
-            />
-            <span className={`min-w-0 flex-1 text-sm ${item.done ? "text-terra/60 line-through" : "text-terra"}`}>
-              {item.title}
-            </span>
-            <button
-              type="button"
-              onClick={() => remover(item.id)}
-              aria-label={`Remover ${item.title}`}
-              className="versalete shrink-0 text-xs text-terra/50 hover:text-red-800"
-            >
-              ×
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-2.5 flex gap-2">
-        <input
-          className="campo py-1.5 text-sm"
-          placeholder="Nova subtarefa…"
-          value={novo}
-          onChange={(e) => setNovo(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void adicionar();
-            }
-          }}
-          aria-label="Nova subtarefa"
-        />
-        <button
-          type="button"
-          onClick={adicionar}
-          className="versalete titulo-serif shrink-0 rounded-sm border border-oliva/40 px-3 text-xs text-oliva"
-        >
-          Add
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -629,13 +538,23 @@ const FASES = [
   "Sem prazo",
 ];
 
-function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Geral");
-  const [phase, setPhase] = useState(FASES[0]);
-  const [owner, setOwner] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [notes, setNotes] = useState("");
+/** Cria ou edita uma tarefa. Com `tarefa`, vem preenchido e salva por cima. */
+function FormTarefa({
+  tarefa,
+  aoSalvar,
+  aoCancelar,
+}: {
+  tarefa: Tarefa | null;
+  aoSalvar: () => void;
+  aoCancelar: () => void;
+}) {
+  const [title, setTitle] = useState(tarefa?.title ?? "");
+  const [category, setCategory] = useState(tarefa?.category ?? "Geral");
+  const [phase, setPhase] = useState(tarefa?.phase ?? FASES[0]);
+  const [owner, setOwner] = useState(tarefa?.owner ?? "");
+  const [dueDate, setDueDate] = useState(tarefa?.due_date ?? "");
+  const [priority, setPriority] = useState<Prioridade>(tarefa?.priority ?? "media");
+  const [notes, setNotes] = useState(tarefa?.notes ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -649,15 +568,19 @@ function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
 
     setSalvando(true);
     const supabase = criarClienteNavegador();
-    const { error } = await supabase.from("tasks").insert({
+    const dados = {
       title: title.trim(),
       category: category.trim() || "Geral",
       phase,
-      phase_order: FASES.indexOf(phase) + 1,
+      phase_order: FASES.includes(phase) ? FASES.indexOf(phase) + 1 : (tarefa?.phase_order ?? 99),
       owner: owner.trim() || null,
       due_date: dueDate || null,
+      priority,
       notes: notes.trim() || null,
-    });
+    };
+    const { error } = tarefa
+      ? await supabase.from("tasks").update(dados).eq("id", tarefa.id)
+      : await supabase.from("tasks").insert(dados);
     setSalvando(false);
 
     if (error) {
@@ -667,8 +590,12 @@ function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
     aoSalvar();
   }
 
+  // Uma fase antiga que não está na lista continua selecionável.
+  const fases = FASES.includes(phase) ? FASES : [phase, ...FASES];
+
   return (
     <form onSubmit={enviar} className="mb-8 space-y-5 rounded-sm border border-terra/20 bg-creme p-6">
+      <h3 className="titulo-serif text-xl text-oliva">{tarefa ? "Editar tarefa" : "Nova tarefa"}</h3>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -682,11 +609,11 @@ function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <Rotulo htmlFor="t-fase">Fase</Rotulo>
           <select id="t-fase" className="campo" value={phase} onChange={(e) => setPhase(e.target.value)}>
-            {FASES.map((f) => (
+            {fases.map((f) => (
               <option key={f}>{f}</option>
             ))}
           </select>
@@ -699,6 +626,14 @@ function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
           <Rotulo htmlFor="t-data">Prazo</Rotulo>
           <input id="t-data" type="date" className="campo" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </div>
+        <div>
+          <Rotulo htmlFor="t-prio">Prioridade</Rotulo>
+          <select id="t-prio" className="campo" value={priority} onChange={(e) => setPriority(e.target.value as Prioridade)}>
+            {(Object.keys(ROTULOS_PRIORIDADE) as Prioridade[]).map((p) => (
+              <option key={p} value={p}>{ROTULOS_PRIORIDADE[p]}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div>
@@ -706,9 +641,14 @@ function FormNovaTarefa({ aoSalvar }: { aoSalvar: () => void }) {
         <textarea id="t-notes" rows={2} className="campo resize-y" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
 
-      <Botao type="submit" disabled={salvando}>
-        {salvando ? "Salvando…" : "Adicionar tarefa"}
-      </Botao>
+      <div className="flex flex-wrap gap-3">
+        <Botao type="submit" disabled={salvando}>
+          {salvando ? "Salvando…" : tarefa ? "Salvar alterações" : "Adicionar tarefa"}
+        </Botao>
+        <Botao type="button" variante="contorno" onClick={aoCancelar}>
+          Cancelar
+        </Botao>
+      </div>
     </form>
   );
 }

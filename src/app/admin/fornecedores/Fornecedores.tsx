@@ -11,8 +11,7 @@ import {
   type Fornecedor,
   type StatusFornecedor,
 } from "@/lib/tipos";
-import { diasAte, formatarData, paraCampo, paraCentavos, reais } from "@/lib/formato";
-import { linkSeguro } from "@/lib/formato";
+import { diasAte, formatarData, linkSeguro, paraCampo, paraCentavos, reais } from "@/lib/formato";
 import {
   contasPorFornecedor,
   CONTA_VAZIA,
@@ -22,15 +21,7 @@ import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
-
-const TOM_ETAPA: Record<StatusFornecedor, "neutro" | "oliva" | "lavanda" | "apagado"> = {
-  prospecto: "neutro",
-  contatado: "neutro",
-  proposta: "lavanda",
-  negociando: "lavanda",
-  contratado: "oliva",
-  descartado: "apagado",
-};
+import { FichaFornecedor, TOM_ETAPA } from "./FichaFornecedor";
 
 const VAZIO = {
   name: "",
@@ -64,6 +55,8 @@ export function Fornecedores({
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [etapaVisivel, setEtapaVisivel] = useState<StatusFornecedor | "todas">("todas");
+  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const detalhe = fornecedores.find((f) => f.id === detalheId) ?? null;
 
   /** O que o financeiro sabe de cada um: contratado, pago e os lançamentos. */
   const contas = useMemo(() => contasPorFornecedor(despesas), [despesas]);
@@ -221,12 +214,13 @@ export function Fornecedores({
     router.refresh();
   }
 
-  async function remover(f: Fornecedor) {
-    if (!confirm(`Remover ${f.name} do funil?`)) return;
+  async function remover(f: Fornecedor): Promise<boolean> {
+    if (!confirm(`Remover ${f.name} do funil?`)) return false;
     const supabase = criarClienteNavegador();
     await supabase.from("vendors").delete().eq("id", f.id);
     if (editando === f.id) limpar();
     router.refresh();
+    return true;
   }
 
   return (
@@ -315,7 +309,7 @@ export function Fornecedores({
 
       <Bloco
         titulo="Fornecedores"
-        descricao="Do primeiro contato ao contrato fechado — com o valor de cada orçamento."
+        descricao="Do primeiro contato ao contrato fechado. Toque no fornecedor para abrir a ficha."
         acao={
           <Botao
             type="button"
@@ -472,9 +466,7 @@ export function Fornecedores({
                         key={f.id}
                         fornecedor={f}
                         conta={contas.get(f.id) ?? CONTA_VAZIA}
-                        aoEditar={() => editar(f)}
-                        aoRemover={() => remover(f)}
-                        aoMover={(s) => moverEtapa(f, s)}
+                        aoAbrir={() => setDetalheId(f.id)}
                       />
                     ))}
                   </ul>
@@ -484,6 +476,22 @@ export function Fornecedores({
           </div>
         )}
       </Bloco>
+
+      {detalhe && (
+        <FichaFornecedor
+          fornecedor={detalhe}
+          conta={contas.get(detalhe.id) ?? CONTA_VAZIA}
+          aoFechar={() => setDetalheId(null)}
+          aoEditar={() => {
+            setDetalheId(null);
+            editar(detalhe);
+          }}
+          aoRemover={() => {
+            void remover(detalhe).then((removeu) => removeu && setDetalheId(null));
+          }}
+          aoMover={(s) => moverEtapa(detalhe, s)}
+        />
+      )}
     </div>
   );
 }
@@ -513,243 +521,83 @@ function FiltroEtapa({
   );
 }
 
+/**
+ * O cartão da lista é só o resumo: nome, etapa, o valor que importa e o
+ * próximo passo. Tudo o mais — contato, conta no financeiro, ações — mora
+ * na ficha, que abre ao tocar.
+ */
 function CartaoFornecedor({
   fornecedor: f,
   conta,
-  aoEditar,
-  aoRemover,
-  aoMover,
+  aoAbrir,
 }: {
   fornecedor: Fornecedor;
   conta: ContaDoFornecedor;
-  aoEditar: () => void;
-  aoRemover: () => void;
-  aoMover: (status: StatusFornecedor) => void;
+  aoAbrir: () => void;
 }) {
   const dias = diasAte(f.next_action_at);
-  const urgente = dias !== null && dias <= 7;
-  const site = linkSeguro(f.website);
+  const urgente = dias !== null && dias <= 7 && f.status !== "contratado" && f.status !== "descartado";
+  const semDespesa = f.status === "contratado" && conta.despesas.length === 0;
+  const quitado = conta.despesas.length > 0 && conta.saldo === 0;
+  const valor = f.agreed_cents ?? f.quoted_cents;
 
   return (
-    <li className="rounded-sm border border-terra/20 bg-creme p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h4 className="titulo-serif text-xl text-oliva">{f.name}</h4>
-          <p className="mt-1 text-sm text-terra">
-            {[f.category, f.company].filter(Boolean).join(" · ")}
-          </p>
-        </div>
-        <Selo tom={TOM_ETAPA[f.status]}>{ROTULOS_FORNECEDOR[f.status]}</Selo>
-      </div>
+    <li>
+      <button
+        type="button"
+        onClick={aoAbrir}
+        aria-label={`Abrir ${f.name}`}
+        className="block w-full rounded-sm border border-terra/20 bg-creme p-4 text-left transition-colors hover:border-oliva/40 focus-visible:border-oliva sm:p-5"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h4 className="titulo-serif text-lg leading-snug text-oliva">{f.name}</h4>
+            <p className="mt-1 truncate text-sm text-terra">
+              {[f.category, f.contact_name ?? f.company].filter(Boolean).join(" · ")}
+            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Selo tom={TOM_ETAPA[f.status]}>{ROTULOS_FORNECEDOR[f.status]}</Selo>
+              {quitado && <Selo tom="oliva">quitado</Selo>}
+              {semDespesa && <Selo tom="alerta">sem despesa</Selo>}
+            </div>
+          </div>
 
-      {(f.contact_name || f.phone || f.email || f.instagram || site) && (
-        <div className="mt-3 space-y-1 text-sm text-terra">
-          {f.contact_name && <p>{f.contact_name}</p>}
-          {f.phone && (
-            <p>
-              <a
-                href={`https://wa.me/55${f.phone.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-oliva"
-              >
-                {f.phone}
-              </a>
-            </p>
-          )}
-          {f.email && <p className="break-all">{f.email}</p>}
-          {f.instagram && (
-            <p>
-              <a
-                href={`https://instagram.com/${f.instagram}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-oliva"
-              >
-                @{f.instagram}
-              </a>
-            </p>
-          )}
-          {site && (
-            <p>
-              <a href={site} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center break-all underline underline-offset-4 hover:text-oliva">
-                {site.replace(/^https?:\/\//, "")}
-              </a>
-            </p>
+          {valor !== null && (
+            <div className="flex items-baseline justify-between gap-3 sm:block sm:shrink-0 sm:text-right">
+              <p className="titulo-serif text-xl text-oliva tabular-nums lining-nums">{reais(valor)}</p>
+              <p className="text-sm text-terra">{f.agreed_cents !== null ? "fechado" : "orçamento"}</p>
+            </div>
           )}
         </div>
-      )}
 
-      {(f.quoted_cents !== null || f.agreed_cents !== null) && (
-        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1">
-          {f.quoted_cents !== null && (
-            <p className="text-sm text-terra">
-              Orçamento: <span className="tabular-nums lining-nums">{reais(f.quoted_cents)}</span>
+        {conta.despesas.length > 0 && (
+          <div className="mt-3">
+            <div
+              className="h-2 w-full rounded-full bg-terra/15"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={conta.contratado}
+              aria-valuenow={conta.pago}
+              aria-label="Pago do contratado"
+            >
+              <span
+                className={`block h-2 rounded-full ${quitado ? "bg-oliva" : "bg-lavanda"}`}
+                style={{ width: `${Math.min(100, Math.round((conta.pago / Math.max(1, conta.contratado)) * 100))}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-sm text-terra tabular-nums lining-nums">
+              {quitado ? "Quitado" : `${reais(conta.pago)} pagos · falta ${reais(conta.saldo)}`}
             </p>
-          )}
-          {f.agreed_cents !== null && (
-            <p className="titulo-serif text-base text-oliva">
-              Fechado: <span className="tabular-nums lining-nums">{reais(f.agreed_cents)}</span>
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ---------- O que o financeiro registra ---------- */}
-      <ContaNoFinanceiro fornecedor={f} conta={conta} />
-
-      {linkSeguro(f.contract_url ?? null) && (
-        <p className="mt-2">
-          <a href={linkSeguro(f.contract_url ?? null)!} target="_blank" rel="noopener noreferrer"
-            className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4">
-            Ver contrato
-          </a>
-        </p>
-      )}
-
-      {f.next_action && (
-        <p className={`mt-3 text-sm ${urgente ? "font-medium text-red-800" : "text-terra"}`}>
-          Próximo passo: {f.next_action}
-          {f.next_action_at && ` — ${formatarData(f.next_action_at)}`}
-        </p>
-      )}
-
-      {f.notes && <p className="mt-3 text-sm leading-relaxed text-terra/85">{f.notes}</p>}
-
-      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-terra/15 pt-4">
-        <label className="versalete flex min-h-11 items-center text-xs text-terra">
-          Mover para{" "}
-          <select
-            value={f.status}
-            onChange={(e) => aoMover(e.target.value as StatusFornecedor)}
-            className="ml-1 min-h-11 rounded-sm border border-terra/30 bg-creme-claro px-2 py-1 normal-case tracking-normal text-oliva"
-          >
-            {ETAPAS_FUNIL.map((s) => (
-              <option key={s} value={s}>{ROTULOS_FORNECEDOR[s]}</option>
-            ))}
-          </select>
-        </label>
-        <button type="button" onClick={aoEditar} className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4">
-          Editar
-        </button>
-        <button type="button" onClick={aoRemover} className="versalete inline-flex min-h-11 items-center text-xs text-red-800 underline underline-offset-4">
-          Remover
-        </button>
-      </div>
-    </li>
-  );
-}
-
-
-/**
- * A conta do fornecedor, lida do financeiro.
- *
- * Nenhum número aqui é digitado nesta tela: tudo vem dos lançamentos. Se o
- * valor parecer errado, o lugar de corrigir é o Financeiro — e é por isso que
- * o bloco leva direto para lá.
- */
-function ContaNoFinanceiro({
-  fornecedor: f,
-  conta,
-}: {
-  fornecedor: Fornecedor;
-  conta: ContaDoFornecedor;
-}) {
-  const [aberto, setAberto] = useState(false);
-
-  // Fornecedor em negociação ainda não tem o que mostrar, e o vazio
-  // atrapalharia mais do que ajudaria.
-  if (conta.despesas.length === 0) {
-    if (f.status !== "contratado") return null;
-    return (
-      <p className="mt-4 rounded-sm border border-dashed border-red-800/35 bg-red-50/50 px-4 py-3 text-sm text-red-900">
-        Fechado, mas sem despesa lançada no financeiro. Enquanto não houver,
-        o que for pago a este fornecedor fica fora do orçamento.
-      </p>
-    );
-  }
-
-  const quitado = conta.saldo === 0;
-  const diasParaVencer = diasAte(conta.proximoVencimento);
-
-  return (
-    <div className="mt-4 rounded-sm border border-terra/20 bg-creme-claro px-4 py-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="versalete text-xs text-lavanda">No financeiro</p>
-        <p className="text-sm text-terra tabular-nums lining-nums">
-          <span className="titulo-serif text-base text-oliva">{reais(conta.pago)}</span> pagos
-          {" de "}
-          {reais(conta.contratado)}
-        </p>
-      </div>
-
-      {/* Uma régua vale mais que a subtração escrita. */}
-      <span className="mt-2 block h-2 w-full rounded-full bg-terra/15">
-        <span
-          className={`block h-2 rounded-full ${quitado ? "bg-oliva" : "bg-lavanda"}`}
-          style={{
-            width: `${Math.min(100, Math.round((conta.pago / Math.max(1, conta.contratado)) * 100))}%`,
-          }}
-        />
-      </span>
-
-      <p className="mt-2 text-sm text-terra">
-        {quitado ? (
-          "Quitado."
-        ) : (
-          <>
-            Falta{" "}
-            <span className="tabular-nums lining-nums text-oliva">{reais(conta.saldo)}</span>
-            {conta.proximoVencimento && (
-              <>
-                {" · próximo vencimento "}
-                <span className={diasParaVencer !== null && diasParaVencer < 0 ? "text-red-800" : ""}>
-                  {formatarData(conta.proximoVencimento)}
-                </span>
-              </>
-            )}
-          </>
+          </div>
         )}
-      </p>
 
-      {conta.pagamentos.length > 0 && (
-        <>
-          <button
-            type="button"
-            onClick={() => setAberto((v) => !v)}
-            aria-expanded={aberto}
-            className="versalete mt-2 inline-flex min-h-11 items-center gap-2 text-xs text-oliva underline underline-offset-4"
-          >
-            {aberto ? "Esconder" : "Ver"} {conta.pagamentos.length}{" "}
-            {conta.pagamentos.length > 1 ? "lançamentos" : "lançamento"}
-          </button>
-
-          {aberto && (
-            <ul className="mt-1 space-y-1.5 border-t border-terra/15 pt-2">
-              {conta.pagamentos.map((p) => (
-                <li key={p.id} className="flex flex-wrap justify-between gap-x-3 text-sm text-terra">
-                  <span className="min-w-0">
-                    {formatarData(p.paid_at)}
-                    {p.method && <span className="text-terra/75"> · {p.method}</span>}
-                  </span>
-                  <span className="tabular-nums lining-nums text-oliva">
-                    {reais(p.amount_cents)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
-      )}
-
-      <p className="mt-2">
-        <Link
-          href={`/admin/financeiro?fornecedor=${f.id}`}
-          className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4"
-        >
-          Abrir no financeiro
-        </Link>
-      </p>
-    </div>
+        {f.next_action && (
+          <p className={`mt-2 truncate text-sm ${urgente ? "font-medium text-red-800" : "text-terra"}`}>
+            Próximo: {f.next_action}
+            {f.next_action_at && ` — ${formatarData(f.next_action_at)}`}
+          </p>
+        )}
+      </button>
+    </li>
   );
 }

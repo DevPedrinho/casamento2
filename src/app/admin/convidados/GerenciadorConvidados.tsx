@@ -15,38 +15,37 @@ import {
 } from "@/lib/tipos";
 import { formatarData } from "@/lib/formato";
 import { formatarCodigo } from "@/lib/codigo";
-import { linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
+import { DetalheConvidado } from "./DetalheConvidado";
+import { Familias } from "./Familias";
 import { FichaConvidado } from "./FichaConvidado";
+import { TOM_STATUS } from "./tons";
 import type { FiltroInicial } from "./page";
 
-export const TOM_STATUS: Record<StatusConvite, "neutro" | "oliva" | "lavanda" | "alerta" | "apagado"> = {
-  nao_contatado: "neutro",
-  convite_enviado: "lavanda",
-  visualizou: "lavanda",
-  aguardando: "lavanda",
-  confirmado: "oliva",
-  nao_vai: "apagado",
-  follow_up: "alerta",
-};
+export { TOM_STATUS };
 
 type Ordem = "nome" | "grupo" | "status" | "idade";
 type FiltroCodigo = "todos" | "sem_codigo" | "nao_enviado" | "enviado";
 
 /**
- * Duas leituras da mesma lista.
+ * Três leituras da mesma lista.
  *
  * "ficha" é a visão de organização: família, telefone, código do convite.
  * "respostas" é a visão da festa: quem vem, para onde, com quem e em que
- * mesa. São perguntas diferentes, e misturar as duas numa linha só deixava
- * tudo apertado — por isso a chave, em vez de mais colunas.
+ * mesa. "familias" agrupa por família — é onde se cria e se desfaz grupo,
+ * e onde se enxerga o conjunto que vai sentar junto.
  */
-type Visao = "ficha" | "respostas";
+type Visao = "ficha" | "respostas" | "familias";
+const VISOES: { valor: Visao; rotulo: string }[] = [
+  { valor: "ficha", rotulo: "Ficha" },
+  { valor: "respostas", rotulo: "Respostas" },
+  { valor: "familias", rotulo: "Famílias" },
+];
 
 export function GerenciadorConvidados({
   convidados,
@@ -78,12 +77,15 @@ export function GerenciadorConvidados({
   const [copiado, setCopiado] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
-  const [aberto, setAberto] = useState<ConvidadoCompleto | null>(null);
+  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [editando, setEditando] = useState<ConvidadoCompleto | null>(null);
   const [novo, setNovo] = useState(false);
   const [salvandoLote, setSalvandoLote] = useState(false);
   const [visao, setVisao] = useState<Visao>(
     inicial.presenca || inicial.vinculo ? "respostas" : "ficha",
   );
+
+  const detalhe = convidados.find((c) => c.id === detalheId) ?? null;
 
   /** Acompanhantes agrupados por quem os trouxe. */
   const porTitular = useMemo(() => {
@@ -113,6 +115,7 @@ export function GerenciadorConvidados({
       excederam: convidados.filter(
         (c) => (porTitular.get(c.id)?.length ?? 0) > c.companions_planned,
       ).length,
+      semFamilia: convidados.filter((c) => !c.group_id).length,
     };
   }, [convidados, porTitular]);
 
@@ -201,6 +204,17 @@ export function GerenciadorConvidados({
     router.refresh();
   }
 
+  /** Ação em massa: põe os selecionados numa família (ou tira deles a família). */
+  async function moverParaFamilia(groupId: string | null) {
+    if (selecionados.size === 0) return;
+    setSalvandoLote(true);
+    const supabase = criarClienteNavegador();
+    await supabase.from("guests").update({ group_id: groupId }).in("id", [...selecionados]);
+    setSalvandoLote(false);
+    setSelecionados(new Set());
+    router.refresh();
+  }
+
   /** Gera o código de um convidado só. */
   async function gerarCodigo(id: string) {
     setGerando(true);
@@ -242,9 +256,17 @@ export function GerenciadorConvidados({
     }
   }
 
+  async function remover(convidado: ConvidadoCompleto): Promise<boolean> {
+    if (!confirm(`Remover ${convidado.full_name} da lista? Isso não pode ser desfeito.`)) return false;
+    const supabase = criarClienteNavegador();
+    await supabase.from("guests").delete().eq("id", convidado.id);
+    router.refresh();
+    return true;
+  }
+
   function baixarCsv() {
     const alvo = selecionados.size > 0 ? visiveis.filter((c) => selecionados.has(c.id)) : visiveis;
-    const cab = ["Nome","Grupo","Lado","Vínculo","Relação","Papel","Telefone","Idade","Faixa",
+    const cab = ["Nome","Família","Lado","Vínculo","Relação","Papel","Telefone","Idade","Faixa",
                  "Lembrancinha","Status","Onde participa","Acompanhantes previstos",
                  "Acompanhantes confirmados","Mesa","Observações",
                  "Código","Código entregue","Já se cadastrou"];
@@ -270,6 +292,19 @@ export function GerenciadorConvidados({
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  /** A linha de um convidado, igual nas três visões; só o resumo muda. */
+  const linha = (c: ConvidadoCompleto) => (
+    <LinhaConvidado
+      key={c.id}
+      convidado={c}
+      visao={visao}
+      acompanhantes={porTitular.get(c.id) ?? []}
+      selecionado={selecionados.has(c.id)}
+      aoSelecionar={() => alternarSelecao(c.id)}
+      aoAbrir={() => setDetalheId(c.id)}
+    />
+  );
 
   return (
     <div className="space-y-8">
@@ -331,26 +366,30 @@ export function GerenciadorConvidados({
 
       <Bloco
         titulo="Lista de convidados"
-        descricao="Busque, filtre e edite. Clique em qualquer linha para abrir a ficha."
+        descricao={
+          visao === "familias"
+            ? "Cada família com os seus. É este agrupamento que o mapa de mesas usa para sentar gente junta."
+            : "Busque, filtre e toque em qualquer linha para abrir a ficha."
+        }
         acao={
           <div
             role="group"
             aria-label="Como ver a lista"
             className="inline-flex rounded-sm border border-terra/30 p-0.5"
           >
-            {(["ficha", "respostas"] as Visao[]).map((v) => (
+            {VISOES.map((v) => (
               <button
-                key={v}
+                key={v.valor}
                 type="button"
-                onClick={() => setVisao(v)}
-                aria-pressed={visao === v}
-                className={`versalete min-h-10 rounded-sm px-4 text-xs transition-colors ${
-                  visao === v
+                onClick={() => setVisao(v.valor)}
+                aria-pressed={visao === v.valor}
+                className={`versalete min-h-10 rounded-sm px-3.5 text-xs transition-colors ${
+                  visao === v.valor
                     ? "bg-oliva text-creme-claro"
                     : "text-terra hover:text-oliva"
                 }`}
               >
-                {v === "ficha" ? "Ficha completa" : "Respostas"}
+                {v.rotulo}
               </button>
             ))}
           </div>
@@ -456,22 +495,40 @@ export function GerenciadorConvidados({
 
         {/* ---------- Ações em massa ---------- */}
         {selecionados.size > 0 && (
-          <div className="mb-5 flex flex-wrap items-center gap-3 rounded-sm border border-oliva/30 bg-oliva/10 px-5 py-4">
+          <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-sm border border-oliva/30 bg-oliva/10 px-5 py-4">
             <span className="titulo-serif text-base text-oliva">
               {selecionados.size} selecionado{selecionados.size > 1 ? "s" : ""}
             </span>
-            <label className="versalete ml-auto text-xs text-terra">
+            <label className="versalete flex min-h-11 items-center text-xs text-terra sm:ml-auto">
               Mover para{" "}
               <select
-                className="ml-1 rounded-sm border border-terra/30 bg-creme-claro px-2 py-1 text-sm normal-case tracking-normal text-oliva"
+                className="ml-1 min-h-11 rounded-sm border border-terra/30 bg-creme-claro px-2 py-1 text-sm normal-case tracking-normal text-oliva"
                 value=""
                 disabled={salvandoLote}
                 onChange={(e) => e.target.value && mudarStatusEmLote(e.target.value as StatusConvite)}
               >
-                <option value="">escolher…</option>
+                <option value="">status…</option>
                 {ETAPAS_CONVITE.map((s) => (
                   <option key={s} value={s}>{ROTULOS_CONVITE[s]}</option>
                 ))}
+              </select>
+            </label>
+            <label className="versalete flex min-h-11 items-center text-xs text-terra">
+              Família{" "}
+              <select
+                className="ml-1 min-h-11 rounded-sm border border-terra/30 bg-creme-claro px-2 py-1 text-sm normal-case tracking-normal text-oliva"
+                value=""
+                disabled={salvandoLote}
+                onChange={(e) => {
+                  if (e.target.value === "") return;
+                  void moverParaFamilia(e.target.value === "__nenhuma" ? null : e.target.value);
+                }}
+              >
+                <option value="">mover para…</option>
+                {grupos.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+                <option value="__nenhuma">Tirar da família</option>
               </select>
             </label>
             <button
@@ -492,7 +549,7 @@ export function GerenciadorConvidados({
         )}
 
         {/* ---------- Lista ---------- */}
-        {visiveis.length === 0 ? (
+        {visiveis.length === 0 && visao !== "familias" ? (
           <Vazio>Nenhum convidado encontrado com esses filtros.</Vazio>
         ) : (
           <>
@@ -509,94 +566,54 @@ export function GerenciadorConvidados({
               </label>
             </div>
 
-            <ul className="space-y-2.5">
-              {visiveis.map((c) => (
-                <li key={c.id}>
-                  <div
-                    className={`rounded-sm border transition-colors ${
-                      selecionados.has(c.id)
-                        ? "border-oliva/50 bg-oliva/5"
-                        : "border-terra/20 bg-creme hover:border-oliva/30"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 px-4 py-3.5 sm:gap-4">
-                      {/* O rótulo em volta dá área de toque à caixinha sem
-                          engordar o desenho da linha. */}
-                      <label className="-my-3 flex shrink-0 cursor-pointer items-center py-3">
-                        <input
-                          type="checkbox"
-                          checked={selecionados.has(c.id)}
-                          onChange={() => alternarSelecao(c.id)}
-                          aria-label={`Selecionar ${c.full_name}`}
-                          className="h-5 w-5 accent-[var(--color-oliva)]"
-                        />
-                      </label>
-
-                      <button
-                        type="button"
-                        onClick={() => setAberto(c)}
-                        className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4"
-                      >
-                        <Avatar nome={c.full_name} tamanho="sm" />
-                        <span className="min-w-0 flex-1">
-                          <span className="titulo-serif block text-lg text-oliva sm:truncate">
-                            {c.full_name}
-                            {c.ceremony_role && (
-                              <span className="versalete ml-2 text-xs text-lavanda">
-                                {c.ceremony_role}
-                              </span>
-                            )}
-                          </span>
-                          <span className="block truncate text-sm text-terra">
-                            {visao === "ficha"
-                              ? [c.grupo?.name, c.relationship, c.phone]
-                                  .filter(Boolean)
-                                  .join(" · ") || "—"
-                              : resumoDaResposta(c, porTitular.get(c.id) ?? [])}
-                          </span>
-                        </span>
-                        <span className="hidden shrink-0 sm:block">
-                          <Selo tom={TOM_STATUS[c.invite_status]}>
-                            {ROTULOS_CONVITE[c.invite_status]}
-                          </Selo>
-                        </span>
-                      </button>
-                    </div>
-
-                    {visao === "ficha" ? (
-                      <LinhaDoCodigo
-                        convidado={c}
-                        copiado={copiado === c.id}
-                        gerando={gerando}
-                        aoGerar={() => gerarCodigo(c.id)}
-                        aoCopiar={() => copiarCodigo(c)}
-                        aoMarcar={(enviado) => marcarEnviado([c.id], enviado)}
-                      />
-                    ) : (
-                      <LinhaDaResposta
-                        convidado={c}
-                        acompanhantes={porTitular.get(c.id) ?? []}
-                      />
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {visao === "familias" ? (
+              <Familias
+                grupos={grupos}
+                convidados={visiveis}
+                pessoasDe={(c) => 1 + c.companions_planned}
+                linha={linha}
+              />
+            ) : (
+              <ul className="space-y-2.5">{visiveis.map((c) => linha(c))}</ul>
+            )}
           </>
         )}
       </Bloco>
 
-      {(aberto || novo) && (
+      {detalhe && !editando && (
+        <DetalheConvidado
+          convidado={detalhe}
+          acompanhantes={porTitular.get(detalhe.id) ?? []}
+          familia={
+            detalhe.group_id
+              ? convidados.filter((x) => x.group_id === detalhe.group_id && x.id !== detalhe.id)
+              : []
+          }
+          copiado={copiado === detalhe.id}
+          gerando={gerando}
+          aoFechar={() => setDetalheId(null)}
+          aoEditar={() => setEditando(detalhe)}
+          aoRemover={() => {
+            void remover(detalhe).then((removeu) => removeu && setDetalheId(null));
+          }}
+          aoAbrirOutro={(outro) => setDetalheId(outro.id)}
+          aoGerar={() => gerarCodigo(detalhe.id)}
+          aoCopiar={() => copiarCodigo(detalhe)}
+          aoMarcar={(enviado) => marcarEnviado([detalhe.id], enviado)}
+        />
+      )}
+
+      {(editando || novo) && (
         <FichaConvidado
-          convidado={aberto}
+          convidado={editando}
           grupos={grupos}
           mesas={mesas}
           aoFechar={() => {
-            setAberto(null);
+            setEditando(null);
             setNovo(false);
           }}
           aoSalvar={() => {
-            setAberto(null);
+            setEditando(null);
             setNovo(false);
             router.refresh();
           }}
@@ -607,105 +624,93 @@ export function GerenciadorConvidados({
 }
 
 /**
- * Segunda linha de cada convidado: o código do convite e o que dá para
- * fazer com ele. Fica fora do botão que abre a ficha porque botão dentro
- * de botão não existe — e assim cada ação tem a própria área de toque.
+ * O cartão da lista é só o resumo: nome, papel, uma linha de contexto e o
+ * status. Tudo o mais — código, acompanhantes, família — mora na ficha.
+ * A caixinha de seleção fica fora do botão que abre a ficha, porque botão
+ * dentro de botão não existe.
  */
-function LinhaDoCodigo({
-  convidado,
-  copiado,
-  gerando,
-  aoGerar,
-  aoCopiar,
-  aoMarcar,
+function LinhaConvidado({
+  convidado: c,
+  visao,
+  acompanhantes,
+  selecionado,
+  aoSelecionar,
+  aoAbrir,
 }: {
   convidado: ConvidadoCompleto;
-  copiado: boolean;
-  gerando: boolean;
-  aoGerar: () => void;
-  aoCopiar: () => void;
-  aoMarcar: (enviado: boolean) => void;
+  visao: Visao;
+  acompanhantes: Acompanhante[];
+  selecionado: boolean;
+  aoSelecionar: () => void;
+  aoAbrir: () => void;
 }) {
-  const telefone = convidado.whatsapp ?? convidado.phone;
-  const zap = convidado.access_code
-    ? linkWhatsApp(telefone, mensagemDoConvite(convidado.full_name, convidado.access_code))
-    : null;
+  const passou = acompanhantes.length > c.companions_planned;
 
-  const acao =
-    "versalete inline-flex min-h-11 items-center gap-1.5 rounded-sm px-2.5 text-xs transition-colors";
+  const contexto =
+    visao === "ficha"
+      ? [c.grupo?.name, c.relationship, c.phone].filter(Boolean).join(" · ") || "—"
+      : visao === "familias"
+        ? [c.relationship, c.attends ? ROTULOS_PRESENCA_CURTO[c.attends] : "sem resposta", c.mesa?.name]
+            .filter(Boolean)
+            .join(" · ")
+        : resumoDaResposta(c, acompanhantes);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 border-t border-terra/15 px-3 py-1.5">
-      {convidado.access_code ? (
-        <>
-          <code className="rounded-sm bg-creme-escuro/60 px-2.5 py-1.5 font-mono text-sm tracking-widest text-oliva">
-            {formatarCodigo(convidado.access_code)}
-          </code>
+    <li
+      className={`flex items-center gap-3 rounded-sm border px-4 py-3.5 transition-colors sm:gap-4 ${
+        selecionado ? "border-oliva/50 bg-oliva/5" : "border-terra/20 bg-creme hover:border-oliva/40"
+      }`}
+    >
+      <label className="-my-3 flex shrink-0 cursor-pointer items-center py-3">
+        <input
+          type="checkbox"
+          checked={selecionado}
+          onChange={aoSelecionar}
+          aria-label={`Selecionar ${c.full_name}`}
+          className="h-5 w-5 accent-[var(--color-oliva)]"
+        />
+      </label>
 
-          <button type="button" onClick={aoCopiar} className={`${acao} text-terra hover:text-oliva`}>
-            {copiado ? "copiado!" : "copiar"}
-          </button>
-
-          {zap && (
-            <a
-              href={zap}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => aoMarcar(true)}
-              className={`${acao} text-terra hover:text-oliva`}
-            >
-              WhatsApp
-            </a>
-          )}
-
-          <button
-            type="button"
-            onClick={() => aoMarcar(!convidado.code_sent_at)}
-            className={`${acao} ${
-              convidado.code_sent_at ? "text-oliva" : "text-terra hover:text-oliva"
-            }`}
-            title={
-              convidado.code_sent_at
-                ? `Entregue em ${formatarData(convidado.code_sent_at.slice(0, 10))}`
-                : "Marcar que já entreguei este código"
-            }
-          >
-            {convidado.code_sent_at ? "✓ entregue" : "marcar entregue"}
-          </button>
-
-          <button
-            type="button"
-            onClick={aoGerar}
-            disabled={gerando}
-            className={`${acao} text-terra/70 hover:text-red-800`}
-            title="Sorteia outro código; o anterior deixa de valer"
-          >
-            trocar
-          </button>
-
-          {convidado.user_id && (
-            <span className="versalete ml-auto px-2 text-xs text-oliva">cadastro ativo</span>
-          )}
-        </>
-      ) : (
-        <>
-          <span className="versalete px-1 text-xs text-terra/70">sem código</span>
-          <button
-            type="button"
-            onClick={aoGerar}
-            disabled={gerando}
-            className={`${acao} text-oliva underline underline-offset-4`}
-          >
-            gerar código
-          </button>
-        </>
-      )}
-    </div>
+      <button
+        type="button"
+        onClick={aoAbrir}
+        aria-label={`Abrir ${c.full_name}`}
+        className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4"
+      >
+        <Avatar nome={c.full_name} tamanho="sm" />
+        <span className="min-w-0 flex-1">
+          <span className="titulo-serif block text-lg leading-snug text-oliva">
+            {c.full_name}
+            {c.ceremony_role && (
+              <span className="versalete ml-2 text-xs text-lavanda">{c.ceremony_role}</span>
+            )}
+          </span>
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-terra">
+            <span className="min-w-0 truncate">{contexto}</span>
+            {visao === "ficha" && (
+              c.access_code ? (
+                <span
+                  className={`versalete text-xs ${c.code_sent_at ? "text-oliva" : "text-terra/70"}`}
+                  title={c.code_sent_at ? "código entregue" : "código ainda não entregue"}
+                >
+                  {c.code_sent_at ? "✓ código entregue" : "código não entregue"}
+                </span>
+              ) : (
+                <span className="versalete text-xs text-red-800">sem código</span>
+              )
+            )}
+            {visao === "respostas" && passou && (
+              <span className="versalete text-xs text-red-800">passou do previsto</span>
+            )}
+          </span>
+        </span>
+        <span className="hidden shrink-0 sm:block">
+          <Selo tom={TOM_STATUS[c.invite_status]}>{ROTULOS_CONVITE[c.invite_status]}</Selo>
+        </span>
+      </button>
+    </li>
   );
 }
-
-export { formatarData };
-
 
 /** A segunda linha da visão "Respostas": o essencial sem abrir a ficha. */
 function resumoDaResposta(convidado: ConvidadoCompleto, acompanhantes: Acompanhante[]) {
@@ -718,46 +723,4 @@ function resumoDaResposta(convidado: ConvidadoCompleto, acompanhantes: Acompanha
     convidado.mesa?.name ?? null,
   ];
   return partes.filter(Boolean).join(" · ");
-}
-
-/**
- * O detalhe da resposta, na visão de festa: quem veio junto e o aviso de
- * quem passou do planejado. Sem trava no site, este aviso é o que faz os
- * noivos perceberem — e resolverem na conversa, que é onde isso se resolve.
- */
-function LinhaDaResposta({
-  convidado,
-  acompanhantes,
-}: {
-  convidado: ConvidadoCompleto;
-  acompanhantes: Acompanhante[];
-}) {
-  const passou = acompanhantes.length > convidado.companions_planned;
-  if (acompanhantes.length === 0 && !passou) return null;
-
-  return (
-    <div className="border-t border-terra/15 px-4 py-3">
-      {acompanhantes.length > 0 && (
-        <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
-          {acompanhantes.map((a) => (
-            <li key={a.id} className="text-sm text-terra">
-              <span className="text-oliva">{a.full_name}</span>
-              {a.age !== null && <span> · {a.age} anos</span>}
-              {a.relationship && <span> · {a.relationship}</span>}
-              {a.attends && <span> · {ROTULOS_PRESENCA_CURTO[a.attends]}</span>}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {passou && (
-        <p className="mt-2 text-sm text-red-800">
-          Trouxe {acompanhantes.length}{" "}
-          {acompanhantes.length > 1 ? "acompanhantes" : "acompanhante"}; o
-          planejado para {convidado.full_name.split(" ")[0]} era{" "}
-          {convidado.companions_planned}.
-        </p>
-      )}
-    </div>
-  );
 }

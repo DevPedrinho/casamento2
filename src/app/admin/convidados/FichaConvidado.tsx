@@ -253,10 +253,10 @@ export function FichaConvidado({
           </Campo>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Campo id="grupo" rotulo="Família / grupo">
+            <Campo id="grupo" rotulo="Família">
               <select id="grupo" className="campo" value={form.group_id}
                 onChange={(e) => set("group_id", e.target.value)}>
-                <option value="">Sem grupo</option>
+                <option value="">Sem família</option>
                 {grupos.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </Campo>
