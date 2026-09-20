@@ -1,11 +1,14 @@
-/** Iniciais do convidado dentro de um círculo — não pedimos foto de perfil. */
+/** A foto de perfil do convidado num círculo — ou as iniciais, quando ele não subiu foto. */
 export function Avatar({
   nome,
+  url = null,
   tamanho = "md",
   tom = "oliva",
   className = "",
 }: {
   nome: string;
+  /** URL pública da foto; sem ela, entram as iniciais. */
+  url?: string | null;
   tamanho?: "sm" | "md" | "lg";
   /** Em fundo escuro (stories) o avatar precisa inverter, senão some. */
   tom?: "oliva" | "claro";
@@ -29,6 +32,19 @@ export function Avatar({
     oliva: "bg-oliva text-creme-claro",
     claro: "bg-creme-claro text-oliva",
   } as const;
+
+  if (url) {
+    return (
+      // URL pública do storage; o otimizador do next/image não se aplica.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={url}
+        alt=""
+        aria-hidden="true"
+        className={`shrink-0 rounded-full object-cover ${tamanhos[tamanho]} ${className}`}
+      />
+    );
+  }
 
   return (
     <span

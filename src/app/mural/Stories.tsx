@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { GrupoStory } from "@/lib/tipos";
 import { tempoRelativo, tempoRestante } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { urlDoSite } from "@/lib/storage";
 import { EMOJIS_REACAO } from "@/lib/tipos";
 import { Avatar } from "@/components/Avatar";
 import { EtiquetaPapel } from "@/components/EtiquetaPapel";
@@ -46,7 +47,7 @@ export function BarraStories({
                 }`}
               >
                 <span className="block rounded-full border-2 border-creme">
-                  <Avatar nome={grupo.autor.full_name} tamanho="lg" />
+                  <Avatar nome={grupo.autor.full_name} url={urlDoSite(grupo.autor.avatar_path ?? null)} tamanho="lg" />
                 </span>
               </span>
               <span className="w-full truncate text-center text-xs text-terra">
@@ -208,7 +209,7 @@ export function VisualizadorStories({
         </div>
 
         <header className="mt-4 flex items-center gap-3">
-          <Avatar nome={grupo.autor.full_name} tamanho="sm" tom="claro" />
+          <Avatar nome={grupo.autor.full_name} url={urlDoSite(grupo.autor.avatar_path ?? null)} tamanho="sm" tom="claro" />
           <div className="min-w-0 flex-1">
             <p className="titulo-serif truncate text-base text-creme-claro">
               {meu ? "Você" : grupo.autor.full_name}

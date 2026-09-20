@@ -250,6 +250,8 @@ export type Autor = {
   ceremony_role?: string | null;
   /** Personagem principal: sobe no feed e abre a fila dos stories. */
   is_featured?: boolean;
+  /** Foto de perfil no bucket "site". */
+  avatar_path?: string | null;
 };
 
 export type Comentario = {
@@ -395,6 +397,8 @@ export type ConvidadoCompleto = {
   access_code: string | null;
   /** Quando os noivos marcaram que entregaram o código. */
   code_sent_at: string | null;
+  /** Foto de perfil no bucket "site". */
+  avatar_path: string | null;
   extra: Record<string, string>;
   created_at: string;
   grupo: GrupoConvidados | null;

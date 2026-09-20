@@ -15,15 +15,17 @@ import {
 } from "@/lib/tipos";
 import { formatarData } from "@/lib/formato";
 import { formatarCodigo } from "@/lib/codigo";
+import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
-import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
+import { Bloco, Selo, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
 import { DetalheConvidado } from "./DetalheConvidado";
 import { Familias } from "./Familias";
-import { FichaConvidado } from "./FichaConvidado";
+import { FichaConvidado, type AbaDaFicha } from "./FichaConvidado";
+import { FilaDeConvites } from "./FilaDeConvites";
 import { TOM_STATUS } from "./tons";
 import type { FiltroInicial } from "./page";
 
@@ -78,7 +80,9 @@ export function GerenciadorConvidados({
   const [gerando, setGerando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [detalheId, setDetalheId] = useState<string | null>(null);
-  const [editando, setEditando] = useState<ConvidadoCompleto | null>(null);
+  const [editando, setEditando] = useState<{ convidado: ConvidadoCompleto; aba: AbaDaFicha } | null>(null);
+  const [filaAberta, setFilaAberta] = useState(false);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [novo, setNovo] = useState(false);
   const [salvandoLote, setSalvandoLote] = useState(false);
   const [visao, setVisao] = useState<Visao>(
@@ -165,8 +169,17 @@ export function GerenciadorConvidados({
     });
   }
 
-  /** Os filtros que vieram de um clique no dashboard, prontos para desfazer. */
+  /** Tudo que está filtrando a lista, em chips, para ver e desfazer sem abrir o painel. */
   const recortes: { rotulo: string; limpar: () => void }[] = [
+    status !== "todos" && { rotulo: ROTULOS_CONVITE[status], limpar: () => setStatus("todos") },
+    grupo !== "todos" && {
+      rotulo: grupos.find((g) => g.id === grupo)?.name ?? "Família",
+      limpar: () => setGrupo("todos"),
+    },
+    filtroCodigo !== "todos" && {
+      rotulo: { sem_codigo: "Sem código", nao_enviado: "Código não entregue", enviado: "Código entregue" }[filtroCodigo],
+      limpar: () => setFiltroCodigo("todos"),
+    },
     vinculo !== "todos" && {
       rotulo: ROTULOS_VINCULO[vinculo as keyof typeof ROTULOS_VINCULO] ?? vinculo,
       limpar: () => setVinculo("todos"),
@@ -327,42 +340,38 @@ export function GerenciadorConvidados({
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-        <Indicador rotulo="Convidados" valor={resumo.total} />
-        <Indicador rotulo="Confirmados" valor={resumo.confirmados} tom="oliva" detalhe={`${resumo.pessoas} pessoas`} />
-        <Indicador rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" />
-        <Indicador rotulo="Não irão" valor={resumo.naoVao} />
-        <Indicador rotulo="Sem convite" valor={resumo.semConvite} tom={resumo.semConvite > 0 ? "alerta" : "oliva"} />
-        <Indicador
-          rotulo="Passaram do previsto"
-          valor={resumo.excederam}
-          tom={resumo.excederam > 0 ? "alerta" : "oliva"}
-          detalhe={resumo.excederam > 0 ? "vale uma conversa" : "ninguém fora da conta"}
-        />
-      </div>
+      {/* ---------- Os números, numa faixa só ---------- */}
+      <dl className="flex flex-wrap gap-x-7 gap-y-3 rounded-sm border border-terra/20 bg-creme-claro px-5 py-4">
+        <Numero rotulo="Convidados" valor={resumo.total} />
+        <Numero rotulo="Confirmados" valor={resumo.confirmados} detalhe={`${resumo.pessoas} pessoas`} tom="oliva" />
+        <Numero rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" />
+        <Numero rotulo="Não irão" valor={resumo.naoVao} />
+        <Numero rotulo="Sem convite" valor={resumo.semConvite} tom={resumo.semConvite > 0 ? "alerta" : "oliva"} />
+        {resumo.excederam > 0 && <Numero rotulo="Passaram do previsto" valor={resumo.excederam} tom="alerta" />}
+      </dl>
 
-      <Bloco
-        titulo="Códigos do convite"
-        descricao="O código é usado uma vez, no cadastro: é ele que ativa o convidado no site e mostra para vocês quem já entrou. Depois disso a pessoa entra só com e-mail e senha."
-        acao={
-          resumo.semCodigo > 0 ? (
-            <Botao type="button" onClick={gerarCodigosFaltantes} disabled={gerando}>
-              {gerando ? "Gerando…" : `Gerar os ${resumo.semCodigo} que faltam`}
-            </Botao>
-          ) : undefined
-        }
-      >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Indicador rotulo="Com código" valor={resumo.total - resumo.semCodigo} tom="oliva" />
-          <Indicador
-            rotulo="Sem código"
-            valor={resumo.semCodigo}
-            tom={resumo.semCodigo > 0 ? "alerta" : "oliva"}
-          />
-          <Indicador rotulo="Já entreguei" valor={resumo.codigoEnviado} tom="lavanda" />
-          <Indicador rotulo="Cadastros ativos" valor={resumo.jaEntraram} />
+      {/* ---------- Convites: a fila e os códigos, numa faixa ---------- */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-sm border border-oliva/25 bg-oliva/5 px-5 py-4">
+        <div className="min-w-0">
+          <p className="titulo-serif text-xl text-oliva">
+            {resumo.codigoEnviado} de {resumo.total} convites entregues
+          </p>
+          <p className="mt-0.5 text-sm text-terra">
+            {resumo.semCodigo > 0 && `${resumo.semCodigo} sem código · `}
+            {resumo.jaEntraram} já se cadastraram no site
+          </p>
         </div>
-      </Bloco>
+        <div className="flex flex-wrap gap-3">
+          {resumo.semCodigo > 0 && (
+            <Botao type="button" variante="contorno" onClick={gerarCodigosFaltantes} disabled={gerando}>
+              {gerando ? "Gerando…" : `Gerar os ${resumo.semCodigo} códigos`}
+            </Botao>
+          )}
+          <Botao type="button" onClick={() => setFilaAberta(true)}>
+            Enviar convites
+          </Botao>
+        </div>
+      </div>
 
       <Bloco
         titulo="Lista de convidados"
@@ -395,21 +404,44 @@ export function GerenciadorConvidados({
           </div>
         }
       >
-        {/* ---------- Filtros ---------- */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-          <div className="lg:col-span-2">
-            <Rotulo htmlFor="busca">Buscar</Rotulo>
-            <div className="relative">
-              <Icone nome="busca" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-terra/60" />
-              <input
-                id="busca"
-                className="campo pl-10"
-                placeholder="Nome, telefone, família, papel…"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-            </div>
+        {/* ---------- Busca sempre à mão; o resto dos filtros, num painel ---------- */}
+        <div className="mb-4 flex gap-2.5">
+          <div className="relative min-w-0 flex-1">
+            <Icone nome="busca" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-terra/60" />
+            <input
+              id="busca"
+              className="campo pl-10"
+              placeholder="Nome, telefone, família, papel…"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              aria-label="Buscar convidado"
+            />
           </div>
+          <button
+            type="button"
+            onClick={() => setFiltrosAbertos((v) => !v)}
+            aria-expanded={filtrosAbertos}
+            aria-controls="painel-filtros"
+            className={`versalete titulo-serif inline-flex min-h-11 shrink-0 items-center gap-2 rounded-sm border px-4 text-xs transition-colors ${
+              filtrosAbertos || recortes.length > 0
+                ? "border-oliva bg-oliva text-creme-claro"
+                : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
+            }`}
+          >
+            Filtros
+            {recortes.length > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-creme-claro px-1.5 text-[0.7rem] text-oliva tabular-nums">
+                {recortes.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div
+          id="painel-filtros"
+          hidden={!filtrosAbertos}
+          className="mb-5 grid grid-cols-1 gap-4 rounded-sm border border-terra/20 bg-creme p-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
           <div>
             <Rotulo htmlFor="f-status">Status</Rotulo>
             <select id="f-status" className="campo" value={status} onChange={(e) => setStatus(e.target.value as StatusConvite | "todos")}>
@@ -451,10 +483,28 @@ export function GerenciadorConvidados({
               <option value="idade">Idade</option>
             </select>
           </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 sm:col-span-2 lg:col-span-4">
+            {(["todos", "noivo", "noiva"] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLado(l)}
+                aria-pressed={lado === l}
+                className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
+                  lado === l
+                    ? "border-oliva bg-oliva text-creme-claro"
+                    : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
+                }`}
+              >
+                {l === "todos" ? "Todos" : l === "noivo" ? "Lado do noivo" : "Lado da noiva"}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Quem chega aqui por um gráfico do dashboard precisa ver por que a
-            lista está curta — e desfazer o recorte num toque. */}
+        {/* O que está filtrando, em chips — visível mesmo com o painel fechado,
+            para desfazer num toque. */}
         {recortes.length > 0 && (
           <div className="mb-5 flex flex-wrap items-center gap-2">
             <span className="versalete text-xs text-terra">Recorte</span>
@@ -472,26 +522,9 @@ export function GerenciadorConvidados({
           </div>
         )}
 
-        <div className="mb-5 flex flex-wrap items-center gap-2.5">
-          {(["todos", "noivo", "noiva"] as const).map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLado(l)}
-              aria-pressed={lado === l}
-              className={`versalete titulo-serif inline-flex min-h-11 items-center rounded-full border px-4 text-xs transition-colors ${
-                lado === l
-                  ? "border-oliva bg-oliva text-creme-claro"
-                  : "border-terra/30 text-terra hover:border-oliva hover:text-oliva"
-              }`}
-            >
-              {l === "todos" ? "Todos" : l === "noivo" ? "Lado do noivo" : "Lado da noiva"}
-            </button>
-          ))}
-          <span className="ml-auto text-sm text-terra">
-            {visiveis.length} de {convidados.length}
-          </span>
-        </div>
+        <p className="mb-4 text-right text-sm text-terra">
+          {visiveis.length} de {convidados.length}
+        </p>
 
         {/* ---------- Ações em massa ---------- */}
         {selecionados.size > 0 && (
@@ -592,7 +625,7 @@ export function GerenciadorConvidados({
           copiado={copiado === detalhe.id}
           gerando={gerando}
           aoFechar={() => setDetalheId(null)}
-          aoEditar={() => setEditando(detalhe)}
+          aoEditar={(aba) => setEditando({ convidado: detalhe, aba: aba ?? "convite" })}
           aoRemover={() => {
             void remover(detalhe).then((removeu) => removeu && setDetalheId(null));
           }}
@@ -603,9 +636,21 @@ export function GerenciadorConvidados({
         />
       )}
 
+      {filaAberta && (
+        <FilaDeConvites
+          convidados={convidados}
+          aoFechar={() => {
+            setFilaAberta(false);
+            router.refresh();
+          }}
+          aoAtualizar={() => router.refresh()}
+        />
+      )}
+
       {(editando || novo) && (
         <FichaConvidado
-          convidado={editando}
+          convidado={editando?.convidado ?? null}
+          abaInicial={editando?.aba}
           grupos={grupos}
           mesas={mesas}
           aoFechar={() => {
@@ -619,6 +664,30 @@ export function GerenciadorConvidados({
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Um número da faixa do topo: rótulo pequeno, valor grande, sem cartão. */
+function Numero({
+  rotulo,
+  valor,
+  detalhe,
+  tom = "neutro",
+}: {
+  rotulo: string;
+  valor: number;
+  detalhe?: string;
+  tom?: "neutro" | "oliva" | "lavanda" | "alerta";
+}) {
+  const cores = { neutro: "text-oliva", oliva: "text-oliva", lavanda: "text-lavanda", alerta: "text-red-800" } as const;
+  return (
+    <div>
+      <dt className="versalete text-xs text-terra">{rotulo}</dt>
+      <dd className={`titulo-serif text-2xl leading-tight tabular-nums lining-nums ${cores[tom]}`}>
+        {valor}
+        {detalhe && <span className="ml-1.5 font-sans text-xs text-terra">{detalhe}</span>}
+      </dd>
     </div>
   );
 }
@@ -677,7 +746,7 @@ function LinhaConvidado({
         aria-label={`Abrir ${c.full_name}`}
         className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4"
       >
-        <Avatar nome={c.full_name} tamanho="sm" />
+        <Avatar nome={c.full_name} url={urlDoSite(c.avatar_path)} tamanho="sm" />
         <span className="min-w-0 flex-1">
           <span className="titulo-serif block text-lg leading-snug text-oliva">
             {c.full_name}

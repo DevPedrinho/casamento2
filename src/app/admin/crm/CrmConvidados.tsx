@@ -11,6 +11,7 @@ import {
 import { diasAte, formatarData } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
+import { urlDoSite } from "@/lib/storage";
 import { Indicador, Vazio } from "@/components/painel";
 
 /** Cores da coluna, para o funil ser legível de relance. */
@@ -192,7 +193,7 @@ function CardConvidado({
       }`}
     >
       <div className="flex items-start gap-3">
-        <Avatar nome={c.full_name} tamanho="sm" />
+        <Avatar nome={c.full_name} url={urlDoSite(c.avatar_path ?? null)} tamanho="sm" />
         <div className="min-w-0 flex-1">
           <p className="titulo-serif truncate text-base text-oliva">{c.full_name}</p>
           <p className="truncate text-sm text-terra">

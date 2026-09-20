@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   ETAPAS_CONVITE,
   PRESENCAS,
   ROTULOS_CONVITE,
   ROTULOS_PRESENCA,
+  ROTULOS_PRESENCA_CURTO,
   ROTULOS_VINCULO,
   VINCULOS,
   type Acompanhante,
   type ConvidadoCompleto,
   type GrupoConvidados,
   type Mesa,
+  type Presenca,
   type StatusConvite,
 } from "@/lib/tipos";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
@@ -19,7 +21,18 @@ import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { formatarCodigo } from "@/lib/codigo";
 import { Avatar } from "@/components/Avatar";
-import { Icone } from "@/components/Icones";
+import { ACAO_FICHA, CartaoFicha, Ficha, LinhaFicha } from "@/components/Ficha";
+import { UploadImagem } from "@/components/UploadImagem";
+import { urlDoSite } from "@/lib/storage";
+
+export type AbaDaFicha = "convite" | "perfil" | "resposta" | "acompanhamento";
+
+const ABAS: { chave: AbaDaFicha; rotulo: string }[] = [
+  { chave: "convite", rotulo: "Convite" },
+  { chave: "perfil", rotulo: "Perfil" },
+  { chave: "resposta", rotulo: "Resposta" },
+  { chave: "acompanhamento", rotulo: "Acompanhamento" },
+];
 
 const VAZIO = {
   full_name: "", group_id: "", side: "", relationship: "", relationship_kind: "",
@@ -30,20 +43,26 @@ const VAZIO = {
   last_contact_at: "", next_action: "", next_action_at: "",
 };
 
-/** Drawer lateral com a ficha completa. Serve para criar e para editar. */
+/**
+ * O formulário do convidado, em quatro abas curtas. Serve para criar e
+ * para editar; salva tudo de uma vez, em qualquer aba.
+ */
 export function FichaConvidado({
   convidado,
   grupos,
   mesas,
+  abaInicial = "convite",
   aoFechar,
   aoSalvar,
 }: {
   convidado: ConvidadoCompleto | null;
   grupos: GrupoConvidados[];
   mesas: Mesa[];
+  abaInicial?: AbaDaFicha;
   aoFechar: () => void;
   aoSalvar: () => void;
 }) {
+  const [aba, setAba] = useState<AbaDaFicha>(abaInicial);
   const [form, setForm] = useState(() =>
     convidado
       ? {
@@ -72,42 +91,17 @@ export function FichaConvidado({
         }
       : VAZIO,
   );
+  const [avatar, setAvatar] = useState<string | null>(convidado?.avatar_path ?? null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
-  const [acompanhantes, setAcompanhantes] = useState<Acompanhante[]>([]);
-  const fecharRef = useRef<HTMLButtonElement>(null);
 
-  const idDoConvidado = convidado?.id;
-
-  // Quem esta pessoa confirmou que traz — nome e idade, como ela digitou.
-  const carregarAcompanhantes = useCallback(async () => {
-    if (!idDoConvidado) return;
+  /** A foto grava na hora: o arquivo já subiu, não faz sentido esperar o Salvar. */
+  async function trocarFoto(caminho: string | null) {
+    setAvatar(caminho);
+    if (!convidado) return;
     const supabase = criarClienteNavegador();
-    const { data } = await supabase
-      .from("rsvp_companions")
-      .select("*")
-      .eq("guest_id", idDoConvidado)
-      .order("created_at");
-    setAcompanhantes((data ?? []) as Acompanhante[]);
-  }, [idDoConvidado]);
-
-  useEffect(() => {
-    void carregarAcompanhantes();
-  }, [carregarAcompanhantes]);
-
-  useEffect(() => {
-    fecharRef.current?.focus();
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    function aoTeclar(e: KeyboardEvent) {
-      if (e.key === "Escape") aoFechar();
-    }
-    document.addEventListener("keydown", aoTeclar);
-    return () => {
-      document.body.style.overflow = original;
-      document.removeEventListener("keydown", aoTeclar);
-    };
-  }, [aoFechar]);
+    await supabase.from("guests").update({ avatar_path: caminho }).eq("id", convidado.id);
+  }
 
   function set<K extends keyof typeof form>(campo: K, valor: (typeof form)[K]) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -119,11 +113,13 @@ export function FichaConvidado({
 
     if (!form.full_name.trim()) {
       setErro("O nome é obrigatório.");
+      setAba("convite");
       return;
     }
     const idade = form.age.trim() ? Number(form.age) : null;
     if (idade !== null && (!Number.isFinite(idade) || idade < 0 || idade > 130)) {
       setErro("Idade inválida.");
+      setAba("perfil");
       return;
     }
 
@@ -152,6 +148,7 @@ export function FichaConvidado({
       last_contact_at: form.last_contact_at || null,
       next_action: form.next_action.trim() || null,
       next_action_at: form.next_action_at || null,
+      avatar_path: avatar,
     };
 
     const { error } = convidado
@@ -183,252 +180,363 @@ export function FichaConvidado({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-oliva-escuro/50" onClick={aoFechar}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={convidado ? `Ficha de ${convidado.full_name}` : "Novo convidado"}
-        onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full max-w-lg flex-col overflow-y-auto border-l border-terra/20 bg-creme-claro shadow-2xl"
-      >
-        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-terra/20 bg-creme-claro px-6 py-5">
-          <Avatar nome={form.full_name || "?"} />
-          <div className="min-w-0 flex-1">
-            <h2 className="titulo-serif truncate text-2xl text-oliva">
-              {convidado ? convidado.full_name : "Novo convidado"}
+    <Ficha
+      rotuloAria={convidado ? `Editar ${convidado.full_name}` : "Novo convidado"}
+      aoFechar={aoFechar}
+      cabecalho={
+        <div className="flex items-center gap-3">
+          <Avatar nome={form.full_name || "?"} url={urlDoSite(avatar)} />
+          <div className="min-w-0">
+            <p className="versalete text-xs text-terra">{convidado ? "Editar convidado" : "Novo convidado"}</p>
+            <h2 className="titulo-serif truncate text-2xl leading-tight text-oliva">
+              {form.full_name.trim() || (convidado ? convidado.full_name : "Quem é?")}
             </h2>
-            {convidado?.user_id && (
-              <p className="text-sm text-terra">Cadastro ativo no site</p>
-            )}
           </div>
-          <button
-            ref={fecharRef}
-            type="button"
-            onClick={aoFechar}
-            aria-label="Fechar"
-            className="-mr-2 flex h-11 w-11 items-center justify-center text-terra transition-colors hover:text-oliva"
-          >
-            <Icone nome="fechar" />
-          </button>
-        </header>
-
-        {convidado?.access_code && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-terra/15 bg-creme px-6 py-4">
-            <span className="versalete text-xs text-terra">Código do convite</span>
-            <code className="rounded-sm bg-creme-escuro/60 px-2.5 py-1.5 font-mono text-base tracking-widest text-oliva">
-              {formatarCodigo(convidado.access_code)}
-            </code>
-            <span className="versalete ml-auto text-xs text-terra">
-              {convidado.code_sent_at ? "já entreguei" : "ainda não entreguei"}
-            </span>
-          </div>
-        )}
-
-        {acompanhantes.length > 0 && (
-          <div className="border-b border-terra/15 bg-creme px-6 py-4">
-            <p className="versalete text-xs text-terra">
-              Confirmou {acompanhantes.length}{" "}
-              {acompanhantes.length === 1 ? "acompanhante" : "acompanhantes"}
-            </p>
-            <ul className="mt-3 space-y-1.5">
-              {acompanhantes.map((a) => (
-                <li key={a.id} className="text-base text-oliva">
-                  {a.full_name}
-                  {a.age !== null && (
-                    <span className="text-sm text-terra"> · {a.age} anos</span>
-                  )}
-                  {a.notes && <span className="text-sm text-terra"> · {a.notes}</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <form onSubmit={salvar} className="flex-1 space-y-6 px-6 py-6">
-          {erro && <Aviso tipo="erro">{erro}</Aviso>}
-
-          <Campo id="nome" rotulo="Nome completo">
-            <input id="nome" required className="campo" value={form.full_name}
-              onChange={(e) => set("full_name", e.target.value)} />
-          </Campo>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Campo id="grupo" rotulo="Família">
-              <select id="grupo" className="campo" value={form.group_id}
-                onChange={(e) => set("group_id", e.target.value)}>
-                <option value="">Sem família</option>
-                {grupos.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
-            </Campo>
-            <Campo id="lado" rotulo="Lado">
-              <select id="lado" className="campo" value={form.side}
-                onChange={(e) => set("side", e.target.value)}>
-                <option value="">—</option>
-                <option value="noivo">Noivo</option>
-                <option value="noiva">Noiva</option>
-              </select>
-            </Campo>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Campo id="vinculo" rotulo="Vínculo com os noivos">
-              <select id="vinculo" className="campo" value={form.relationship_kind}
-                onChange={(e) => set("relationship_kind", e.target.value)}>
-                <option value="">—</option>
-                {VINCULOS.map((v) => (
-                  <option key={v} value={v}>{ROTULOS_VINCULO[v]}</option>
-                ))}
-              </select>
-            </Campo>
-            <Campo id="rel" rotulo="Relação, com as palavras de vocês"
-              dica="É o que aparece na ficha: “Prima 2º grau”, “Companheira do Ramon”.">
-              <input id="rel" className="campo" placeholder="Prima, Tio, Amigo…"
-                value={form.relationship} onChange={(e) => set("relationship", e.target.value)} />
-            </Campo>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Campo id="papel" rotulo="Papel na cerimônia">
-              <input id="papel" className="campo" placeholder="Madrinha, Padrinho…"
-                value={form.ceremony_role} onChange={(e) => set("ceremony_role", e.target.value)} />
-            </Campo>
-            <Campo id="destaque" rotulo="Personagem principal"
-              dica="Ganha etiqueta no mural e as publicações sobem para o topo.">
-              <label className="flex min-h-11 items-center gap-3">
-                <input id="destaque" type="checkbox" checked={form.is_featured}
-                  onChange={(e) => set("is_featured", e.target.checked)}
-                  className="h-5 w-5 accent-[var(--color-oliva)]" />
-                <span className="text-sm text-terra">Aparece em destaque no mural</span>
-              </label>
-            </Campo>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <Campo id="sexo" rotulo="Sexo">
-              <select id="sexo" className="campo" value={form.gender}
-                onChange={(e) => set("gender", e.target.value)}>
-                <option value="">—</option>
-                <option value="feminino">Feminino</option>
-                <option value="masculino">Masculino</option>
-                <option value="outro">Outro</option>
-              </select>
-            </Campo>
-            <Campo id="idade" rotulo="Idade">
-              <input id="idade" inputMode="numeric" className="campo" value={form.age}
-                onChange={(e) => set("age", e.target.value)} />
-            </Campo>
-            <Campo id="lembr" rotulo="Lembrancinha">
-              <input id="lembr" className="campo" value={form.favor_type}
-                onChange={(e) => set("favor_type", e.target.value)} />
-            </Campo>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Campo id="fone" rotulo="Telefone / WhatsApp">
-              <input id="fone" className="campo" placeholder="85-9xxxx-xxxx" value={form.phone}
-                onChange={(e) => set("phone", e.target.value)} />
-            </Campo>
-            <Campo id="email" rotulo="E-mail">
-              <input id="email" type="email" className="campo" value={form.email}
-                onChange={(e) => set("email", e.target.value)} />
-            </Campo>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <Campo id="status" rotulo="Status do convite">
-              <select id="status" className="campo" value={form.invite_status}
-                onChange={(e) => set("invite_status", e.target.value as StatusConvite)}>
-                {ETAPAS_CONVITE.map((s) => (
-                  <option key={s} value={s}>{ROTULOS_CONVITE[s]}</option>
-                ))}
-              </select>
-            </Campo>
-            <Campo id="acomp" rotulo="Acompanhantes previstos">
-              <input id="acomp" inputMode="numeric" className="campo"
-                value={form.companions_planned}
-                onChange={(e) => set("companions_planned", e.target.value)} />
-            </Campo>
-            <Campo id="presenca" rotulo="Onde participa">
-              <select id="presenca" className="campo" value={form.attends}
-                onChange={(e) => set("attends", e.target.value)}>
-                <option value="">Ainda não respondeu</option>
-                {PRESENCAS.map((v) => (
-                  <option key={v} value={v}>{ROTULOS_PRESENCA[v]}</option>
-                ))}
-              </select>
-            </Campo>
-            <Campo id="mesa" rotulo="Mesa">
-              <select id="mesa" className="campo" value={form.table_id}
-                onChange={(e) => set("table_id", e.target.value)}>
-                <option value="">Sem mesa</option>
-                {mesas.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </Campo>
-          </div>
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Campo id="ult" rotulo="Último contato">
-              <input id="ult" type="date" className="campo" value={form.last_contact_at}
-                onChange={(e) => set("last_contact_at", e.target.value)} />
-            </Campo>
-            <Campo id="prox-data" rotulo="Retornar em">
-              <input id="prox-data" type="date" className="campo" value={form.next_action_at}
-                onChange={(e) => set("next_action_at", e.target.value)} />
-            </Campo>
-          </div>
-
-          <Campo id="prox" rotulo="Próxima ação">
-            <input id="prox" className="campo" placeholder="Ligar, mandar convite…"
-              value={form.next_action} onChange={(e) => set("next_action", e.target.value)} />
-          </Campo>
-
-          <Campo id="rest" rotulo="Restrições alimentares">
-            <input id="rest" className="campo" value={form.dietary_notes}
-              onChange={(e) => set("dietary_notes", e.target.value)} />
-          </Campo>
-
-          <Campo id="obs" rotulo="Observações">
-            <textarea id="obs" rows={3} className="campo resize-y" value={form.notes}
-              onChange={(e) => set("notes", e.target.value)} />
-          </Campo>
-
-          {/* Colunas da planilha sem campo próprio — preservadas, não descartadas. */}
-          {convidado && Object.keys(convidado.extra ?? {}).length > 0 && (
-            <div className="rounded-sm border border-terra/20 bg-creme px-5 py-4">
-              <p className="versalete mb-2 text-xs text-terra">Da planilha</p>
-              <dl className="space-y-1 text-sm text-terra">
-                {Object.entries(convidado.extra).map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-4">
-                    <dt className="capitalize">{k.replace(/_/g, " ")}</dt>
-                    <dd className="text-oliva">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-        </form>
-
-        <footer className="sticky bottom-0 flex flex-wrap items-center gap-3 border-t border-terra/20 bg-creme-claro px-6 py-4">
-          <Botao type="button" onClick={salvar} disabled={salvando}>
+        </div>
+      }
+      abaixoDoCabecalho={
+        <div role="tablist" aria-label="Partes da ficha" className="-mx-5 mt-4 flex gap-1 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
+          {ABAS.map((a) => (
+            <button
+              key={a.chave}
+              type="button"
+              role="tab"
+              aria-selected={aba === a.chave}
+              onClick={() => setAba(a.chave)}
+              className={`versalete titulo-serif inline-flex min-h-10 shrink-0 items-center border-b-2 px-3 text-xs transition-colors ${
+                aba === a.chave ? "border-oliva text-oliva" : "border-transparent text-terra hover:text-oliva"
+              }`}
+            >
+              {a.rotulo}
+            </button>
+          ))}
+        </div>
+      }
+      rodape={
+        <>
+          <Botao type="button" onClick={salvar} disabled={salvando} className="flex-1 sm:flex-none">
             {salvando ? "Salvando…" : convidado ? "Salvar" : "Adicionar"}
           </Botao>
           <Botao type="button" variante="contorno" onClick={aoFechar}>
             Cancelar
           </Botao>
           {convidado && !convidado.user_id && (
-            <button
-              type="button"
-              onClick={remover}
-              className="inline-flex min-h-11 items-center versalete ml-auto text-xs text-red-800 underline underline-offset-4"
-            >
+            <button type="button" onClick={remover} className={`${ACAO_FICHA} ml-auto px-3 text-red-800`}>
               Remover
             </button>
           )}
-        </footer>
+        </>
+      }
+    >
+      <form onSubmit={salvar} className="space-y-5">
+        {erro && <Aviso tipo="erro">{erro}</Aviso>}
+
+        {/* ---------- Convite ---------- */}
+        {aba === "convite" && (
+          <>
+            <CartaoFicha titulo="Quem é">
+              <div className="space-y-4">
+                <Campo id="nome" rotulo="Nome completo">
+                  <input id="nome" required className="campo" value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
+                </Campo>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Campo id="grupo" rotulo="Família">
+                    <select id="grupo" className="campo" value={form.group_id} onChange={(e) => set("group_id", e.target.value)}>
+                      <option value="">Sem família</option>
+                      {grupos.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </Campo>
+                  <Campo id="lado" rotulo="Lado">
+                    <select id="lado" className="campo" value={form.side} onChange={(e) => set("side", e.target.value)}>
+                      <option value="">—</option>
+                      <option value="noivo">Noivo</option>
+                      <option value="noiva">Noiva</option>
+                    </select>
+                  </Campo>
+                </div>
+              </div>
+            </CartaoFicha>
+
+            <CartaoFicha titulo="Convite">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Campo id="status" rotulo="Status do convite">
+                  <select id="status" className="campo" value={form.invite_status} onChange={(e) => set("invite_status", e.target.value as StatusConvite)}>
+                    {ETAPAS_CONVITE.map((s) => <option key={s} value={s}>{ROTULOS_CONVITE[s]}</option>)}
+                  </select>
+                </Campo>
+                <Campo id="acomp" rotulo="Acompanhantes previstos" dica="Quantas pessoas o convite comporta além da própria.">
+                  <input id="acomp" inputMode="numeric" className="campo" value={form.companions_planned} onChange={(e) => set("companions_planned", e.target.value)} />
+                </Campo>
+              </div>
+              {convidado && (
+                <div className="mt-4 border-t border-terra/15 pt-2">
+                  <LinhaFicha
+                    rotulo="Código do convite"
+                    valor={convidado.access_code ? <code className="font-mono tracking-widest">{formatarCodigo(convidado.access_code)}</code> : "ainda sem código"}
+                    detalhe={convidado.code_sent_at ? "já entregue" : convidado.access_code ? "ainda não entregue" : null}
+                  />
+                  <LinhaFicha rotulo="Cadastro no site" valor={convidado.user_id ? "ativo" : "ainda não entrou"} />
+                </div>
+              )}
+            </CartaoFicha>
+          </>
+        )}
+
+        {/* ---------- Perfil ---------- */}
+        {aba === "perfil" && (
+          <>
+            <CartaoFicha titulo="Foto de perfil">
+              <UploadImagem
+                pasta={`avatares/${convidado?.id ?? "novos"}`}
+                caminhoAtual={avatar}
+                urlAtual={urlDoSite(avatar)}
+                aoEnviar={(caminho) => void trocarFoto(caminho)}
+                aoRemover={() => void trocarFoto(null)}
+                rotulo="Aparece no cartão da lista e no mural"
+                proporcao="aspect-square max-w-[14rem]"
+              />
+            </CartaoFicha>
+
+            <CartaoFicha titulo="Relação com vocês">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Campo id="vinculo" rotulo="Vínculo">
+                    <select id="vinculo" className="campo" value={form.relationship_kind} onChange={(e) => set("relationship_kind", e.target.value)}>
+                      <option value="">—</option>
+                      {VINCULOS.map((v) => <option key={v} value={v}>{ROTULOS_VINCULO[v]}</option>)}
+                    </select>
+                  </Campo>
+                  <Campo id="rel" rotulo="Relação, com as palavras de vocês" dica="“Prima 2º grau”, “Companheira do Ramon”.">
+                    <input id="rel" className="campo" placeholder="Prima, Tio, Amigo…" value={form.relationship} onChange={(e) => set("relationship", e.target.value)} />
+                  </Campo>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Campo id="papel" rotulo="Papel na cerimônia">
+                    <input id="papel" className="campo" placeholder="Madrinha, Padrinho…" value={form.ceremony_role} onChange={(e) => set("ceremony_role", e.target.value)} />
+                  </Campo>
+                  <Campo id="destaque" rotulo="Personagem principal" dica="Ganha etiqueta no mural e as publicações sobem para o topo.">
+                    <label className="flex min-h-11 items-center gap-3">
+                      <input id="destaque" type="checkbox" checked={form.is_featured} onChange={(e) => set("is_featured", e.target.checked)} className="h-5 w-5 accent-[var(--color-oliva)]" />
+                      <span className="text-sm text-terra">Aparece em destaque no mural</span>
+                    </label>
+                  </Campo>
+                </div>
+              </div>
+            </CartaoFicha>
+
+            <CartaoFicha titulo="Dados pessoais">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Campo id="sexo" rotulo="Sexo">
+                  <select id="sexo" className="campo" value={form.gender} onChange={(e) => set("gender", e.target.value)}>
+                    <option value="">—</option>
+                    <option value="feminino">Feminino</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </Campo>
+                <Campo id="idade" rotulo="Idade">
+                  <input id="idade" inputMode="numeric" className="campo" value={form.age} onChange={(e) => set("age", e.target.value)} />
+                </Campo>
+                <Campo id="lembr" rotulo="Lembrancinha">
+                  <input id="lembr" className="campo" value={form.favor_type} onChange={(e) => set("favor_type", e.target.value)} />
+                </Campo>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Campo id="fone" rotulo="Telefone / WhatsApp">
+                  <input id="fone" inputMode="tel" className="campo" placeholder="85-9xxxx-xxxx" value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                </Campo>
+                <Campo id="email" rotulo="E-mail">
+                  <input id="email" type="email" className="campo" value={form.email} onChange={(e) => set("email", e.target.value)} />
+                </Campo>
+              </div>
+              <div className="mt-4">
+                <Campo id="rest" rotulo="Restrições alimentares">
+                  <input id="rest" className="campo" value={form.dietary_notes} onChange={(e) => set("dietary_notes", e.target.value)} />
+                </Campo>
+              </div>
+            </CartaoFicha>
+          </>
+        )}
+
+        {/* ---------- Resposta ---------- */}
+        {aba === "resposta" && (
+          <>
+            <CartaoFicha titulo="Presença">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Campo id="presenca" rotulo="Onde participa">
+                  <select id="presenca" className="campo" value={form.attends} onChange={(e) => set("attends", e.target.value)}>
+                    <option value="">Ainda não respondeu</option>
+                    {PRESENCAS.map((v) => <option key={v} value={v}>{ROTULOS_PRESENCA[v]}</option>)}
+                  </select>
+                </Campo>
+                <Campo id="mesa" rotulo="Mesa">
+                  <select id="mesa" className="campo" value={form.table_id} onChange={(e) => set("table_id", e.target.value)}>
+                    <option value="">Sem mesa</option>
+                    {mesas.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </Campo>
+              </div>
+            </CartaoFicha>
+
+            {convidado ? (
+              <Acompanhantes convidadoId={convidado.id} />
+            ) : (
+              <CartaoFicha titulo="Acompanhantes">
+                <p className="text-sm text-terra">Salve o convidado primeiro; depois dá para cadastrar quem vem junto.</p>
+              </CartaoFicha>
+            )}
+          </>
+        )}
+
+        {/* ---------- Acompanhamento ---------- */}
+        {aba === "acompanhamento" && (
+          <>
+            <CartaoFicha titulo="Contato">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Campo id="ult" rotulo="Último contato">
+                  <input id="ult" type="date" className="campo" value={form.last_contact_at} onChange={(e) => set("last_contact_at", e.target.value)} />
+                </Campo>
+                <Campo id="prox-data" rotulo="Retornar em">
+                  <input id="prox-data" type="date" className="campo" value={form.next_action_at} onChange={(e) => set("next_action_at", e.target.value)} />
+                </Campo>
+              </div>
+              <div className="mt-4">
+                <Campo id="prox" rotulo="Próxima ação">
+                  <input id="prox" className="campo" placeholder="Ligar, mandar convite…" value={form.next_action} onChange={(e) => set("next_action", e.target.value)} />
+                </Campo>
+              </div>
+            </CartaoFicha>
+
+            <CartaoFicha titulo="Observações">
+              <textarea id="obs" rows={4} aria-label="Observações" className="campo resize-y" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
+            </CartaoFicha>
+
+            {/* Colunas da planilha sem campo próprio — preservadas, não descartadas. */}
+            {convidado && Object.keys(convidado.extra ?? {}).length > 0 && (
+              <CartaoFicha titulo="Da planilha">
+                {Object.entries(convidado.extra).map(([k, v]) => (
+                  <LinhaFicha key={k} rotulo={k.replace(/_/g, " ")} valor={v} />
+                ))}
+              </CartaoFicha>
+            )}
+          </>
+        )}
+      </form>
+    </Ficha>
+  );
+}
+
+/**
+ * Quem vem junto, editado pelos noivos. Cada linha grava sozinha ao sair
+ * do campo; não depende da resposta do convidado no site.
+ */
+function Acompanhantes({ convidadoId }: { convidadoId: string }) {
+  const [itens, setItens] = useState<Acompanhante[]>([]);
+  const [carregado, setCarregado] = useState(false);
+  const [novo, setNovo] = useState({ full_name: "", age: "", relationship: "", attends: "" as Presenca | "" });
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    const supabase = criarClienteNavegador();
+    const { data } = await supabase
+      .from("rsvp_companions")
+      .select("*")
+      .eq("guest_id", convidadoId)
+      .order("created_at");
+    setItens((data ?? []) as Acompanhante[]);
+    setCarregado(true);
+  }, [convidadoId]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  function mudar(id: string, campo: keyof Acompanhante, valor: string | number | null) {
+    setItens((l) => l.map((a) => (a.id === id ? { ...a, [campo]: valor } : a)));
+  }
+
+  async function gravar(a: Acompanhante) {
+    if (!a.full_name.trim()) return;
+    const supabase = criarClienteNavegador();
+    await supabase
+      .from("rsvp_companions")
+      .update({ full_name: a.full_name.trim(), age: a.age, relationship: a.relationship?.trim() || null, attends: a.attends })
+      .eq("id", a.id);
+  }
+
+  async function adicionar() {
+    if (!novo.full_name.trim()) return;
+    setSalvando(true);
+    const supabase = criarClienteNavegador();
+    const { data } = await supabase
+      .from("rsvp_companions")
+      .insert({
+        guest_id: convidadoId,
+        full_name: novo.full_name.trim(),
+        age: novo.age.trim() ? Number(novo.age) : null,
+        relationship: novo.relationship.trim() || null,
+        attends: novo.attends || null,
+      })
+      .select()
+      .single();
+    if (data) setItens((l) => [...l, data as Acompanhante]);
+    setNovo({ full_name: "", age: "", relationship: "", attends: "" });
+    setSalvando(false);
+  }
+
+  async function remover(id: string) {
+    setItens((l) => l.filter((a) => a.id !== id));
+    const supabase = criarClienteNavegador();
+    await supabase.from("rsvp_companions").delete().eq("id", id);
+  }
+
+  const campoCurto = "campo py-1.5 text-sm";
+
+  return (
+    <CartaoFicha titulo={`Acompanhantes${itens.length > 0 ? ` · ${itens.length}` : ""}`}>
+      {!carregado ? (
+        <p className="text-sm text-terra">Carregando…</p>
+      ) : itens.length === 0 ? (
+        <p className="text-sm text-terra">Ninguém cadastrado ainda. Quem o convidado confirmar no site também aparece aqui.</p>
+      ) : (
+        <ul className="space-y-3">
+          {itens.map((a) => (
+            <li key={a.id} className="rounded-sm border border-terra/15 bg-creme-claro/60 p-3">
+              <div className="grid grid-cols-[1fr_4.5rem] gap-2">
+                <input aria-label="Nome" className={campoCurto} value={a.full_name} onChange={(e) => mudar(a.id, "full_name", e.target.value)} onBlur={() => gravar(a)} />
+                <input aria-label="Idade" inputMode="numeric" placeholder="idade" className={campoCurto} value={a.age ?? ""} onChange={(e) => mudar(a.id, "age", e.target.value.trim() ? Number(e.target.value) : null)} onBlur={() => gravar(a)} />
+              </div>
+              <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2">
+                <input aria-label="Relação" placeholder="esposa, filho…" className={campoCurto} value={a.relationship ?? ""} onChange={(e) => mudar(a.id, "relationship", e.target.value)} onBlur={() => gravar(a)} />
+                <select aria-label="Onde participa" className={campoCurto} value={a.attends ?? ""} onChange={(e) => { mudar(a.id, "attends", e.target.value || null); void gravar({ ...a, attends: (e.target.value || null) as Presenca | null }); }}>
+                  <option value="">onde?</option>
+                  {PRESENCAS.map((p) => <option key={p} value={p}>{ROTULOS_PRESENCA_CURTO[p]}</option>)}
+                </select>
+                <button type="button" onClick={() => remover(a.id)} aria-label={`Remover ${a.full_name}`} className="inline-flex h-10 w-10 items-center justify-center text-terra/60 hover:text-red-800">×</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-4 border-t border-terra/15 pt-4">
+        <p className="versalete mb-2 text-xs text-terra">Adicionar</p>
+        <div className="grid grid-cols-[1fr_4.5rem] gap-2">
+          <input aria-label="Nome do acompanhante" placeholder="Nome" className={campoCurto} value={novo.full_name} onChange={(e) => setNovo({ ...novo, full_name: e.target.value })} />
+          <input aria-label="Idade do acompanhante" inputMode="numeric" placeholder="idade" className={campoCurto} value={novo.age} onChange={(e) => setNovo({ ...novo, age: e.target.value })} />
+        </div>
+        <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-2">
+          <input aria-label="Relação do acompanhante" placeholder="esposa, filho…" className={campoCurto} value={novo.relationship} onChange={(e) => setNovo({ ...novo, relationship: e.target.value })} />
+          <select aria-label="Onde o acompanhante participa" className={campoCurto} value={novo.attends} onChange={(e) => setNovo({ ...novo, attends: e.target.value as Presenca | "" })}>
+            <option value="">onde?</option>
+            {PRESENCAS.map((p) => <option key={p} value={p}>{ROTULOS_PRESENCA_CURTO[p]}</option>)}
+          </select>
+          <Botao type="button" variante="contorno" onClick={adicionar} disabled={salvando || !novo.full_name.trim()}>
+            {salvando ? "…" : "Add"}
+          </Botao>
+        </div>
       </div>
-    </div>
+    </CartaoFicha>
   );
 }
 

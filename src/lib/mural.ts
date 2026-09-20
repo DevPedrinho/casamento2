@@ -58,7 +58,7 @@ async function carregarAutores(
 
   const { data } = await supabase
     .from("perfis_publicos")
-    .select("id, full_name, ceremony_role, is_featured")
+    .select("id, full_name, ceremony_role, is_featured, avatar_path")
     .in("id", unicos);
 
   for (const a of (data ?? []) as Autor[]) mapa.set(a.id, a);

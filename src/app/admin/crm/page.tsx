@@ -13,7 +13,7 @@ export default async function CrmPage() {
     .select(
       `id, user_id, full_name, phone, whatsapp, invite_status, companions_planned,
        last_contact_at, next_action, next_action_at, side, ceremony_role, group_id,
-       access_code, code_sent_at,
+       access_code, code_sent_at, avatar_path,
        grupo:guest_groups!guests_group_id_fkey ( id, name, side, notes )`,
     )
     .order("full_name", { ascending: true });

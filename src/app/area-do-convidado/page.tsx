@@ -43,7 +43,7 @@ export default async function AreaDoConvidado() {
       supabase
         .from("guests")
         .select(
-          `full_name, phone, whatsapp, email, age, gender, attends, relationship,
+          `full_name, phone, whatsapp, email, age, gender, attends, relationship, avatar_path,
            relationship_kind, ceremony_role, is_featured, dietary_notes, is_admin, table_id,
            mesa:wedding_tables!guests_table_id_fkey ( id, name, seats, notes, sort_order )`,
         )

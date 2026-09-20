@@ -10,12 +10,14 @@ import {
 } from "@/lib/tipos";
 import { diasAte, formatarData } from "@/lib/formato";
 import { formatarCodigo } from "@/lib/codigo";
+import { urlDoSite } from "@/lib/storage";
 import { linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
 import { Avatar } from "@/components/Avatar";
 import { Botao } from "@/components/Botao";
 import { Selo } from "@/components/painel";
 import { ACAO_FICHA, CartaoFicha, Ficha, LinhaFicha } from "@/components/Ficha";
 import { TOM_STATUS } from "./tons";
+import type { AbaDaFicha } from "./FichaConvidado";
 
 const LADO: Record<string, string> = { noivo: "do noivo", noiva: "da noiva", ambos: "dos dois" };
 
@@ -47,7 +49,7 @@ export function DetalheConvidado({
   copiado: boolean;
   gerando: boolean;
   aoFechar: () => void;
-  aoEditar: () => void;
+  aoEditar: (aba?: AbaDaFicha) => void;
   aoRemover: () => void;
   aoAbrirOutro: (outro: ConvidadoCompleto) => void;
   aoGerar: () => void;
@@ -67,7 +69,7 @@ export function DetalheConvidado({
       aoFechar={aoFechar}
       cabecalho={
         <div className="flex items-center gap-3">
-          <Avatar nome={c.full_name} />
+          <Avatar nome={c.full_name} url={urlDoSite(c.avatar_path)} />
           <div className="min-w-0">
             {c.grupo && <p className="versalete text-xs text-terra">{c.grupo.name}</p>}
             <h2 className="titulo-serif text-2xl leading-tight text-oliva">{c.full_name}</h2>
@@ -85,7 +87,7 @@ export function DetalheConvidado({
       }
       rodape={
         <>
-          <Botao type="button" variante="contorno" onClick={aoEditar} className="flex-1 sm:flex-none">
+          <Botao type="button" variante="contorno" onClick={() => aoEditar()} className="flex-1 sm:flex-none">
             Editar
           </Botao>
           {!c.user_id && (
@@ -161,7 +163,7 @@ export function DetalheConvidado({
                     onClick={() => aoAbrirOutro(outro)}
                     className="flex min-h-11 w-full items-center gap-3 py-2 text-left"
                   >
-                    <Avatar nome={outro.full_name} tamanho="sm" />
+                    <Avatar nome={outro.full_name} url={urlDoSite(outro.avatar_path)} tamanho="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm text-oliva">{outro.full_name}</span>
                       {outro.relationship && <span className="block truncate text-xs text-terra">{outro.relationship}</span>}
@@ -176,7 +178,14 @@ export function DetalheConvidado({
       </CartaoFicha>
 
       {/* ---------- Resposta ---------- */}
-      <CartaoFicha titulo="Resposta">
+      <CartaoFicha
+        titulo="Resposta"
+        acao={
+          <button type="button" onClick={() => aoEditar("resposta")} className={`${ACAO_FICHA} text-oliva`}>
+            acompanhantes e mesa
+          </button>
+        }
+      >
         <LinhaFicha rotulo="Status do convite" valor={ROTULOS_CONVITE[c.invite_status]} />
         <LinhaFicha rotulo="Onde participa" valor={c.attends ? ROTULOS_PRESENCA[c.attends] : "ainda não respondeu"} />
         <LinhaFicha
@@ -214,7 +223,14 @@ export function DetalheConvidado({
       </CartaoFicha>
 
       {/* ---------- Contato ---------- */}
-      <CartaoFicha titulo="Contato">
+      <CartaoFicha
+        titulo="Contato"
+        acao={
+          <button type="button" onClick={() => aoEditar("perfil")} className={`${ACAO_FICHA} text-oliva`}>
+            editar
+          </button>
+        }
+      >
         <LinhaFicha
           rotulo="Telefone"
           valor={

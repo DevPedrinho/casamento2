@@ -6,6 +6,7 @@ import type { Denuncia, Publicacao } from "@/lib/tipos";
 import { tempoRelativo, tempoRestante } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
+import { urlDoSite } from "@/lib/storage";
 import { Botao } from "@/components/Botao";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
 
@@ -130,7 +131,7 @@ function LinhaPost({ post, aoMudar }: { post: Publicacao; aoMudar: () => void })
       className={`rounded-sm border border-terra/20 bg-creme p-5 ${post.is_hidden ? "opacity-60" : ""}`}
     >
       <div className="flex items-start gap-4">
-        <Avatar nome={nome} tamanho="sm" />
+        <Avatar nome={nome} url={urlDoSite(post.autor?.avatar_path ?? null)} tamanho="sm" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <p className="titulo-serif text-lg text-oliva">{nome}</p>

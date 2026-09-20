@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { Publicacao } from "@/lib/tipos";
 import { formatarDataHora, tempoRelativo } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { urlDoSite } from "@/lib/storage";
 import { Avatar } from "@/components/Avatar";
 import { EtiquetaPapel } from "@/components/EtiquetaPapel";
 import { Icone } from "@/components/Icones";
@@ -108,7 +109,7 @@ function CartaoPost({
   return (
     <li className="overflow-hidden rounded-sm border border-terra/20 bg-creme-claro">
       <header className="flex items-center gap-3 px-6 py-4">
-        <Avatar nome={nome} />
+        <Avatar nome={nome} url={urlDoSite(post.autor?.avatar_path ?? null)} />
         <div className="min-w-0 flex-1">
           <p className="titulo-serif truncate text-lg text-oliva">
             {meu ? "Você" : nome}
@@ -208,7 +209,7 @@ function CartaoPost({
       {vendoCurtidas && (
         <ListaDePessoas
           titulo="Curtido por"
-          pessoas={post.quem_curtiu.map((a) => ({ id: a.id, nome: a.full_name }))}
+          pessoas={post.quem_curtiu.map((a) => ({ id: a.id, nome: a.full_name, url: urlDoSite(a.avatar_path ?? null) }))}
           aoFechar={() => setVendoCurtidas(false)}
         />
       )}
@@ -233,7 +234,7 @@ export function ListaDePessoas({
   aoFechar,
 }: {
   titulo: string;
-  pessoas: { id: string; nome: string; detalhe?: string; emoji?: string }[];
+  pessoas: { id: string; nome: string; url?: string | null; detalhe?: string; emoji?: string }[];
   aoFechar: () => void;
 }) {
   useEffect(() => {
@@ -277,7 +278,7 @@ export function ListaDePessoas({
         <ul className="divide-y divide-terra/10">
           {pessoas.map((p) => (
             <li key={p.id} className="flex items-center gap-3.5 px-6 py-3.5">
-              <Avatar nome={p.nome} tamanho="sm" />
+              <Avatar nome={p.nome} url={p.url ?? null} tamanho="sm" />
               <div className="min-w-0 flex-1">
                 <p className="titulo-serif truncate text-base text-oliva">{p.nome}</p>
                 {p.detalhe && <p className="text-sm text-terra">{p.detalhe}</p>}
@@ -344,7 +345,7 @@ function Comentarios({
             const meuComentario = c.guest_id === meuId;
             return (
               <li key={c.id} className="flex items-start gap-3">
-                <Avatar nome={nome} tamanho="sm" />
+                <Avatar nome={nome} url={urlDoSite(c.autor?.avatar_path ?? null)} tamanho="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
                     <span className="titulo-serif text-base text-oliva">

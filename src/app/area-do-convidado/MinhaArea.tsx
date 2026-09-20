@@ -23,6 +23,9 @@ import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { BotaoSair } from "@/components/BotaoSair";
 import { Divisor } from "@/components/Ornamentos";
 import { Icone } from "@/components/Icones";
+import { Avatar } from "@/components/Avatar";
+import { UploadImagem } from "@/components/UploadImagem";
+import { urlDoSite } from "@/lib/storage";
 
 export type MinhaFicha = {
   full_name: string;
@@ -40,6 +43,7 @@ export type MinhaFicha = {
   is_admin: boolean;
   table_id: string | null;
   mesa: Mesa | null;
+  avatar_path?: string | null;
 };
 
 type Aba = "resposta" | "dados" | "dia";
@@ -228,7 +232,16 @@ function AbaDados({ guestId, ficha }: { guestId: string; ficha: MinhaFicha | nul
   const [idade, setIdade] = useState(ficha?.age === null || ficha === null ? "" : String(ficha.age));
   const [genero, setGenero] = useState<string>(ficha?.gender ?? "");
   const [restricoes, setRestricoes] = useState(ficha?.dietary_notes ?? "");
+  const [avatar, setAvatar] = useState<string | null>(ficha?.avatar_path ?? null);
   const [erro, setErro] = useState<string | null>(null);
+
+  /** A foto grava sozinha: o arquivo já subiu, não precisa do botão salvar. */
+  async function trocarFoto(caminho: string | null) {
+    setAvatar(caminho);
+    const supabase = criarClienteNavegador();
+    await supabase.from("guests").update({ avatar_path: caminho }).eq("id", guestId);
+    router.refresh();
+  }
   const [salvo, setSalvo] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -272,6 +285,21 @@ function AbaDados({ guestId, ficha }: { guestId: string; ficha: MinhaFicha | nul
     <form onSubmit={salvar} className="space-y-5 rounded-sm border border-terra/20 bg-creme-claro p-6 sm:p-8">
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       {salvo && <Aviso tipo="ok">Pronto, salvamos aqui. 💜</Aviso>}
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+        <Avatar nome={nome || "?"} url={urlDoSite(avatar)} tamanho="lg" className="hidden sm:block" />
+        <div className="min-w-0 flex-1">
+          <UploadImagem
+            pasta={`avatares/${guestId}`}
+            caminhoAtual={avatar}
+            urlAtual={urlDoSite(avatar)}
+            aoEnviar={(caminho) => void trocarFoto(caminho)}
+            aoRemover={() => void trocarFoto(null)}
+            rotulo="Sua foto de perfil — aparece no mural, como numa rede social"
+            proporcao="aspect-square max-w-[12rem]"
+          />
+        </div>
+      </div>
 
       <div>
         <Rotulo htmlFor="meu-nome">Nome completo</Rotulo>
