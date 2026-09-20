@@ -152,7 +152,12 @@ export function FormRsvp({
       .eq("id", guestId);
 
     if (erroFicha) {
-      setErro("Não foi possível salvar seus dados agora. Tente de novo em instantes.");
+      // O motivo real fica no console: um "não foi possível" genérico já nos
+      // custou dias de investigação uma vez.
+      console.error("Falha ao salvar a ficha do convidado:", erroFicha);
+      setErro(
+        "Não foi possível salvar seus dados agora. Tente de novo em instantes — se insistir, avise os noivos.",
+      );
       setEnviando(false);
       return;
     }
@@ -173,7 +178,10 @@ export function FormRsvp({
     );
 
     if (error) {
-      setErro("Não foi possível salvar agora. Tente novamente em instantes.");
+      console.error("Falha ao salvar a confirmação:", error);
+      setErro(
+        "Não foi possível salvar agora. Tente novamente em instantes — se insistir, avise os noivos.",
+      );
       setEnviando(false);
       return;
     }
@@ -205,6 +213,7 @@ export function FormRsvp({
         : await supabase.from("rsvp_companions").insert(dados);
 
       if (resposta.error) {
+        console.error("Falha ao salvar acompanhante:", resposta.error);
         setErro("Não foi possível salvar os acompanhantes. Tente de novo.");
         setEnviando(false);
         router.refresh();
