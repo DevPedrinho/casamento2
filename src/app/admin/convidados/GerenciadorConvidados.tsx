@@ -22,7 +22,7 @@ import { contaNoTotal, temAcessoAoSite } from "@/lib/idade";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
-import { Bloco, Selo, Vazio } from "@/components/painel";
+import { Bloco, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
 import { DetalheConvidado } from "./DetalheConvidado";
 import { Familias } from "./Familias";
@@ -248,6 +248,17 @@ export function GerenciadorConvidados({
     setSelecionados(todosVisiveisSelecionados ? new Set() : new Set(visiveis.map((c) => c.id)));
   }
 
+  /** Muda o status de um convidado direto na linha, sem abrir a ficha. */
+  async function mudarStatus(convidado: ConvidadoCompleto, novoStatus: StatusConvite) {
+    if (novoStatus === convidado.invite_status) return;
+    const supabase = criarClienteNavegador();
+    await supabase
+      .from("guests")
+      .update({ invite_status: novoStatus, last_contact_at: new Date().toISOString().slice(0, 10) })
+      .eq("id", convidado.id);
+    router.refresh();
+  }
+
   /** Ação em massa: move o status de todos os selecionados de uma vez. */
   async function mudarStatusEmLote(novoStatus: StatusConvite) {
     if (selecionados.size === 0) return;
@@ -394,6 +405,7 @@ export function GerenciadorConvidados({
       selecionado={selecionados.has(c.id)}
       aoSelecionar={() => alternarSelecao(c.id)}
       aoAbrir={() => setDetalheId(c.id)}
+      aoMudarStatus={(s) => mudarStatus(c, s)}
     />
   );
 
@@ -836,6 +848,7 @@ function LinhaConvidado({
   selecionado,
   aoSelecionar,
   aoAbrir,
+  aoMudarStatus,
 }: {
   convidado: ConvidadoCompleto;
   /** Nome de quem trouxe, quando o cadastro nasceu de um acompanhante. */
@@ -845,6 +858,7 @@ function LinhaConvidado({
   selecionado: boolean;
   aoSelecionar: () => void;
   aoAbrir: () => void;
+  aoMudarStatus: (status: StatusConvite) => void;
 }) {
   const passou = acompanhantes.length > c.companions_planned;
 
@@ -910,13 +924,34 @@ function LinhaConvidado({
             )}
           </span>
         </span>
-        <span className="hidden shrink-0 sm:block">
-          <Selo tom={TOM_STATUS[c.invite_status]}>{ROTULOS_CONVITE[c.invite_status]}</Selo>
-        </span>
       </button>
+
+      {/* O status é um select vestido de selo: troca direto na linha. Fica
+          fora do botão da ficha, porque controle dentro de botão não existe. */}
+      <select
+        value={c.invite_status}
+        onChange={(e) => aoMudarStatus(e.target.value as StatusConvite)}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`Status do convite de ${c.full_name}`}
+        title="Mudar o status do convite"
+        className={`versalete min-h-8 shrink-0 cursor-pointer appearance-none rounded-full border-0 px-3 py-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-oliva/40 ${TONS_STATUS[TOM_STATUS[c.invite_status]]}`}
+      >
+        {ETAPAS_CONVITE.map((s) => (
+          <option key={s} value={s}>{ROTULOS_CONVITE[s]}</option>
+        ))}
+      </select>
     </li>
   );
 }
+
+/** As mesmas cores do Selo, para o select do status parecer um selo. */
+const TONS_STATUS = {
+  neutro: "bg-terra/15 text-terra",
+  oliva: "bg-oliva text-creme-claro",
+  lavanda: "bg-lavanda text-creme-claro",
+  alerta: "bg-red-800/15 text-red-900",
+  apagado: "bg-creme-escuro text-terra/85",
+} as const;
 
 /** A segunda linha da visão "Respostas": o essencial sem abrir a ficha. */
 function resumoDaResposta(convidado: ConvidadoCompleto, acompanhantes: Acompanhante[]) {
