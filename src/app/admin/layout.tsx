@@ -56,15 +56,11 @@ async function carregarPendencias(
 ): Promise<Pendencias> {
   const hoje = new Date().toISOString().slice(0, 10);
 
-  const [semConvite, followUp, tarefas, vencendo, denuncias] = await Promise.all([
+  const [semConvite, tarefas, vencendo, denuncias] = await Promise.all([
     supabase
       .from("guests")
       .select("id", { count: "exact", head: true })
       .eq("invite_status", "nao_contatado"),
-    supabase
-      .from("guests")
-      .select("id", { count: "exact", head: true })
-      .eq("invite_status", "follow_up"),
     supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })
@@ -80,7 +76,6 @@ async function carregarPendencias(
 
   return {
     convidados: semConvite.count ?? 0,
-    crm: followUp.count ?? 0,
     tarefas: tarefas.count ?? 0,
     financeiro: vencendo.count ?? 0,
     mural: denuncias.count ?? 0,

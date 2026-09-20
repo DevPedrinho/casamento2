@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Selo } from "@/components/painel";
 
-export type TipoDoItem = "financeiro" | "tarefa" | "fornecedor" | "crm" | "dia";
+export type TipoDoItem = "financeiro" | "tarefa" | "fornecedor" | "convites" | "dia";
 
 export type ItemDoMes = {
   /** Data ISO (AAAA-MM-DD). Sem data, o item entra no mês atual, sem dia. */
@@ -24,7 +24,7 @@ const ROTULO_TIPO: Record<TipoDoItem, string> = {
   financeiro: "financeiro",
   tarefa: "tarefa",
   fornecedor: "fornecedor",
-  crm: "crm",
+  convites: "convites",
   dia: "o dia",
 };
 
@@ -33,7 +33,7 @@ const FAIXA: Record<TipoDoItem, string> = {
   financeiro: "border-l-terra",
   tarefa: "border-l-oliva",
   fornecedor: "border-l-terra",
-  crm: "border-l-lavanda",
+  convites: "border-l-lavanda",
   dia: "border-l-lavanda",
 };
 
@@ -186,7 +186,7 @@ export function MesAMes({
                           ) : item.alta ? (
                             <Selo tom="oliva">alta</Selo>
                           ) : (
-                            <Selo tom={item.tipo === "dia" || item.tipo === "crm" ? "lavanda" : "neutro"}>{ROTULO_TIPO[item.tipo]}</Selo>
+                            <Selo tom={item.tipo === "dia" || item.tipo === "convites" ? "lavanda" : "neutro"}>{ROTULO_TIPO[item.tipo]}</Selo>
                           )}
                         </span>
                       </Link>

@@ -230,8 +230,8 @@ export default async function Dashboard() {
       data: null,
       titulo: `Enviar o convite: ${conta("nao_contatado")} convidados sem contato`,
       detalhe: "Nenhum foi contatado ainda",
-      tipo: "crm",
-      href: "/admin/crm",
+      tipo: "convites",
+      href: "/admin/convidados?status=nao_contatado",
     });
   }
   if (conta("follow_up") > 0) {
@@ -239,8 +239,8 @@ export default async function Dashboard() {
       data: null,
       titulo: `Retomar contato com ${conta("follow_up")} convidados`,
       detalhe: "Marcados como follow-up",
-      tipo: "crm",
-      href: "/admin/crm",
+      tipo: "convites",
+      href: "/admin/convidados?status=follow_up",
     });
   }
   if (orcamentoTotal === 0) {

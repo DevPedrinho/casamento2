@@ -16,6 +16,7 @@ const SELECT = `
 
 /** Filtros que chegam pela URL, quando o clique veio de um gráfico. */
 export type FiltroInicial = {
+  status?: string;
   vinculo?: string;
   faixa?: string;
   presenca?: string;
@@ -60,6 +61,7 @@ export default async function ConvidadosPage({
       mesas={(mesas ?? []) as Mesa[]}
       acompanhantes={acompanhantes ?? []}
       inicial={{
+        status: texto(params.status),
         vinculo: texto(params.vinculo),
         faixa: texto(params.faixa),
         presenca: texto(params.presenca),

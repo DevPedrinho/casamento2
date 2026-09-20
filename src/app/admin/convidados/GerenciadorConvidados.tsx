@@ -65,7 +65,9 @@ export function GerenciadorConvidados({
 }) {
   const router = useRouter();
   const [busca, setBusca] = useState("");
-  const [status, setStatus] = useState<StatusConvite | "todos">("todos");
+  const [status, setStatus] = useState<StatusConvite | "todos">(
+    ETAPAS_CONVITE.includes(inicial.status as StatusConvite) ? (inicial.status as StatusConvite) : "todos",
+  );
   const [grupo, setGrupo] = useState<string>("todos");
   const [lado, setLado] = useState<"todos" | "noivo" | "noiva">(
     inicial.lado === "noivo" || inicial.lado === "noiva" ? inicial.lado : "todos",

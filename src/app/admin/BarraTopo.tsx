@@ -11,7 +11,6 @@ import { CASAMENTO } from "@/lib/config";
 
 export type Pendencias = {
   convidados?: number;
-  crm?: number;
   tarefas?: number;
   financeiro?: number;
   mural?: number;
@@ -23,7 +22,6 @@ type Item = { href: string; rotulo: string; icone: NomeIcone; chave?: keyof Pend
 const PRINCIPAIS: Item[] = [
   { href: "/admin", rotulo: "Dashboard", icone: "dashboard" },
   { href: "/admin/convidados", rotulo: "Convidados", icone: "convidados", chave: "convidados" },
-  { href: "/admin/crm", rotulo: "CRM", icone: "crm", chave: "crm" },
   { href: "/admin/checklist", rotulo: "Tarefas", icone: "tarefas", chave: "tarefas" },
   { href: "/admin/fornecedores", rotulo: "Fornecedores", icone: "fornecedores" },
   { href: "/admin/financeiro", rotulo: "Financeiro", icone: "financeiro", chave: "financeiro" },
