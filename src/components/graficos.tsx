@@ -150,10 +150,13 @@ export function Rosca({
   itens,
   total,
   legendaCentro,
+  aoClicar,
 }: {
   itens: Fatia[];
   total: number;
   legendaCentro: string;
+  /** Com isso, a fatia vira botão em vez de link. */
+  aoClicar?: (chave: string) => void;
 }) {
   const [ativo, setAtivo] = useState<string | null>(null);
 
@@ -240,7 +243,17 @@ export function Rosca({
               onMouseEnter={() => setAtivo(item.chave)}
               onMouseLeave={() => setAtivo(null)}
             >
-              {item.href ? (
+              {aoClicar ? (
+                <button
+                  type="button"
+                  onClick={() => aoClicar(item.chave)}
+                  onFocus={() => setAtivo(item.chave)}
+                  onBlur={() => setAtivo(null)}
+                  className="flex w-full items-start gap-3 rounded-sm px-2 py-2 text-left transition-colors hover:bg-oliva/5 focus-visible:bg-oliva/5"
+                >
+                  {conteudo}
+                </button>
+              ) : item.href ? (
                 <Link
                   href={item.href}
                   onFocus={() => setAtivo(item.chave)}

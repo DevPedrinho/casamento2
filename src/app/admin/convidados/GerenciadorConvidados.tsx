@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ETAPAS_CONVITE,
   ROTULOS_CONVITE,
@@ -28,6 +28,7 @@ import { DetalheConvidado } from "./DetalheConvidado";
 import { Familias } from "./Familias";
 import { FichaConvidado, type AbaDaFicha } from "./FichaConvidado";
 import { FilaDeConvites } from "./FilaDeConvites";
+import { RetratoConvidados, type FiltroDoRetrato } from "./RetratoConvidados";
 import { TOM_STATUS } from "./tons";
 import type { FiltroInicial } from "./page";
 
@@ -90,6 +91,7 @@ export function GerenciadorConvidados({
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const [editando, setEditando] = useState<{ convidado: ConvidadoCompleto; aba: AbaDaFicha } | null>(null);
   const [filaAberta, setFilaAberta] = useState(false);
+  const listaRef = useRef<HTMLDivElement>(null);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
   const [novo, setNovo] = useState(false);
   const [salvandoLote, setSalvandoLote] = useState(false);
@@ -182,6 +184,16 @@ export function GerenciadorConvidados({
       else novo.add(id);
       return novo;
     });
+  }
+
+  /** Um clique no retrato: aplica o filtro daquele eixo e leva até a lista. */
+  function filtrarPeloRetrato(f: FiltroDoRetrato) {
+    if (f.eixo === "vinculo") setVinculo(f.valor);
+    if (f.eixo === "faixa") setFaixa(f.valor);
+    if (f.eixo === "genero") setGenero(f.valor);
+    if (f.eixo === "presenca") setPresenca(f.valor);
+    if (f.eixo === "lado") setLado(f.valor === "noiva" || f.valor === "noivo" ? f.valor : "todos");
+    listaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   /** Um número da faixa clicado: zera os filtros irmãos e aplica o dele; de novo, desfaz. */
@@ -453,6 +465,9 @@ export function GerenciadorConvidados({
         </div>
       </div>
 
+      <RetratoConvidados convidados={convidados} aoFiltrar={filtrarPeloRetrato} />
+
+      <div ref={listaRef} className="scroll-mt-24">
       <Bloco
         titulo="Lista de convidados"
         descricao={
@@ -702,6 +717,7 @@ export function GerenciadorConvidados({
           </>
         )}
       </Bloco>
+      </div>
 
       {detalhe && !editando && (
         <DetalheConvidado

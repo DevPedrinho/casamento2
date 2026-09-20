@@ -3,27 +3,20 @@ import { criarClienteServidor } from "@/lib/supabase/servidor";
 import type {
   Despesa,
   Fornecedor,
-  Genero,
   LocalEvento,
-  Presenca,
   StatusConvite,
   Tarefa,
-  Vinculo,
 } from "@/lib/tipos";
 import {
-  PRESENCAS,
   ROTULOS_CONVITE,
   ROTULOS_LOCAL,
-  ROTULOS_PRESENCA,
-  ROTULOS_VINCULO,
-  VINCULOS,
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
 import { diasAte, reais } from "@/lib/formato";
 import { contaNoTotal } from "@/lib/idade";
 import { AnelCompacto, Bloco, Indicador, Vazio } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
-import { BarrasInterativas, Rosca, type Fatia } from "@/components/graficos";
+import { BarrasInterativas } from "@/components/graficos";
 import { Icone, type NomeIcone } from "@/components/Icones";
 
 export const dynamic = "force-dynamic";
@@ -58,82 +51,6 @@ export default async function Dashboard() {
   const conta = (s: StatusConvite) => listaConvidados.filter((c) => c.invite_status === s).length;
   const confirmados = listaConvidados.filter((c) => c.invite_status === "confirmado");
   const familiasComGrupo = new Set(listaConvidados.map((c) => c.group_id).filter(Boolean)).size;
-
-  // ---------- Quem vem para quê ----------
-  //
-  // A conta é por pessoa, não por convite: o acompanhante come, senta e
-  // ocupa lugar igual ao de quem o trouxe. É esse número que o buffet pede.
-  type Pessoa = { attends: Presenca | null; gender: Genero | null; age: number | null };
-
-  const pessoas: Pessoa[] = listaConvidados
-    .filter((c) => c.invite_status === "confirmado")
-    .map((c) => ({ attends: c.attends, gender: c.gender, age: c.age }));
-
-  const responderam = pessoas.filter((p) => p.attends !== null);
-  const vaiPara = (p: Presenca) => responderam.filter((x) => x.attends === p).length;
-
-  const naRecepcao = responderam.filter(
-    (p) => p.attends === "ambos" || p.attends === "recepcao",
-  );
-  const criancasNaRecepcao = naRecepcao.filter((p) => p.age !== null && p.age < 12).length;
-  const adultosNaRecepcao = naRecepcao.length - criancasNaRecepcao;
-
-  const presenca: Fatia[] = PRESENCAS.map((chave) => ({
-    chave,
-    rotulo: ROTULOS_PRESENCA[chave],
-    valor: vaiPara(chave),
-    href: `/admin/convidados?presenca=${chave}`,
-  })).filter((f) => f.valor > 0);
-
-  // ---------- O retrato dos convidados ----------
-  const contarPor = <T extends string>(
-    valores: (T | null)[],
-    ordem: T[],
-    rotulos: Record<T, string>,
-    parametro: string,
-  ): Fatia[] =>
-    ordem
-      .map((chave) => ({
-        chave,
-        rotulo: rotulos[chave],
-        valor: valores.filter((v) => v === chave).length,
-        href: `/admin/convidados?${parametro}=${chave}`,
-      }))
-      .filter((f) => f.valor > 0);
-
-  const FAIXAS = ["Criança", "Adolescente", "Adulto", "Idoso"];
-  const porFaixa: Fatia[] = FAIXAS.map((faixa) => ({
-    chave: faixa,
-    rotulo: faixa,
-    valor: listaConvidados.filter((c) => c.age_range === faixa).length,
-    href: `/admin/convidados?faixa=${encodeURIComponent(faixa)}`,
-  })).filter((f) => f.valor > 0);
-
-  const porGenero = contarPor<Genero>(
-    listaConvidados.map((c) => c.gender),
-    ["feminino", "masculino", "outro"],
-    { feminino: "Feminino", masculino: "Masculino", outro: "Outro" },
-    "genero",
-  );
-
-  const porVinculo = contarPor<Vinculo>(
-    listaConvidados.map((c) => c.relationship_kind),
-    VINCULOS,
-    ROTULOS_VINCULO,
-    "vinculo",
-  ).sort((a, b) => b.valor - a.valor);
-
-  const porLado: Fatia[] = (["noiva", "noivo"] as const)
-    .map((lado) => ({
-      chave: lado,
-      rotulo: lado === "noiva" ? "Lado da noiva" : "Lado do noivo",
-      valor: listaConvidados.filter((c) => c.side === lado).length,
-      href: `/admin/convidados?lado=${lado}`,
-    }))
-    .filter((f) => f.valor > 0);
-
-  const semVinculo = listaConvidados.filter((c) => !c.relationship_kind).length;
-  const semFaixa = listaConvidados.filter((c) => !c.age_range).length;
 
   // ---------- Tarefas ----------
   const feitas = listaTarefas.filter((t) => t.status === "feito").length;
@@ -338,13 +255,13 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* ---------- Retrato dos convidados (fechado por padrão) ---------- */}
+      {/* ---------- Gastos por categoria (fechado por padrão) ---------- */}
       <details className="group rounded-sm border border-terra/20 bg-creme-claro">
         <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-6 py-5 sm:px-8 [&::-webkit-details-marker]:hidden">
           <span>
-            <span className="titulo-serif block text-2xl text-oliva">Retrato dos convidados</span>
+            <span className="titulo-serif block text-2xl text-oliva">Gastos por categoria</span>
             <span className="mt-1 block text-sm text-terra">
-              Quem vem para quê, vínculo, faixa etária, lado — e o gasto por categoria.
+              O orçamento por área, e os números do financeiro.
             </span>
           </span>
           <span className="versalete inline-flex min-h-11 items-center gap-2 text-xs text-oliva">
@@ -355,56 +272,16 @@ export default async function Dashboard() {
         </summary>
 
         <div className="space-y-6 border-t border-terra/15 px-6 py-6 sm:px-8">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-            <Indicador rotulo="Total" valor={listaConvidados.length} />
-            <Indicador rotulo="Confirmados" valor={confirmados.length} tom="oliva" detalhe={`${pessoas.length} pessoas`} />
-            <Indicador rotulo="Aguardando" valor={conta("aguardando") + conta("convite_enviado") + conta("visualizou")} tom="lavanda" />
-            <Indicador rotulo="Não irão" valor={conta("nao_vai")} />
-            <Indicador rotulo="Famílias" valor={familiasComGrupo} />
-            <Indicador rotulo="Na festa" valor={naRecepcao.length} tom="oliva" detalhe={`${adultosNaRecepcao} adultos · ${criancasNaRecepcao} crianças`} />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Bloco
-              titulo="Cerimônia, festa ou as duas"
-              descricao="Contado por pessoa, com os acompanhantes dentro. Toque para ver quem é."
-            >
-              <Rosca itens={presenca} total={responderam.length} legendaCentro="pessoas já responderam" />
-            </Bloco>
-
-            <Bloco
-              titulo="Gastos por categoria"
-              descricao="Toque numa categoria para ver as despesas dela."
-            >
-              {porCategoria.length === 0 ? (
-                <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
-              ) : (
-                <BarrasInterativas itens={porCategoria} tom={2} moeda />
-              )}
-            </Bloco>
-
-            <Bloco
-              titulo="Vínculo com vocês"
-              descricao={semVinculo > 0 ? `${semVinculo} ainda sem vínculo definido na ficha.` : "Toque para ver a lista de cada grupo."}
-            >
-              <BarrasInterativas itens={porVinculo} tom={1} sufixo="convidados" />
-            </Bloco>
-
-            <Bloco
-              titulo="Faixa etária"
-              descricao={semFaixa > 0 ? `${semFaixa} ainda sem faixa preenchida.` : "Toque para ver a lista de cada faixa."}
-            >
-              <BarrasInterativas itens={porFaixa} tom={0} sufixo="convidados" />
-            </Bloco>
-
-            <Bloco titulo="Gênero" descricao="Como cada convidado se identifica na ficha.">
-              <BarrasInterativas itens={porGenero} tom={3} sufixo="convidados" />
-            </Bloco>
-
-            <Bloco titulo="De que lado" descricao="Quem veio da noiva e quem veio do noivo.">
-              <BarrasInterativas itens={porLado} tom={5} sufixo="convidados" />
-            </Bloco>
-          </div>
+          <Bloco
+            titulo="Gastos por categoria"
+            descricao="Toque numa categoria para ver as despesas dela."
+          >
+            {porCategoria.length === 0 ? (
+              <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
+            ) : (
+              <BarrasInterativas itens={porCategoria} tom={2} moeda />
+            )}
+          </Bloco>
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <Indicador rotulo="Orçamento" valor={reais(orcamentoTotal)} />
