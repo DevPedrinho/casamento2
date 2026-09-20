@@ -5,7 +5,7 @@ import type { ConvidadoCompleto } from "@/lib/tipos";
 import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
 import { linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
-import { temAcessoAoSite } from "@/lib/convidado";
+import { temAcessoAoSite } from "@/lib/idade";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoExterno } from "@/components/Botao";

@@ -20,7 +20,7 @@ import {
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
 import { diasAte, reais } from "@/lib/formato";
-import { contaNoTotal } from "@/lib/convidado";
+import { contaNoTotal } from "@/lib/idade";
 import { AnelCompacto, Bloco, Indicador, Vazio } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
 import { BarrasInterativas, Rosca, type Fatia } from "@/components/graficos";

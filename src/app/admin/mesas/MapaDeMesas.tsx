@@ -10,7 +10,7 @@ import {
   type StatusConvite,
 } from "@/lib/tipos";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
-import { contaNoTotal } from "@/lib/convidado";
+import { contaNoTotal } from "@/lib/idade";
 import { Botao } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";

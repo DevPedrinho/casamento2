@@ -18,7 +18,7 @@ import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { confirmarExclusao, excluirConvidado } from "@/lib/excluirConvidado";
-import { contaNoTotal, temAcessoAoSite } from "@/lib/convidado";
+import { contaNoTotal, temAcessoAoSite } from "@/lib/idade";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
