@@ -1,15 +1,33 @@
 import { criarClienteServidor } from "@/lib/supabase/servidor";
-import { Personagens, type Personagem } from "./Personagens";
+import {
+  TEXTOS_PERSONAGENS_PADRAO,
+  type PersonagemCerimonia,
+  type TextosPersonagens,
+} from "@/lib/tipos";
+import { urlDoSite } from "@/lib/storage";
+import { EditorPersonagens, type ConvidadoResumo } from "./EditorPersonagens";
 
 export const dynamic = "force-dynamic";
 
 export default async function PersonagensPage() {
   const supabase = await criarClienteServidor();
 
-  const { data } = await supabase
-    .from("guests")
-    .select("id, full_name, side, ceremony_role, is_featured, featured_order, user_id")
-    .order("full_name");
+  const [{ data: pessoas }, { data: pagina }, { data: convidados }] = await Promise.all([
+    supabase.from("ceremony_people").select("*").order("section").order("sort_order").order("name"),
+    supabase.from("ceremony_page").select("texts").maybeSingle(),
+    supabase.from("guests").select("id, full_name, side").order("full_name"),
+  ]);
 
-  return <Personagens convidados={(data ?? []) as Personagem[]} />;
+  const textos: TextosPersonagens = {
+    ...TEXTOS_PERSONAGENS_PADRAO,
+    ...((pagina?.texts as Partial<TextosPersonagens> | null) ?? {}),
+  };
+
+  return (
+    <EditorPersonagens
+      pessoas={((pessoas ?? []) as PersonagemCerimonia[]).map((p) => ({ ...p, url: urlDoSite(p.image_path) }))}
+      textos={textos}
+      convidados={(convidados ?? []) as ConvidadoResumo[]}
+    />
+  );
 }

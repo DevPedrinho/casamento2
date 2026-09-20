@@ -568,3 +568,44 @@ export type ConfiguracoesSite = {
   color_cream: string | null;
   texts: Record<string, string>;
 };
+
+/* ===================== Personagens da cerimônia ===================== */
+
+export type SecaoPersonagem = "protagonistas" | "raizes" | "ao_lado" | "cortejo";
+
+export const SECOES_PERSONAGEM: SecaoPersonagem[] = ["protagonistas", "raizes", "ao_lado", "cortejo"];
+
+export const ROTULOS_SECAO_PERSONAGEM: Record<SecaoPersonagem, string> = {
+  protagonistas: "Os protagonistas",
+  raizes: "Nossas raízes",
+  ao_lado: "Quem caminha ao nosso lado",
+  cortejo: "Nosso cortejo",
+};
+
+/** Uma pessoa da página Personagens. Pode apontar para um convidado, mas não precisa. */
+export type PersonagemCerimonia = {
+  id: string;
+  guest_id: string | null;
+  name: string;
+  role_label: string;
+  section: SecaoPersonagem;
+  group_label: string | null;
+  description: string | null;
+  long_text: string | null;
+  image_path: string | null;
+  sort_order: number;
+  is_active: boolean;
+};
+
+/** Os textos da página, com o que vale quando os noivos ainda não escreveram. */
+export const TEXTOS_PERSONAGENS_PADRAO = {
+  titulo: "Personagens da nossa cerimônia",
+  abertura: "Cada um deles ocupa um lugar especial na nossa história — e agora também no nosso grande dia.",
+  protagonistas_sub: "Dois corações, um só caminho",
+  raizes_sub: "Aqueles que nos ensinaram a amar",
+  ao_lado_sub: "Amigos e familiares que tornam tudo mais especial",
+  cortejo_sub: "Pequenos grandes papéis",
+  fechamento: "Nenhum deles está aqui apenas por um papel na cerimônia. Cada um ocupa um lugar na nossa história.",
+};
+
+export type TextosPersonagens = typeof TEXTOS_PERSONAGENS_PADRAO;

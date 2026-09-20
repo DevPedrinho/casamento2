@@ -10,6 +10,7 @@ import { CASAMENTO } from "@/lib/config";
 const LINKS = [
   { href: "/", rotulo: "Início" },
   { href: "/nossa-historia", rotulo: "Nossa História" },
+  { href: "/personagens", rotulo: "Personagens" },
   { href: "/mural", rotulo: "Mural" },
   { href: "/presentes", rotulo: "Presentes" },
   { href: "/confirmar", rotulo: "Confirmar Presença" },
@@ -70,7 +71,7 @@ export function Cabecalho({ nomes }: { nomes?: string }) {
           </span>
         </Link>
 
-        <ul className="hidden items-center gap-5 lg:gap-7 md:flex">
+        <ul className="hidden items-center gap-5 lg:flex xl:gap-7">
           {LINKS.map((link) => (
             <li key={link.href}>
               <Link
@@ -107,7 +108,7 @@ export function Cabecalho({ nomes }: { nomes?: string }) {
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
-          className="-mr-2 flex h-11 w-11 items-center justify-center text-oliva md:hidden"
+          className="-mr-2 flex h-11 w-11 items-center justify-center text-oliva lg:hidden"
           aria-expanded={aberto}
           aria-controls="menu-mobile"
           aria-label={aberto ? "Fechar menu" : "Abrir menu"}
@@ -118,7 +119,7 @@ export function Cabecalho({ nomes }: { nomes?: string }) {
         </button>
       </nav>
 
-      <div id="menu-mobile" hidden={!aberto} className="border-t border-terra/15 md:hidden">
+      <div id="menu-mobile" hidden={!aberto} className="border-t border-terra/15 lg:hidden">
         <ul className="mx-auto max-w-6xl px-5 py-3">
           {LINKS.map((link) => (
             <li key={link.href}>
