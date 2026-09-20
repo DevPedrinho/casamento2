@@ -60,12 +60,15 @@ export function Financeiro({
   fornecedores,
   orcamentoTotal,
   categoriaInicial,
+  fornecedorInicial,
 }: {
   despesas: Despesa[];
   fornecedores: Fornecedor[];
   orcamentoTotal: number;
   /** Categoria que já chega aberta, quando o clique veio do dashboard. */
   categoriaInicial?: string;
+  /** Fornecedor a isolar, quando o clique veio da ficha dele. */
+  fornecedorInicial?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
@@ -75,11 +78,30 @@ export function Financeiro({
   const [salvando, setSalvando] = useState(false);
   const [pagandoId, setPagandoId] = useState<string | null>(null);
 
+  // Quando se chega pela ficha de um fornecedor, a tela mostra só o que é
+  // dele — é a pergunta que a pessoa trouxe da outra tela.
+  const [filtroFornecedor, setFiltroFornecedor] = useState<string | null>(
+    fornecedorInicial ?? null,
+  );
+  const fornecedorFiltrado = fornecedores.find((f) => f.id === filtroFornecedor) ?? null;
+
+  const visiveis = useMemo(
+    () => (filtroFornecedor ? despesas.filter((d) => d.vendor_id === filtroFornecedor) : despesas),
+    [despesas, filtroFornecedor],
+  );
+
   // As categorias começam fechadas: o orçamento inteiro aberto vira uma
   // parede de números. A que veio do gráfico já abre.
-  const [abertas, setAbertas] = useState<Set<string>>(
-    () => new Set(categoriaInicial ? [categoriaInicial] : []),
-  );
+  const [abertas, setAbertas] = useState<Set<string>>(() => {
+    if (categoriaInicial) return new Set([categoriaInicial]);
+    // Vindo de um fornecedor, são poucas despesas: abre todas de uma vez.
+    if (fornecedorInicial) {
+      return new Set(
+        despesas.filter((d) => d.vendor_id === fornecedorInicial).map((d) => d.category),
+      );
+    }
+    return new Set();
+  });
 
   function alternarCategoria(categoria: string) {
     setAbertas((atual) => {
@@ -107,13 +129,13 @@ export function Financeiro({
 
   const porCategoria = useMemo(() => {
     const mapa = new Map<string, Despesa[]>();
-    for (const d of despesas) {
+    for (const d of visiveis) {
       const lista = mapa.get(d.category);
       if (lista) lista.push(d);
       else mapa.set(d.category, [d]);
     }
     return [...mapa.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
-  }, [despesas]);
+  }, [visiveis]);
 
   function limpar() {
     setForm(VAZIO);
@@ -326,8 +348,26 @@ export function Financeiro({
           </form>
         )}
 
-        {despesas.length === 0 ? (
-          <Vazio>Nenhum item no orçamento ainda.</Vazio>
+        {fornecedorFiltrado && (
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <span className="versalete text-xs text-terra">Mostrando só</span>
+            <button
+              type="button"
+              onClick={() => setFiltroFornecedor(null)}
+              className="versalete inline-flex min-h-9 items-center gap-2 rounded-full border border-lavanda/40 bg-lavanda/10 px-3 text-xs text-lavanda transition-colors hover:border-lavanda"
+            >
+              {fornecedorFiltrado.name}
+              <Icone nome="fechar" className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+
+        {visiveis.length === 0 ? (
+          <Vazio>
+            {fornecedorFiltrado
+              ? `Nenhuma despesa lançada para ${fornecedorFiltrado.name} ainda. Crie uma acima para o que for pago a ele entrar no orçamento.`
+              : "Nenhum item no orçamento ainda."}
+          </Vazio>
         ) : (
           <div className="space-y-9">
             {porCategoria.map(([categoria, itens]) => {

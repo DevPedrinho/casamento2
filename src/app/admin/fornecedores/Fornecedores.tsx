@@ -1,16 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import {
   CATEGORIAS_FORNECEDOR,
   ETAPAS_FUNIL,
   ROTULOS_FORNECEDOR,
+  type Despesa,
   type Fornecedor,
   type StatusFornecedor,
 } from "@/lib/tipos";
 import { diasAte, formatarData, paraCampo, paraCentavos, reais } from "@/lib/formato";
 import { linkSeguro } from "@/lib/formato";
+import {
+  contasPorFornecedor,
+  CONTA_VAZIA,
+  type ContaDoFornecedor,
+} from "@/lib/contasDoFornecedor";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
@@ -29,7 +36,6 @@ const VAZIO = {
   name: "",
   company: "",
   contract_url: "",
-  paid: "",
   category: "",
   status: "prospecto" as StatusFornecedor,
   contact_name: "",
@@ -44,7 +50,13 @@ const VAZIO = {
   notes: "",
 };
 
-export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
+export function Fornecedores({
+  fornecedores,
+  despesas,
+}: {
+  fornecedores: Fornecedor[];
+  despesas: Despesa[];
+}) {
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
   const [editando, setEditando] = useState<string | null>(null);
@@ -52,6 +64,41 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [etapaVisivel, setEtapaVisivel] = useState<StatusFornecedor | "todas">("todas");
+
+  /** O que o financeiro sabe de cada um: contratado, pago e os lançamentos. */
+  const contas = useMemo(() => contasPorFornecedor(despesas), [despesas]);
+
+  /**
+   * Fichas que discordam do financeiro.
+   *
+   * O campo "pago" da ficha era digitado à mão e envelheceu. Em vez de
+   * apagá-lo em silêncio — o que sumiria com dinheiro que alguém registrou —
+   * ele vira uma lista de pendências para vocês acertarem.
+   */
+  const conciliar = useMemo(() => {
+    return fornecedores
+      .map((f) => {
+        const conta = contas.get(f.id) ?? CONTA_VAZIA;
+        const fichaDizia = f.paid_cents ?? 0;
+        const semDespesa = f.status === "contratado" && conta.despesas.length === 0;
+        const divergeNoPago = fichaDizia > 0 && fichaDizia !== conta.pago;
+        const divergeNoFechado =
+          f.agreed_cents !== null &&
+          conta.despesas.length > 0 &&
+          conta.contratado !== f.agreed_cents;
+
+        if (!semDespesa && !divergeNoPago && !divergeNoFechado) return null;
+        return { fornecedor: f, conta, fichaDizia, semDespesa, divergeNoPago, divergeNoFechado };
+      })
+      .filter(Boolean) as {
+        fornecedor: Fornecedor;
+        conta: ContaDoFornecedor;
+        fichaDizia: number;
+        semDespesa: boolean;
+        divergeNoPago: boolean;
+        divergeNoFechado: boolean;
+      }[];
+  }, [contas, fornecedores]);
 
   const resumo = useMemo(() => {
     const contratados = fornecedores.filter((f) => f.status === "contratado");
@@ -63,14 +110,18 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
       const dias = diasAte(f.next_action_at);
       return dias !== null && dias <= 7 && f.status !== "contratado" && f.status !== "descartado";
     }).length;
+    const totalPago = [...contas.values()].reduce((s, c) => s + c.pago, 0);
+
     return {
       total: fornecedores.length,
       contratados: contratados.length,
       emNegociacao: emNegociacao.length,
       totalFechado,
+      totalPago,
+      aPagar: Math.max(0, totalFechado - totalPago),
       proximas,
     };
-  }, [fornecedores]);
+  }, [contas, fornecedores]);
 
   const porEtapa = useMemo(() => {
     return ETAPAS_FUNIL.map((etapa) => ({
@@ -93,7 +144,6 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
       name: f.name,
       company: f.company ?? "",
       contract_url: f.contract_url ?? "",
-      paid: paraCampo(f.paid_cents ?? null),
       category: f.category,
       status: f.status,
       contact_name: f.contact_name ?? "",
@@ -137,7 +187,6 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
       name: form.name.trim(),
       company: form.company.trim() || null,
       contract_url: form.contract_url.trim() || null,
-      paid_cents: paraCentavos(form.paid),
       category: form.category.trim() || "Geral",
       status: form.status,
       contact_name: form.contact_name.trim() || null,
@@ -194,12 +243,74 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
       </div>
 
       {resumo.totalFechado > 0 && (
-        <div className="rounded-sm border border-terra/20 bg-creme-claro px-6 py-5 text-center">
-          <span className="versalete text-xs text-terra">Total já fechado em contratos</span>
-          <p className="titulo-serif mt-2 text-3xl text-oliva tabular-nums lining-nums">
-            {reais(resumo.totalFechado)}
-          </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Indicador rotulo="Fechado em contratos" valor={reais(resumo.totalFechado)} />
+          <Indicador
+            rotulo="Já pago"
+            valor={reais(resumo.totalPago)}
+            tom="oliva"
+            detalhe="somado dos lançamentos"
+          />
+          <Indicador
+            rotulo="Ainda a pagar"
+            valor={reais(resumo.aPagar)}
+            tom={resumo.aPagar > 0 ? "lavanda" : "oliva"}
+          />
         </div>
+      )}
+
+      {/* ---------- Onde a ficha e o financeiro discordam ---------- */}
+      {conciliar.length > 0 && (
+        <Bloco
+          titulo="Conferir com o financeiro"
+          descricao="Estas fichas não batem com os lançamentos. O financeiro é quem manda — a ficha só reflete."
+        >
+          <ul className="space-y-2.5">
+            {conciliar.map(({ fornecedor: f, conta, fichaDizia, semDespesa, divergeNoPago, divergeNoFechado }) => (
+              <li
+                key={f.id}
+                className="rounded-sm border border-red-800/25 bg-red-50/50 px-4 py-3"
+              >
+                <p className="titulo-serif text-lg text-oliva">{f.name}</p>
+
+                {semDespesa && (
+                  <p className="mt-1 text-sm text-red-900">
+                    Contrato fechado em {reais(f.agreed_cents ?? 0)}, mas nenhuma
+                    despesa lançada. Todo esse valor está fora do orçamento.
+                    {fichaDizia > 0 && (
+                      <> A ficha ainda diz {reais(fichaDizia)} pagos — lance a despesa
+                      e registre o pagamento com a data real.</>
+                    )}
+                  </p>
+                )}
+
+                {divergeNoPago && !semDespesa && (
+                  <p className="mt-1 text-sm text-red-900">
+                    A ficha dizia {reais(fichaDizia)} pagos; o financeiro registra{" "}
+                    {reais(conta.pago)}.{" "}
+                    {conta.pago > fichaDizia
+                      ? "A ficha ficou para trás — o número certo é o do financeiro."
+                      : "Falta lançar pagamento no financeiro, ou a ficha estava otimista."}
+                  </p>
+                )}
+
+                {divergeNoFechado && (
+                  <p className="mt-1 text-sm text-red-900">
+                    Fechado na ficha: {reais(f.agreed_cents ?? 0)}. Contratado nas
+                    despesas: {reais(conta.contratado)}.
+                  </p>
+                )}
+
+                <Link
+                  href={`/admin/financeiro?fornecedor=${f.id}`}
+                  className="versalete mt-2 inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4"
+                >
+                  Resolver no financeiro
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Bloco>
       )}
 
       <Bloco
@@ -297,11 +408,10 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
                 <Rotulo htmlFor="f-fech">Valor fechado (R$)</Rotulo>
                 <input id="f-fech" inputMode="decimal" className="campo" placeholder="Só quando contratar" value={form.agreed} onChange={(e) => setForm({ ...form, agreed: e.target.value })} />
               </div>
-              <div>
-                <Rotulo htmlFor="f-pago">Já pago (R$)</Rotulo>
-                <input id="f-pago" inputMode="decimal" className="campo" value={form.paid}
-                  onChange={(e) => setForm({ ...form, paid: e.target.value })} />
-              </div>
+              <p className="self-end text-xs leading-relaxed text-terra/80">
+                O quanto já foi pago não se digita aqui — ele é somado dos
+                lançamentos do financeiro, e por isso nunca fica desencontrado.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -361,6 +471,7 @@ export function Fornecedores({ fornecedores }: { fornecedores: Fornecedor[] }) {
                       <CartaoFornecedor
                         key={f.id}
                         fornecedor={f}
+                        conta={contas.get(f.id) ?? CONTA_VAZIA}
                         aoEditar={() => editar(f)}
                         aoRemover={() => remover(f)}
                         aoMover={(s) => moverEtapa(f, s)}
@@ -404,11 +515,13 @@ function FiltroEtapa({
 
 function CartaoFornecedor({
   fornecedor: f,
+  conta,
   aoEditar,
   aoRemover,
   aoMover,
 }: {
   fornecedor: Fornecedor;
+  conta: ContaDoFornecedor;
   aoEditar: () => void;
   aoRemover: () => void;
   aoMover: (status: StatusFornecedor) => void;
@@ -479,17 +592,11 @@ function CartaoFornecedor({
               Fechado: <span className="tabular-nums lining-nums">{reais(f.agreed_cents)}</span>
             </p>
           )}
-          {f.agreed_cents !== null && (f.paid_cents ?? 0) > 0 && (
-            <p className="text-sm text-terra">
-              Pago: <span className="tabular-nums lining-nums">{reais(f.paid_cents ?? 0)}</span>
-              {" · saldo "}
-              <span className="tabular-nums lining-nums">
-                {reais(Math.max(0, f.agreed_cents - (f.paid_cents ?? 0)))}
-              </span>
-            </p>
-          )}
         </div>
       )}
+
+      {/* ---------- O que o financeiro registra ---------- */}
+      <ContaNoFinanceiro fornecedor={f} conta={conta} />
 
       {linkSeguro(f.contract_url ?? null) && (
         <p className="mt-2">
@@ -530,5 +637,119 @@ function CartaoFornecedor({
         </button>
       </div>
     </li>
+  );
+}
+
+
+/**
+ * A conta do fornecedor, lida do financeiro.
+ *
+ * Nenhum número aqui é digitado nesta tela: tudo vem dos lançamentos. Se o
+ * valor parecer errado, o lugar de corrigir é o Financeiro — e é por isso que
+ * o bloco leva direto para lá.
+ */
+function ContaNoFinanceiro({
+  fornecedor: f,
+  conta,
+}: {
+  fornecedor: Fornecedor;
+  conta: ContaDoFornecedor;
+}) {
+  const [aberto, setAberto] = useState(false);
+
+  // Fornecedor em negociação ainda não tem o que mostrar, e o vazio
+  // atrapalharia mais do que ajudaria.
+  if (conta.despesas.length === 0) {
+    if (f.status !== "contratado") return null;
+    return (
+      <p className="mt-4 rounded-sm border border-dashed border-red-800/35 bg-red-50/50 px-4 py-3 text-sm text-red-900">
+        Fechado, mas sem despesa lançada no financeiro. Enquanto não houver,
+        o que for pago a este fornecedor fica fora do orçamento.
+      </p>
+    );
+  }
+
+  const quitado = conta.saldo === 0;
+  const diasParaVencer = diasAte(conta.proximoVencimento);
+
+  return (
+    <div className="mt-4 rounded-sm border border-terra/20 bg-creme-claro px-4 py-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="versalete text-xs text-lavanda">No financeiro</p>
+        <p className="text-sm text-terra tabular-nums lining-nums">
+          <span className="titulo-serif text-base text-oliva">{reais(conta.pago)}</span> pagos
+          {" de "}
+          {reais(conta.contratado)}
+        </p>
+      </div>
+
+      {/* Uma régua vale mais que a subtração escrita. */}
+      <span className="mt-2 block h-2 w-full rounded-full bg-terra/15">
+        <span
+          className={`block h-2 rounded-full ${quitado ? "bg-oliva" : "bg-lavanda"}`}
+          style={{
+            width: `${Math.min(100, Math.round((conta.pago / Math.max(1, conta.contratado)) * 100))}%`,
+          }}
+        />
+      </span>
+
+      <p className="mt-2 text-sm text-terra">
+        {quitado ? (
+          "Quitado."
+        ) : (
+          <>
+            Falta{" "}
+            <span className="tabular-nums lining-nums text-oliva">{reais(conta.saldo)}</span>
+            {conta.proximoVencimento && (
+              <>
+                {" · próximo vencimento "}
+                <span className={diasParaVencer !== null && diasParaVencer < 0 ? "text-red-800" : ""}>
+                  {formatarData(conta.proximoVencimento)}
+                </span>
+              </>
+            )}
+          </>
+        )}
+      </p>
+
+      {conta.pagamentos.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setAberto((v) => !v)}
+            aria-expanded={aberto}
+            className="versalete mt-2 inline-flex min-h-11 items-center gap-2 text-xs text-oliva underline underline-offset-4"
+          >
+            {aberto ? "Esconder" : "Ver"} {conta.pagamentos.length}{" "}
+            {conta.pagamentos.length > 1 ? "lançamentos" : "lançamento"}
+          </button>
+
+          {aberto && (
+            <ul className="mt-1 space-y-1.5 border-t border-terra/15 pt-2">
+              {conta.pagamentos.map((p) => (
+                <li key={p.id} className="flex flex-wrap justify-between gap-x-3 text-sm text-terra">
+                  <span className="min-w-0">
+                    {formatarData(p.paid_at)}
+                    {p.method && <span className="text-terra/75"> · {p.method}</span>}
+                  </span>
+                  <span className="tabular-nums lining-nums text-oliva">
+                    {reais(p.amount_cents)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+
+      <p className="mt-2">
+        <Link
+          href={`/admin/financeiro?fornecedor=${f.id}`}
+          className="versalete inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4"
+        >
+          Abrir no financeiro
+        </Link>
+      </p>
+    </div>
   );
 }
