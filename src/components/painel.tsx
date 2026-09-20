@@ -229,3 +229,46 @@ export function Anel({
     </div>
   );
 }
+
+/** Anel pequeno com o rótulo ao lado — para três medidores empilhados. */
+export function AnelCompacto({
+  valor,
+  total,
+  rotulo,
+  legenda,
+  tom = "oliva",
+}: {
+  valor: number;
+  total: number;
+  rotulo: string;
+  legenda?: string;
+  tom?: "oliva" | "lavanda" | "terra";
+}) {
+  const pct = total > 0 ? Math.min(100, Math.round((valor / total) * 100)) : 0;
+  const raio = 30;
+  const circunferencia = 2 * Math.PI * raio;
+  const cores = { oliva: "stroke-oliva", lavanda: "stroke-lavanda", terra: "stroke-terra" } as const;
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="relative shrink-0">
+        <svg viewBox="0 0 72 72" className="h-[4.5rem] w-[4.5rem] -rotate-90" aria-hidden="true">
+          <circle cx="36" cy="36" r={raio} fill="none" strokeWidth="7" className="stroke-creme-escuro" />
+          <circle
+            cx="36" cy="36" r={raio} fill="none" strokeWidth="7" strokeLinecap="round"
+            className={cores[tom]}
+            strokeDasharray={circunferencia}
+            strokeDashoffset={circunferencia - (circunferencia * pct) / 100}
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="titulo-serif text-lg text-oliva tabular-nums lining-nums">{pct}%</span>
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="versalete text-xs text-terra">{rotulo}</p>
+        {legenda && <p className="mt-0.5 text-sm text-terra/85">{legenda}</p>}
+      </div>
+    </div>
+  );
+}

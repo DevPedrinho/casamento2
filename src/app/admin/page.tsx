@@ -20,14 +20,13 @@ import {
   VINCULOS,
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
-import { diasAte, formatarData, reais } from "@/lib/formato";
-import { Anel, Bloco, Indicador, Progresso, Selo, Vazio } from "@/components/painel";
+import { diasAte, reais } from "@/lib/formato";
+import { AnelCompacto, Bloco, Indicador, Vazio } from "@/components/painel";
+import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
 import { BarrasInterativas, Rosca, type Fatia } from "@/components/graficos";
 import { Icone, type NomeIcone } from "@/components/Icones";
 
 export const dynamic = "force-dynamic";
-
-type Acao = { texto: string; detalhe: string; href: string; urgente: boolean; icone: NomeIcone };
 
 export default async function Dashboard() {
   const supabase = await criarClienteServidor();
@@ -160,11 +159,6 @@ export default async function Dashboard() {
   const comprometido = listaDespesas.reduce((s, d) => s + refDe(d), 0);
   const pendente = Math.max(0, comprometido - pago);
 
-  const proximosPagamentos = listaDespesas
-    .filter((d) => d.due_date && pagoDe(d) < refDe(d))
-    .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
-    .slice(0, 5);
-
   const porCategoria = [...listaDespesas.reduce((mapa, d) => {
     const atual = mapa.get(d.category) ?? { previsto: 0, pago: 0 };
     mapa.set(d.category, {
@@ -184,68 +178,92 @@ export default async function Dashboard() {
       detalhe: `${reais(v.pago)} já pagos`,
     }));
 
-  // ---------- Próximas ações ----------
-  const acoes: Acao[] = [];
-  if (conta("nao_contatado") > 0) {
-    acoes.push({
-      texto: `Enviar convite para ${conta("nao_contatado")} convidados`,
-      detalhe: "Ainda não foram contatados",
-      href: "/admin/crm",
-      urgente: false,
-      icone: "convidados",
-    });
-  }
-  if (conta("follow_up") > 0) {
-    acoes.push({
-      texto: `Retomar contato com ${conta("follow_up")} convidados`,
-      detalhe: "Marcados como follow-up",
-      href: "/admin/crm",
-      urgente: true,
-      icone: "crm",
-    });
-  }
-  for (const t of atrasadas.slice(0, 3)) {
-    acoes.push({
-      texto: t.title,
-      detalhe: `Venceu em ${formatarData(t.due_date)}`,
-      href: "/admin/checklist",
-      urgente: true,
-      icone: "tarefas",
-    });
-  }
-  for (const d of proximosPagamentos.slice(0, 3)) {
-    const dias = diasAte(d.due_date);
-    acoes.push({
-      texto: `Pagar ${d.description}`,
-      detalhe: `${reais(refDe(d) - pagoDe(d))} · ${dias !== null && dias < 0 ? "vencido" : `vence ${formatarData(d.due_date)}`}`,
-      href: "/admin/financeiro",
-      urgente: dias !== null && dias <= 7,
-      icone: "financeiro",
-    });
-  }
-  for (const f of listaFornecedores.filter((f) => f.next_action_at && f.status !== "contratado").slice(0, 2)) {
-    acoes.push({
-      texto: `${f.next_action ?? "Retornar"} — ${f.name}`,
-      detalhe: formatarData(f.next_action_at) ?? "",
-      href: "/admin/fornecedores",
-      urgente: (diasAte(f.next_action_at) ?? 99) <= 3,
-      icone: "fornecedores",
-    });
-  }
-  if (orcamentoTotal === 0) {
-    acoes.push({
-      texto: "Definir o orçamento total do casamento",
-      detalhe: "Sem ele, não dá para saber se o planejamento cabe",
-      href: "/admin/financeiro",
-      urgente: false,
-      icone: "financeiro",
-    });
-  }
-
   const diasRestantes = Math.max(
     0,
     Math.ceil((DATA_CASAMENTO.getTime() - Date.now()) / 86_400_000),
   );
+  const hoje = new Date().toISOString().slice(0, 10);
+  const diaDoCasamento = CASAMENTO.dataISO.slice(0, 10);
+  const mesesAntes = Math.floor(diasRestantes / 30);
+  const fase =
+    diasRestantes === 0 ? "No dia"
+    : diasRestantes <= 7 ? "Última semana"
+    : diasRestantes <= 30 ? "Último mês"
+    : faseDoMes(mesesAntes);
+
+  // ---------- Mês a mês: tudo que tem data, de hoje até o casamento ----------
+  const listaLocais = (locais.data ?? []) as LocalEvento[];
+  const semPrazo = listaTarefas.filter((t) => t.status !== "feito" && !t.due_date).length;
+
+  const itensDoMes: ItemDoMes[] = [
+    ...listaDespesas
+      .filter((d) => d.due_date && pagoDe(d) < refDe(d) && d.status !== "cancelado")
+      .map((d) => ({
+        data: d.due_date,
+        titulo: `${d.description} — ${reais(refDe(d) - pagoDe(d))}`,
+        detalhe: pagoDe(d) > 0 ? `${reais(pagoDe(d))} já pagos de ${reais(refDe(d))}` : d.category,
+        tipo: "financeiro" as const,
+        href: `/admin/financeiro?categoria=${encodeURIComponent(d.category)}`,
+      })),
+    ...listaTarefas
+      .filter((t) => t.status !== "feito" && t.due_date)
+      .map((t) => ({
+        data: t.due_date,
+        titulo: t.title,
+        detalhe: [t.category, t.owner].filter(Boolean).join(" · "),
+        tipo: "tarefa" as const,
+        href: "/admin/checklist",
+        alta: t.priority === "alta",
+      })),
+    ...listaFornecedores
+      .filter((f) => f.next_action_at && f.status !== "contratado" && f.status !== "descartado")
+      .map((f) => ({
+        data: f.next_action_at,
+        titulo: `${f.next_action ?? "Retornar"} — ${f.name}`,
+        detalhe: f.category,
+        tipo: "fornecedor" as const,
+        href: "/admin/fornecedores",
+      })),
+  ];
+  if (conta("nao_contatado") > 0) {
+    itensDoMes.push({
+      data: null,
+      titulo: `Enviar o convite: ${conta("nao_contatado")} convidados sem contato`,
+      detalhe: "Nenhum foi contatado ainda",
+      tipo: "crm",
+      href: "/admin/crm",
+    });
+  }
+  if (conta("follow_up") > 0) {
+    itensDoMes.push({
+      data: null,
+      titulo: `Retomar contato com ${conta("follow_up")} convidados`,
+      detalhe: "Marcados como follow-up",
+      tipo: "crm",
+      href: "/admin/crm",
+    });
+  }
+  if (orcamentoTotal === 0) {
+    itensDoMes.push({
+      data: null,
+      titulo: "Definir o orçamento total do casamento",
+      detalhe: "Sem ele, não dá para saber se o planejamento cabe",
+      tipo: "financeiro",
+      href: "/admin/financeiro",
+    });
+  }
+  itensDoMes.push({
+    data: diaDoCasamento,
+    titulo: `${CASAMENTO.noiva} & ${CASAMENTO.noivo}`,
+    detalhe:
+      listaLocais.length > 0
+        ? listaLocais.map((l) => `${ROTULOS_LOCAL[l.kind].toLowerCase()} · ${l.name}`).join(" — ")
+        : "cerimônia e festa",
+    tipo: "dia",
+    href: "/admin/cronograma",
+  });
+
+  const sobraDoOrcamento = orcamentoTotal - comprometido;
 
   return (
     <div className="space-y-8">
@@ -256,245 +274,168 @@ export default async function Dashboard() {
             {CASAMENTO.noiva} &amp; {CASAMENTO.noivo}
           </h1>
         </div>
-        <div className="rounded-sm border border-terra/20 bg-creme-claro px-7 py-4 text-center">
-          <span className="titulo-serif block text-4xl text-oliva tabular-nums lining-nums">
-            {diasRestantes}
-          </span>
-          <span className="versalete mt-1 block text-xs text-terra">
-            dias · {CASAMENTO.dataCurta}
-          </span>
-        </div>
+        <p className="max-w-md text-sm text-terra">
+          Tudo o que tem data, mês a mês, até o dia. O que já venceu fica marcado no mês
+          atual; os meses vazios lembram onde faltam prazos.
+        </p>
       </header>
 
-      {/* ---------- Convidados ---------- */}
-      <section>
-        <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">Convidados</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-          <Indicador rotulo="Total" valor={listaConvidados.length} />
-          <Indicador rotulo="Confirmados" valor={confirmados.length} tom="oliva" detalhe={`${pessoas.length} pessoas`} />
-          <Indicador rotulo="Aguardando" valor={conta("aguardando") + conta("convite_enviado") + conta("visualizou")} tom="lavanda" />
-          <Indicador rotulo="Não irão" valor={conta("nao_vai")} />
-          <Indicador rotulo="Sem convite" valor={conta("nao_contatado")} tom={conta("nao_contatado") > 0 ? "alerta" : "oliva"} />
-          <Indicador rotulo="Famílias" valor={familiasComGrupo} />
-        </div>
-      </section>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* ---------- O termômetro ---------- */}
+        <Bloco titulo="Onde estamos">
+          <div className="space-y-6">
+            <div>
+              <p className="versalete text-xs text-terra">{CASAMENTO.dataCurta}</p>
+              <p className="titulo-serif mt-1 text-6xl leading-none text-oliva tabular-nums lining-nums">
+                {diasRestantes}
+              </p>
+              <p className="mt-1 text-sm text-terra">
+                {diasRestantes === 1 ? "dia" : "dias"} · fase {fase.toLowerCase()}
+              </p>
+            </div>
 
-      {/* ---------- Quem vem para quê ---------- */}
-      <section>
-        <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">
-          Quem vem para quê
-        </h2>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+            <AnelCompacto
+              valor={confirmados.length}
+              total={listaConvidados.length}
+              rotulo="Confirmações"
+              legenda={`${confirmados.length} de ${listaConvidados.length}${conta("nao_contatado") > 0 ? ` · ${conta("nao_contatado")} sem convite` : ""}`}
+              tom="lavanda"
+            />
+            <AnelCompacto
+              valor={pago}
+              total={orcamentoTotal || comprometido}
+              rotulo="Orçamento pago"
+              legenda={
+                orcamentoTotal > 0
+                  ? `${reais(pago)} de ${reais(orcamentoTotal)} · ${Math.round((comprometido / orcamentoTotal) * 100)}% comprometido`
+                  : `${reais(pago)} pagos · sem orçamento definido`
+              }
+              tom="terra"
+            />
+            <AnelCompacto
+              valor={feitas}
+              total={listaTarefas.length}
+              rotulo="Checklist"
+              legenda={`${feitas} de ${listaTarefas.length}${atrasadas.length > 0 ? ` · ${atrasadas.length} atrasada${atrasadas.length === 1 ? "" : "s"}` : ` · ${listaTarefas.filter((t) => t.status === "fazendo").length} em andamento`}`}
+            />
+
+            {orcamentoTotal > 0 && sobraDoOrcamento < orcamentoTotal * 0.05 && (
+              <p className={`rounded-sm border px-3 py-2.5 text-sm ${sobraDoOrcamento < 0 ? "border-red-800/30 bg-red-50/60 text-red-900" : "border-terra/20 bg-creme text-terra"}`}>
+                {sobraDoOrcamento < 0
+                  ? `Orçamento estourado em ${reais(-sobraDoOrcamento)}.`
+                  : `Orçamento no limite: sobram ${reais(sobraDoOrcamento)}.`}
+              </p>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <Atalho href="/admin/convidados" icone="convidados">Convidados</Atalho>
+              <Atalho href="/admin/financeiro" icone="financeiro">Financeiro</Atalho>
+              <Atalho href="/admin/checklist" icone="tarefas">Tarefas</Atalho>
+            </div>
+          </div>
+        </Bloco>
+
+        {/* ---------- Mês a mês ---------- */}
+        <div className="lg:col-span-2">
+          <Bloco
+            titulo="Mês a mês"
+            descricao="Pagamentos, tarefas e retornos de fornecedor na ordem em que chegam. Toque para abrir."
+          >
+            <MesAMes itens={itensDoMes} hoje={hoje} diaDoCasamento={diaDoCasamento} semPrazo={semPrazo} />
+          </Bloco>
+        </div>
+      </div>
+
+      {/* ---------- Retrato dos convidados (fechado por padrão) ---------- */}
+      <details className="group rounded-sm border border-terra/20 bg-creme-claro">
+        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-6 py-5 sm:px-8 [&::-webkit-details-marker]:hidden">
+          <span>
+            <span className="titulo-serif block text-2xl text-oliva">Retrato dos convidados</span>
+            <span className="mt-1 block text-sm text-terra">
+              Quem vem para quê, vínculo, faixa etária, lado — e o gasto por categoria.
+            </span>
+          </span>
+          <span className="versalete inline-flex min-h-11 items-center gap-2 text-xs text-oliva">
+            <span className="group-open:hidden">abrir</span>
+            <span className="hidden group-open:inline">fechar</span>
+            <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
+          </span>
+        </summary>
+
+        <div className="space-y-6 border-t border-terra/15 px-6 py-6 sm:px-8">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+            <Indicador rotulo="Total" valor={listaConvidados.length} />
+            <Indicador rotulo="Confirmados" valor={confirmados.length} tom="oliva" detalhe={`${pessoas.length} pessoas`} />
+            <Indicador rotulo="Aguardando" valor={conta("aguardando") + conta("convite_enviado") + conta("visualizou")} tom="lavanda" />
+            <Indicador rotulo="Não irão" valor={conta("nao_vai")} />
+            <Indicador rotulo="Famílias" valor={familiasComGrupo} />
+            <Indicador rotulo="Na festa" valor={naRecepcao.length} tom="oliva" detalhe={`${adultosNaRecepcao} adultos · ${criancasNaRecepcao} crianças`} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Bloco
               titulo="Cerimônia, festa ou as duas"
               descricao="Contado por pessoa, com os acompanhantes dentro. Toque para ver quem é."
             >
-              <Rosca
-                itens={presenca}
-                total={responderam.length}
-                legendaCentro="pessoas já responderam"
-              />
+              <Rosca itens={presenca} total={responderam.length} legendaCentro="pessoas já responderam" />
+            </Bloco>
+
+            <Bloco
+              titulo="Gastos por categoria"
+              descricao="Toque numa categoria para ver as despesas dela."
+            >
+              {porCategoria.length === 0 ? (
+                <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
+              ) : (
+                <BarrasInterativas itens={porCategoria} tom={2} moeda />
+              )}
+            </Bloco>
+
+            <Bloco
+              titulo="Vínculo com vocês"
+              descricao={semVinculo > 0 ? `${semVinculo} ainda sem vínculo definido na ficha.` : "Toque para ver a lista de cada grupo."}
+            >
+              <BarrasInterativas itens={porVinculo} tom={1} sufixo="convidados" />
+            </Bloco>
+
+            <Bloco
+              titulo="Faixa etária"
+              descricao={semFaixa > 0 ? `${semFaixa} ainda sem faixa preenchida.` : "Toque para ver a lista de cada faixa."}
+            >
+              <BarrasInterativas itens={porFaixa} tom={0} sufixo="convidados" />
+            </Bloco>
+
+            <Bloco titulo="Gênero" descricao="Como cada convidado se identifica na ficha.">
+              <BarrasInterativas itens={porGenero} tom={3} sufixo="convidados" />
+            </Bloco>
+
+            <Bloco titulo="De que lado" descricao="Quem veio da noiva e quem veio do noivo.">
+              <BarrasInterativas itens={porLado} tom={5} sufixo="convidados" />
             </Bloco>
           </div>
 
-          <Bloco titulo="Na festa" descricao="O número que o buffet vai pedir.">
-            <div className="space-y-5">
-              <div>
-                <span className="titulo-serif block text-5xl text-oliva tabular-nums lining-nums">
-                  {naRecepcao.length}
-                </span>
-                <span className="versalete block text-xs text-terra">
-                  pessoas no buffet
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Indicador rotulo="Adultos" valor={adultosNaRecepcao} />
-                <Indicador
-                  rotulo="Crianças"
-                  valor={criancasNaRecepcao}
-                  tom="lavanda"
-                  detalhe="até 11 anos"
-                />
-              </div>
-              {responderam.length === 0 && (
-                <p className="text-sm leading-relaxed text-terra">
-                  Ainda ninguém respondeu onde participa. O número aparece aqui
-                  conforme as confirmações chegam.
-                </p>
-              )}
-            </div>
-          </Bloco>
-        </div>
-      </section>
-
-      {/* ---------- O retrato dos convidados ---------- */}
-      <section>
-        <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">
-          Quem são os convidados
-        </h2>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <Bloco
-            titulo="Vínculo com vocês"
-            descricao={
-              semVinculo > 0
-                ? `${semVinculo} ainda sem vínculo definido na ficha.`
-                : "Toque para ver a lista de cada grupo."
-            }
-          >
-            <BarrasInterativas itens={porVinculo} tom={1} sufixo="convidados" />
-          </Bloco>
-
-          <Bloco
-            titulo="Faixa etária"
-            descricao={
-              semFaixa > 0
-                ? `${semFaixa} ainda sem faixa preenchida.`
-                : "Toque para ver a lista de cada faixa."
-            }
-          >
-            <BarrasInterativas itens={porFaixa} tom={0} sufixo="convidados" />
-          </Bloco>
-
-          <Bloco titulo="Gênero" descricao="Como cada convidado se identifica na ficha.">
-            <BarrasInterativas itens={porGenero} tom={3} sufixo="convidados" />
-          </Bloco>
-
-          <Bloco titulo="De que lado" descricao="Quem veio da noiva e quem veio do noivo.">
-            <BarrasInterativas itens={porLado} tom={5} sufixo="convidados" />
-          </Bloco>
-        </div>
-      </section>
-
-      {/* ---------- Organização ---------- */}
-      <section>
-        <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">Organização</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-          <Indicador rotulo="Tarefas" valor={listaTarefas.length} />
-          <Indicador rotulo="Concluídas" valor={feitas} tom="oliva" />
-          <Indicador rotulo="Atrasadas" valor={atrasadas.length} tom={atrasadas.length > 0 ? "alerta" : "oliva"} />
-          <Indicador rotulo="Fornecedores" valor={listaFornecedores.length} detalhe={`${listaFornecedores.filter((f) => f.status === "contratado").length} fechados`} />
-          <Indicador rotulo="Presentes" valor={(presentes.data ?? []).length} />
-          <Indicador rotulo="Mural" valor={(posts.data ?? []).length} detalhe="publicações" />
-        </div>
-      </section>
-
-      {/* ---------- Financeiro ---------- */}
-      <section>
-        <h2 className="versalete titulo-serif mb-4 text-xs text-lavanda">Financeiro</h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Indicador rotulo="Orçamento" valor={reais(orcamentoTotal)} />
-          <Indicador rotulo="Comprometido" valor={reais(comprometido)} tom="lavanda" />
-          <Indicador rotulo="Contratado" valor={reais(contratado)} tom="lavanda" />
-          <Indicador rotulo="Pago" valor={reais(pago)} tom="oliva" />
-          <Indicador rotulo="Pendente" valor={reais(pendente)} tom={pendente > 0 ? "alerta" : "oliva"} />
-        </div>
-      </section>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* ---------- Próximas ações ---------- */}
-        <div className="lg:col-span-2">
-          <Bloco
-            titulo="Próximas ações"
-            descricao="O que precisa acontecer agora para o casamento seguir organizado."
-          >
-            {acoes.length === 0 ? (
-              <Vazio>Nada pendente. Aproveitem o momento.</Vazio>
-            ) : (
-              <ul className="space-y-2.5">
-                {acoes.slice(0, 8).map((acao, i) => (
-                  <li key={`${acao.href}-${i}`}>
-                    <Link
-                      href={acao.href}
-                      className={`flex items-center gap-4 rounded-sm border px-4 py-3.5 transition-colors ${
-                        acao.urgente
-                          ? "border-red-800/25 bg-red-50/60 hover:border-red-800/50"
-                          : "border-terra/20 bg-creme hover:border-oliva/40"
-                      }`}
-                    >
-                      <Icone
-                        nome={acao.icone}
-                        className={`h-5 w-5 shrink-0 ${acao.urgente ? "text-red-800" : "text-oliva"}`}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="titulo-serif block truncate text-base text-oliva">
-                          {acao.texto}
-                        </span>
-                        <span className="block truncate text-sm text-terra">{acao.detalhe}</span>
-                      </span>
-                      {acao.urgente && <Selo tom="alerta">urgente</Selo>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Bloco>
-        </div>
-
-        {/* ---------- Progresso ---------- */}
-        <Bloco titulo="Progresso">
-          <div className="space-y-8">
-            <Anel
-              valor={feitas}
-              total={listaTarefas.length}
-              rotulo="Checklist"
-              legenda={`${feitas} de ${listaTarefas.length} tarefas`}
-            />
-            <Progresso
-              atual={confirmados.length}
-              total={listaConvidados.length}
-              rotulo="Confirmações"
-              tom="lavanda"
-            />
-            {orcamentoTotal > 0 && (
-              <Progresso
-                atual={comprometido}
-                total={orcamentoTotal}
-                rotulo="Orçamento comprometido"
-                tom={comprometido > orcamentoTotal ? "alerta" : "oliva"}
-              />
-            )}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            <Indicador rotulo="Orçamento" valor={reais(orcamentoTotal)} />
+            <Indicador rotulo="Comprometido" valor={reais(comprometido)} tom="lavanda" />
+            <Indicador rotulo="Contratado" valor={reais(contratado)} tom="lavanda" />
+            <Indicador rotulo="Pago" valor={reais(pago)} tom="oliva" />
+            <Indicador rotulo="Pendente" valor={reais(pendente)} tom={pendente > 0 ? "alerta" : "oliva"} />
           </div>
-        </Bloco>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* ---------- Gastos por categoria ---------- */}
-        <Bloco
-          titulo="Gastos por categoria"
-          descricao="Toque numa categoria para ver as despesas dela."
-        >
-          {porCategoria.length === 0 ? (
-            <Vazio>Nenhum valor lançado no orçamento ainda.</Vazio>
-          ) : (
-            <BarrasInterativas itens={porCategoria} tom={2} moeda />
-          )}
-        </Bloco>
-
-        {/* ---------- Onde é a festa ---------- */}
-        <Bloco titulo="O grande dia">
-          <ul className="space-y-5">
-            {((locais.data ?? []) as LocalEvento[]).map((local) => (
-              <li key={local.id} className="rounded-sm border border-terra/20 bg-creme p-5">
-                <p className="versalete text-xs text-lavanda">
-                  {ROTULOS_LOCAL[local.kind]}
-                  {local.starts_at && ` · ${local.starts_at}`}
-                </p>
-                <p className="titulo-serif mt-2 text-xl text-oliva">{local.name}</p>
-                <p className="mt-1 text-sm text-terra">
-                  {[local.address, local.city].filter(Boolean).join(" — ")}
-                </p>
-              </li>
-            ))}
-          </ul>
-          <Link
-            href="/admin/locais"
-            className="versalete mt-5 inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4"
-          >
-            Editar informações do evento
-          </Link>
-        </Bloco>
-      </div>
+        </div>
+      </details>
     </div>
+  );
+}
+
+/** Atalho pequeno para um módulo, com o ícone dele. */
+function Atalho({ href, icone, children }: { href: string; icone: NomeIcone; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="titulo-serif inline-flex min-h-11 items-center gap-2 rounded-sm border border-terra/25 bg-creme px-3.5 text-base text-oliva transition-colors hover:border-oliva/50"
+    >
+      <Icone nome={icone} className="h-4 w-4" />
+      {children}
+    </Link>
   );
 }
