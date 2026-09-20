@@ -73,7 +73,7 @@ export function FichaDespesa({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end bg-oliva-escuro/50 sm:items-stretch sm:justify-end"
+      className="fixed inset-0 z-[60] flex items-end bg-oliva-escuro/50 sm:items-stretch sm:justify-end"
       onClick={aoFechar}
     >
       <div
