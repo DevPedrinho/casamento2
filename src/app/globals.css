@@ -108,6 +108,9 @@ body {
 @utility versalete {
   text-transform: uppercase;
   letter-spacing: 0.32em;
+  /* Em 13px e caixa alta, a Jost 400 fica fina demais: meio peso a mais
+     para os rótulos lerem sem esforço. */
+  font-weight: 500;
 }
 
 @utility titulo-serif {
@@ -118,7 +121,7 @@ body {
 /* Versalete pequena na Cormorant é traço fino demais em 13px: os rótulos de
    seção e os selos ganham um peso a mais para ler sem esforço. */
 .titulo-serif.versalete {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* -------- Entrada suave das seções conforme aparecem na tela --------

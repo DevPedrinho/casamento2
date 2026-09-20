@@ -10,6 +10,7 @@ import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco, BarrasCategoria, Indicador, LinhaValor, Progresso, Selo, Vazio } from "@/components/painel";
 import { BarrasInterativas, type Fatia } from "@/components/graficos";
 import { Icone } from "@/components/Icones";
+import { ACAO_FICHA } from "@/components/Ficha";
 import { statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
 import { FichaDespesa } from "./FichaDespesa";
 
@@ -110,6 +111,12 @@ export function Financeiro({
     }
     return [...mapa.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
   }, [visiveis]);
+
+  /** Com 14 categorias, abrir uma a uma cansa: um toque abre ou recolhe todas. */
+  const todasAbertas = porCategoria.length > 0 && porCategoria.every(([c]) => abertas.has(c));
+  function alternarTodas() {
+    setAbertas(todasAbertas ? new Set() : new Set(porCategoria.map(([c]) => c)));
+  }
 
   function limpar() {
     setForm(VAZIO);
@@ -228,16 +235,27 @@ export function Financeiro({
         titulo="Orçamento"
         descricao="Previsto é a estimativa; contratado é o que foi fechado. Lance os pagamentos conforme forem saindo."
         acao={
-          <Botao
-            type="button"
-            variante="contorno"
-            onClick={() => {
-              if (aberto) limpar();
-              setAberto((v) => !v);
-            }}
-          >
-            {aberto ? "Fechar" : "Novo item"}
-          </Botao>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {porCategoria.length > 1 && (
+              <button
+                type="button"
+                onClick={alternarTodas}
+                className={`${ACAO_FICHA} text-terra hover:text-oliva`}
+              >
+                {todasAbertas ? "Recolher todas" : "Abrir todas"}
+              </button>
+            )}
+            <Botao
+              type="button"
+              variante="contorno"
+              onClick={() => {
+                if (aberto) limpar();
+                setAberto((v) => !v);
+              }}
+            >
+              {aberto ? "Fechar" : "Novo item"}
+            </Botao>
+          </div>
         }
       >
         {aberto && (
@@ -348,29 +366,48 @@ export function Financeiro({
           <div className="space-y-9">
             {porCategoria.map(([categoria, itens]) => {
               const catPrevisto = itens.reduce((s, d) => s + d.estimated_cents, 0);
+              const catReferencia = itens.reduce((s, d) => s + valorDeReferencia(d), 0);
               const catPago = itens.reduce((s, d) => s + totalPago(d), 0);
+              const catQuitada = catReferencia > 0 && catPago >= catReferencia;
               const aberta = abertas.has(categoria);
+              // O cabeçalho é uma linha de verdade — nome em corpo de título,
+              // números legíveis à direita e uma barra fina do quanto já foi.
+              // A versalete em Cormorant 13px que ficava aqui era fio de cabelo.
               return (
                 <section key={categoria} id={`categoria-${encodeURIComponent(categoria)}`}>
                   <button
                     type="button"
                     onClick={() => alternarCategoria(categoria)}
                     aria-expanded={aberta}
-                    className="mb-4 flex w-full flex-wrap items-baseline justify-between gap-3 border-b border-terra/20 pb-2 text-left transition-colors hover:border-oliva/40"
+                    className="mb-4 block w-full border-b border-terra/25 py-3 text-left transition-colors hover:border-oliva/50"
                   >
-                    <h3 className="versalete titulo-serif flex items-center gap-2 text-xs text-lavanda">
-                      <Icone
-                        nome="recolher"
-                        className={`h-4 w-4 transition-transform ${aberta ? "-rotate-90" : ""}`}
-                      />
-                      {categoria}
-                      <span className="text-terra">
-                        {itens.length} {itens.length > 1 ? "itens" : "item"}
-                      </span>
-                    </h3>
-                    <p className="text-sm text-terra tabular-nums lining-nums">
-                      previsto {reais(catPrevisto)} · pago {reais(catPago)}
-                    </p>
+                    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                      <h3 className="titulo-serif flex min-w-0 items-center gap-2.5 text-xl leading-tight text-oliva">
+                        <Icone
+                          nome="recolher"
+                          className={`h-5 w-5 shrink-0 text-terra transition-transform ${aberta ? "-rotate-90" : ""}`}
+                        />
+                        <span className="min-w-0 truncate">{categoria}</span>
+                        <span className="font-corpo shrink-0 text-sm text-terra">
+                          {itens.length} {itens.length > 1 ? "itens" : "item"}
+                        </span>
+                      </h3>
+                      <p className="flex flex-wrap gap-x-4 pl-[1.9rem] text-sm text-terra tabular-nums lining-nums sm:pl-0">
+                        <span>previsto {reais(catPrevisto)}</span>
+                        <span className={catPago > 0 ? "font-medium text-oliva" : ""}>
+                          pago {reais(catPago)}
+                        </span>
+                      </p>
+                    </div>
+                    {catReferencia > 0 && (
+                      <div className="mt-2.5 pl-[1.9rem]">
+                        <Progresso
+                          atual={catPago}
+                          total={catReferencia}
+                          tom={catQuitada ? "oliva" : "lavanda"}
+                        />
+                      </div>
+                    )}
                   </button>
                   <ul className="space-y-3" hidden={!aberta}>
                     {itens.map((d) => (
@@ -465,14 +502,14 @@ function AlertasEGraficos({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {atrasadas.length > 0 && (
             <div className="rounded-sm border border-red-800/30 bg-red-50/60 px-6 py-5">
-              <p className="versalete text-xs text-red-900">
+              <p className="titulo-serif text-lg text-red-900 lining-nums">
                 {atrasadas.length} conta{atrasadas.length > 1 ? "s" : ""} em atraso
               </p>
               <ul className="mt-3 space-y-1.5">
                 {atrasadas.slice(0, 4).map((d) => (
                   <li key={d.id} className="flex justify-between gap-4 text-sm text-terra">
                     <span className="min-w-0 truncate">{d.description}</span>
-                    <span className="shrink-0 tabular-nums lining-nums">
+                    <span className="shrink-0 font-medium text-red-900 tabular-nums lining-nums">
                       {reais(valorDeReferencia(d) - totalPago(d))}
                     </span>
                   </li>
@@ -483,14 +520,14 @@ function AlertasEGraficos({
 
           {proximas.length > 0 && (
             <div className="rounded-sm border border-lavanda/40 bg-lavanda/10 px-6 py-5">
-              <p className="versalete text-xs text-lavanda">
+              <p className="titulo-serif text-lg text-lavanda lining-nums">
                 {proximas.length} vencendo em 30 dias
               </p>
               <ul className="mt-3 space-y-1.5">
                 {proximas.slice(0, 4).map((d) => (
                   <li key={d.id} className="flex justify-between gap-4 text-sm text-terra">
                     <span className="min-w-0 truncate">{d.description}</span>
-                    <span className="shrink-0 tabular-nums lining-nums">
+                    <span className="shrink-0 font-medium text-lavanda tabular-nums lining-nums">
                       {formatarData(d.due_date)}
                     </span>
                   </li>
