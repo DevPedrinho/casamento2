@@ -39,7 +39,7 @@ export async function contextoDoPainel(): Promise<string> {
     await Promise.all([
       supabase
         .from("guests")
-        .select("invite_status, companions_planned, access_code, code_sent_at, user_id, group_id"),
+        .select("invite_status, companions_planned, access_code, code_sent_at, user_id, group_id, age, invited_by"),
       supabase.from("guest_groups").select("name, invite_limit"),
       supabase.from("tasks").select("title, status, due_date, phase, priority"),
       supabase.from("expenses").select("description, category, estimated_cents, contracted_cents, status, due_date, payments(amount_cents)"),
@@ -54,10 +54,8 @@ export async function contextoDoPainel(): Promise<string> {
   const lista = convidados.data ?? [];
   const conta = (s: string) => lista.filter((c) => c.invite_status === s).length;
   const confirmados = lista.filter((c) => c.invite_status === "confirmado");
-  const pessoasConfirmadas = confirmados.reduce(
-    (soma, c) => soma + 1 + (c.companions_planned ?? 0),
-    0,
-  );
+  // Acompanhante já é cadastro próprio; criança de até 3 anos não conta.
+  const pessoasConfirmadas = confirmados.filter((c) => c.age === null || c.age > 3).length;
 
   const listaTarefas = tarefas.data ?? [];
   const atrasadas = listaTarefas.filter(
@@ -93,7 +91,7 @@ export async function contextoDoPainel(): Promise<string> {
 
     bloco("Convidados", [
       `Total na lista: ${lista.length}`,
-      `Confirmados: ${confirmados.length} (${pessoasConfirmadas} pessoas com acompanhantes)`,
+      `Confirmados: ${confirmados.length} (${pessoasConfirmadas} pessoas contando para o buffet; acompanhantes já são cadastros próprios)`,
       `Aguardando resposta: ${conta("aguardando") + conta("convite_enviado") + conta("visualizou")}`,
       `Não vão: ${conta("nao_vai")}`,
       `Ainda sem convite enviado: ${conta("nao_contatado")}`,

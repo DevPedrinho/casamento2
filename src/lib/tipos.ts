@@ -399,6 +399,8 @@ export type ConvidadoCompleto = {
   code_sent_at: string | null;
   /** Foto de perfil no bucket "site". */
   avatar_path: string | null;
+  /** Quem trouxe: o titular, quando o cadastro nasceu de um acompanhante. */
+  invited_by: string | null;
   extra: Record<string, string>;
   created_at: string;
   grupo: GrupoConvidados | null;

@@ -5,6 +5,7 @@ import type { ConvidadoCompleto } from "@/lib/tipos";
 import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
 import { linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
+import { temAcessoAoSite } from "@/lib/convidado";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoExterno } from "@/components/Botao";
@@ -39,13 +40,14 @@ export function FilaDeConvites({
 
   const telefoneDe = (c: ConvidadoCompleto) => telefones[c.id] ?? c.whatsapp ?? c.phone ?? null;
 
-  const semCodigo = convidados.filter((c) => !c.access_code).length;
+  const semCodigo = convidados.filter((c) => !c.access_code && temAcessoAoSite(c)).length;
+  const semAcesso = convidados.filter((c) => !temAcessoAoSite(c)).length;
 
   // Ainda por entregar, família a família.
   const pendentes = useMemo(
     () =>
       convidados
-        .filter((c) => c.access_code && !c.code_sent_at && !enviados.has(c.id))
+        .filter((c) => c.access_code && temAcessoAoSite(c) && !c.code_sent_at && !enviados.has(c.id))
         .sort(
           (a, b) =>
             (a.grupo?.name ?? "zzz").localeCompare(b.grupo?.name ?? "zzz", "pt-BR") ||
@@ -63,6 +65,7 @@ export function FilaDeConvites({
 
   const entreguesAntes = convidados.filter((c) => c.code_sent_at).length;
   const entregues = entreguesAntes + enviados.size;
+  const comAcesso = convidados.length - semAcesso;
 
   const mensagem = atual ? mensagemDoConvite(atual.full_name, atual.access_code) : "";
   const zap = atual ? linkWhatsApp(telefoneDe(atual), mensagem) : null;
@@ -127,9 +130,10 @@ export function FilaDeConvites({
       }
       abaixoDoCabecalho={
         <p className="mt-2 text-sm text-terra">
-          {entregues} de {convidados.length} entregues
+          {entregues} de {comAcesso} entregues
           {enviados.size > 0 && ` · ${enviados.size} agora`}
           {semTelefone.length > 0 && ` · ${semTelefone.length} sem telefone`}
+          {semAcesso > 0 && ` · ${semAcesso} criança${semAcesso === 1 ? "" : "s"} sem acesso`}
         </p>
       }
       rodape={

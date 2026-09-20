@@ -9,7 +9,7 @@ const SELECT = `
   relationship, relationship_kind, ceremony_role, attends, gender, age, age_range,
   favor_type, invite_status, confirmed_at, companions_planned, table_id,
   dietary_notes, notes, last_contact_at, next_action, next_action_at,
-  access_code, code_sent_at, is_featured, featured_order, avatar_path, extra, created_at,
+  access_code, code_sent_at, is_featured, featured_order, avatar_path, invited_by, extra, created_at,
   grupo:guest_groups!guests_group_id_fkey ( id, name, side, notes ),
   mesa:wedding_tables!guests_table_id_fkey ( id, name, seats, notes, sort_order )
 `;

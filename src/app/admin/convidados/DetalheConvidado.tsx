@@ -32,6 +32,7 @@ export function DetalheConvidado({
   convidado,
   acompanhantes,
   familia,
+  titular,
   copiado,
   gerando,
   aoFechar,
@@ -46,6 +47,8 @@ export function DetalheConvidado({
   acompanhantes: Acompanhante[];
   /** Os outros convidados da mesma família. */
   familia: ConvidadoCompleto[];
+  /** Quem trouxe, quando o cadastro nasceu de um acompanhante. */
+  titular: ConvidadoCompleto | null;
   copiado: boolean;
   gerando: boolean;
   aoFechar: () => void;
@@ -147,6 +150,17 @@ export function DetalheConvidado({
       <CartaoFicha titulo="Família">
         <LinhaFicha rotulo="Família" valor={c.grupo?.name ?? "sem família"} detalhe={c.grupo?.side ? `lado ${LADO[c.grupo.side] ?? c.grupo.side}` : null} />
         <LinhaFicha rotulo="Lado" valor={c.side ? `Convidado ${LADO[c.side]}` : "—"} />
+        {titular && (
+          <LinhaFicha
+            rotulo="Veio com"
+            valor={
+              <button type="button" onClick={() => aoAbrirOutro(titular)} className="underline underline-offset-4">
+                {titular.full_name}
+              </button>
+            }
+            detalhe="cadastro criado a partir da confirmação"
+          />
+        )}
         {c.grupo?.notes && <p className="mt-1 text-sm text-terra">{c.grupo.notes}</p>}
 
         {c.grupo && (

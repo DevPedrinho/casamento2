@@ -18,6 +18,7 @@ import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { confirmarExclusao, excluirConvidado } from "@/lib/excluirConvidado";
+import { contaNoTotal, temAcessoAoSite } from "@/lib/convidado";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
@@ -108,17 +109,21 @@ export function GerenciadorConvidados({
   }, [acompanhantes]);
 
   const resumo = useMemo(() => {
-    const conta = (s: StatusConvite) => convidados.filter((c) => c.invite_status === s).length;
-    const confirmados = convidados.filter((c) => c.invite_status === "confirmado");
+    // Quem conta: acompanhante já é cadastro próprio; criança de colo fica fora.
+    const contam = convidados.filter(contaNoTotal);
+    const conta = (s: StatusConvite) => contam.filter((c) => c.invite_status === s).length;
+    const confirmados = contam.filter((c) => c.invite_status === "confirmado");
     return {
-      total: convidados.length,
+      total: contam.length,
+      colo: convidados.length - contam.length,
       confirmados: confirmados.length,
-      pessoas: confirmados.reduce((s, c) => s + 1 + c.companions_planned, 0),
+      pessoas: confirmados.length,
       aguardando: conta("aguardando") + conta("convite_enviado") + conta("visualizou"),
       naoVao: conta("nao_vai"),
       semConvite: conta("nao_contatado"),
       followUp: conta("follow_up"),
-      semCodigo: convidados.filter((c) => !c.access_code).length,
+      semCodigo: convidados.filter((c) => !c.access_code && temAcessoAoSite(c)).length,
+      semAcesso: convidados.filter((c) => !temAcessoAoSite(c)).length,
       codigoEnviado: convidados.filter((c) => c.code_sent_at).length,
       jaEntraram: convidados.filter((c) => c.user_id).length,
       // Sem trava de lugares, o excesso vira aviso: quem trouxe mais gente do
@@ -142,7 +147,7 @@ export function GerenciadorConvidados({
       if (faixa !== "todos" && c.age_range !== faixa) return false;
       if (genero !== "todos" && c.gender !== genero) return false;
       if (presenca !== "todos" && c.attends !== presenca) return false;
-      if (filtroCodigo === "sem_codigo" && c.access_code) return false;
+      if (filtroCodigo === "sem_codigo" && (c.access_code || !temAcessoAoSite(c))) return false;
       if (filtroCodigo === "nao_enviado" && (!c.access_code || c.code_sent_at)) return false;
       if (filtroCodigo === "enviado" && !c.code_sent_at) return false;
       if (filtroCodigo === "cadastrado" && !c.user_id) return false;
@@ -363,11 +368,14 @@ export function GerenciadorConvidados({
     URL.revokeObjectURL(url);
   }
 
+  const nomePorId = useMemo(() => new Map(convidados.map((c) => [c.id, c.full_name])), [convidados]);
+
   /** A linha de um convidado, igual nas três visões; só o resumo muda. */
   const linha = (c: ConvidadoCompleto) => (
     <LinhaConvidado
       key={c.id}
       convidado={c}
+      titular={c.invited_by ? (nomePorId.get(c.invited_by) ?? null) : null}
       visao={visao}
       acompanhantes={porTitular.get(c.id) ?? []}
       selecionado={selecionados.has(c.id)}
@@ -399,8 +407,8 @@ export function GerenciadorConvidados({
 
       {/* ---------- Os números, numa faixa só ---------- */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-sm border border-terra/20 bg-creme-claro px-3 py-2.5" role="group" aria-label="Filtrar pelos números">
-        <Numero rotulo="Convidados" valor={resumo.total} ativo={semRecorteDeStatus} aoClicar={() => recortarPor({})} />
-        <Numero rotulo="Confirmados" valor={resumo.confirmados} detalhe={`${resumo.pessoas} pessoas`} tom="oliva" ativo={status === "confirmado"} aoClicar={() => recortarPor({ status: "confirmado" })} />
+        <Numero rotulo="Convidados" valor={resumo.total} detalhe={resumo.colo > 0 ? `+${resumo.colo} no colo` : undefined} ativo={semRecorteDeStatus} aoClicar={() => recortarPor({})} />
+        <Numero rotulo="Confirmados" valor={resumo.confirmados} tom="oliva" ativo={status === "confirmado"} aoClicar={() => recortarPor({ status: "confirmado" })} />
         <Numero rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" ativo={status === "em_espera"} aoClicar={() => recortarPor({ status: "em_espera" })} />
         <Numero rotulo="Não irão" valor={resumo.naoVao} ativo={status === "nao_vai"} aoClicar={() => recortarPor({ status: "nao_vai" })} />
         <Numero rotulo="Sem convite" valor={resumo.semConvite} tom={resumo.semConvite > 0 ? "alerta" : "oliva"} ativo={status === "nao_contatado"} aoClicar={() => recortarPor({ status: "nao_contatado" })} />
@@ -419,6 +427,7 @@ export function GerenciadorConvidados({
             {resumo.codigoEnviado} de {resumo.total} convites entregues
           </button>
           <p className="mt-0.5 text-sm text-terra">
+            {resumo.semAcesso > 0 && `${resumo.semAcesso} criança${resumo.semAcesso === 1 ? "" : "s"} sem acesso · `}
             {resumo.semCodigo > 0 && (
               <>
                 <button type="button" onClick={() => recortarPor({ codigo: "sem_codigo" })} aria-pressed={filtroCodigo === "sem_codigo"} className={`underline-offset-4 hover:underline ${filtroCodigo === "sem_codigo" ? "underline" : ""}`}>
@@ -703,6 +712,7 @@ export function GerenciadorConvidados({
               ? convidados.filter((x) => x.group_id === detalhe.group_id && x.id !== detalhe.id)
               : []
           }
+          titular={detalhe.invited_by ? (convidados.find((x) => x.id === detalhe.invited_by) ?? null) : null}
           copiado={copiado === detalhe.id}
           gerando={gerando}
           aoFechar={() => setDetalheId(null)}
@@ -795,6 +805,7 @@ function Numero({
  */
 function LinhaConvidado({
   convidado: c,
+  titular,
   visao,
   acompanhantes,
   selecionado,
@@ -802,6 +813,8 @@ function LinhaConvidado({
   aoAbrir,
 }: {
   convidado: ConvidadoCompleto;
+  /** Nome de quem trouxe, quando o cadastro nasceu de um acompanhante. */
+  titular: string | null;
   visao: Visao;
   acompanhantes: Acompanhante[];
   selecionado: boolean;
@@ -810,9 +823,10 @@ function LinhaConvidado({
 }) {
   const passou = acompanhantes.length > c.companions_planned;
 
+  const veioCom = titular ? `veio com ${titular.split(" ")[0]}` : null;
   const contexto =
     visao === "ficha"
-      ? [c.grupo?.name, c.relationship, c.phone].filter(Boolean).join(" · ") || "—"
+      ? [c.grupo?.name, veioCom, c.relationship, c.phone].filter(Boolean).join(" · ") || "—"
       : visao === "familias"
         ? [c.relationship, c.attends ? ROTULOS_PRESENCA_CURTO[c.attends] : "sem resposta", c.mesa?.name]
             .filter(Boolean)
@@ -851,7 +865,10 @@ function LinhaConvidado({
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-terra">
             <span className="min-w-0 truncate">{contexto}</span>
-            {visao === "ficha" && (
+            {visao === "ficha" && !temAcessoAoSite(c) && (
+              <span className="versalete text-xs text-terra/85">sem acesso · criança</span>
+            )}
+            {visao === "ficha" && temAcessoAoSite(c) && (
               c.access_code ? (
                 <span
                   className={`versalete text-xs ${c.code_sent_at ? "text-oliva" : "text-terra/85"}`}

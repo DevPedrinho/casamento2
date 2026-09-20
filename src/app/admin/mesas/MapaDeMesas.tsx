@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
   ROTULOS_PRESENCA_CURTO,
-  type Acompanhante,
   type GrupoConvidados,
   type Mesa,
   type Presenca,
   type StatusConvite,
 } from "@/lib/tipos";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
+import { contaNoTotal } from "@/lib/convidado";
 import { Botao } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
@@ -26,6 +26,8 @@ export type ConvidadoDaMesa = {
   age: number | null;
   is_featured: boolean;
   ceremony_role: string | null;
+  /** Quem trouxe: o titular, quando o cadastro nasceu de um acompanhante. */
+  invited_by: string | null;
 };
 
 /** Uma cadeira: o titular ou alguém que ele trouxe. */
@@ -38,25 +40,25 @@ type Cadeira = {
   /** Acompanhante senta com quem o trouxe; só o titular é movido. */
   titularId: string;
   eAcompanhante: boolean;
+  /** Criança de colo: senta junto, mas não ocupa lugar. */
+  colo: boolean;
 };
 
 /**
  * O mapa de mesas.
  *
- * Quem vem é contado por cadeira, não por convite: o acompanhante ocupa um
- * lugar igual ao do titular. Mas quem se move é o titular — arrastar a
- * família inteira de uma vez é o que os noivos realmente querem fazer, e
- * ninguém senta longe de quem trouxe.
+ * Quem vem é contado por cadeira, não por convite: o acompanhante — que
+ * hoje é um cadastro próprio, ligado a quem o trouxe — ocupa um lugar igual
+ * ao do titular. Mas quem se move é o titular: a família inteira anda junta,
+ * e ninguém senta longe de quem trouxe. Criança de colo vai junto sem lugar.
  */
 export function MapaDeMesas({
   mesas,
   convidados,
-  acompanhantes,
   grupos,
 }: {
   mesas: Mesa[];
   convidados: ConvidadoDaMesa[];
-  acompanhantes: Acompanhante[];
   grupos: GrupoConvidados[];
 }) {
   const router = useRouter();
@@ -73,43 +75,35 @@ export function MapaDeMesas({
   const vaiAFesta = (p: Presenca | null) => p === "ambos" || p === "recepcao";
 
   const porTitular = useMemo(() => {
-    const mapa = new Map<string, Acompanhante[]>();
-    for (const a of acompanhantes) {
-      mapa.set(a.guest_id, [...(mapa.get(a.guest_id) ?? []), a]);
+    const mapa = new Map<string, ConvidadoDaMesa[]>();
+    for (const c of convidados) {
+      if (c.invited_by) mapa.set(c.invited_by, [...(mapa.get(c.invited_by) ?? []), c]);
     }
     return mapa;
-  }, [acompanhantes]);
+  }, [convidados]);
 
   /** Cada titular vira um grupinho de cadeiras que anda junto. */
   const grupinhos = useMemo(() => {
+    const cadeira = (p: ConvidadoDaMesa, titularId: string): Cadeira => ({
+      chave: p.id,
+      nome: p.full_name,
+      idade: p.age,
+      presenca: p.attends,
+      papel: p.ceremony_role,
+      titularId,
+      eAcompanhante: p.id !== titularId,
+      colo: !contaNoTotal(p),
+    });
     return convidados
+      .filter((c) => !c.invited_by)
       .filter((c) => c.invite_status !== "nao_vai")
       .filter((c) => !soFesta || vaiAFesta(c.attends) || c.attends === null)
       .map((c) => {
-        const meus = porTitular.get(c.id) ?? [];
-        const cadeiras: Cadeira[] = [
-          {
-            chave: c.id,
-            nome: c.full_name,
-            idade: c.age,
-            presenca: c.attends,
-            papel: c.ceremony_role,
-            titularId: c.id,
-            eAcompanhante: false,
-          },
-          ...meus
-            .filter((a) => !soFesta || vaiAFesta(a.attends) || a.attends === null)
-            .map((a) => ({
-              chave: a.id,
-              nome: a.full_name,
-              idade: a.age,
-              presenca: a.attends,
-              papel: null,
-              titularId: c.id,
-              eAcompanhante: true,
-            })),
-        ];
-        return { titular: c, cadeiras };
+        const meus = (porTitular.get(c.id) ?? [])
+          .filter((a) => a.invite_status !== "nao_vai")
+          .filter((a) => !soFesta || vaiAFesta(a.attends) || a.attends === null);
+        const cadeiras: Cadeira[] = [cadeira(c, c.id), ...meus.map((a) => cadeira(a, c.id))];
+        return { titular: c, cadeiras, lugares: cadeiras.filter((x) => !x.colo).length };
       });
   }, [convidados, porTitular, soFesta]);
 
@@ -123,10 +117,10 @@ export function MapaDeMesas({
     return { mapa, soltos };
   }, [grupinhos]);
 
-  const totalCadeiras = grupinhos.reduce((s, g) => s + g.cadeiras.length, 0);
+  const totalCadeiras = grupinhos.reduce((s, g) => s + g.lugares, 0);
   const sentados = grupinhos
     .filter((g) => g.titular.table_id)
-    .reduce((s, g) => s + g.cadeiras.length, 0);
+    .reduce((s, g) => s + g.lugares, 0);
   const lugaresCriados = mesas.reduce((s, m) => s + m.seats, 0);
 
   const semMesa = useMemo(() => {
@@ -159,7 +153,7 @@ export function MapaDeMesas({
       .map((g, i) => {
         const pessoas = grupinhos
           .filter((x) => x.titular.group_id === g.id)
-          .reduce((s, x) => s + x.cadeiras.length, 0);
+          .reduce((s, x) => s + x.lugares, 0);
         return {
           name: g.name,
           seats: Math.min(30, Math.max(2, pessoas || 8)),
@@ -173,9 +167,11 @@ export function MapaDeMesas({
     router.refresh();
   }
 
+  /** Move o titular e, com ele, quem ele trouxe: a família senta junta. */
   async function mover(titularId: string, mesaId: string | null) {
     setSalvando(true);
-    await supabase.from("guests").update({ table_id: mesaId }).eq("id", titularId);
+    const ids = [titularId, ...(porTitular.get(titularId) ?? []).map((a) => a.id)];
+    await supabase.from("guests").update({ table_id: mesaId }).in("id", ids);
     setSelecionado(null);
     setSalvando(false);
     router.refresh();
@@ -328,7 +324,7 @@ export function MapaDeMesas({
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {mesas.map((mesa) => {
             const nela = porMesa.mapa.get(mesa.id) ?? [];
-            const ocupados = nela.reduce((s, g) => s + g.cadeiras.length, 0);
+            const ocupados = nela.reduce((s, g) => s + g.lugares, 0);
             const cheia = ocupados > mesa.seats;
 
             return (
@@ -386,6 +382,7 @@ export function MapaDeMesas({
                                   {ROTULOS_PRESENCA_CURTO[c.presenca]}
                                 </span>
                               )}
+                              {c.colo && <span className="versalete ml-2 text-xs text-terra/85">no colo</span>}
                             </p>
                           ))}
                         </div>

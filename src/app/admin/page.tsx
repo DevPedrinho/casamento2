@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import type {
-  Acompanhante,
   Despesa,
   Fornecedor,
   Genero,
@@ -21,6 +20,7 @@ import {
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
 import { diasAte, reais } from "@/lib/formato";
+import { contaNoTotal } from "@/lib/convidado";
 import { AnelCompacto, Bloco, Indicador, Vazio } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
 import { BarrasInterativas, Rosca, type Fatia } from "@/components/graficos";
@@ -31,7 +31,7 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   const supabase = await criarClienteServidor();
 
-  const [convidados, tarefas, despesas, fornecedores, presentes, posts, config, locais, acompanhantes] =
+  const [convidados, tarefas, despesas, fornecedores, presentes, posts, config, locais] =
     await Promise.all([
       supabase.from("guests").select(
         `id, full_name, invite_status, companions_planned, group_id, next_action,
@@ -44,10 +44,11 @@ export default async function Dashboard() {
       supabase.from("posts").select("id, kind, created_at, caption").order("created_at", { ascending: false }).limit(5),
       supabase.from("wedding_settings").select("budget_total_cents").eq("id", true).maybeSingle(),
       supabase.from("event_venues").select("*").order("sort_order"),
-      supabase.from("rsvp_companions").select("*"),
     ]);
 
-  const listaConvidados = convidados.data ?? [];
+  // Acompanhante já é cadastro próprio; criança de colo fica fora das contas.
+  const listaConvidados = (convidados.data ?? []).filter(contaNoTotal);
+  const noColo = (convidados.data ?? []).length - listaConvidados.length;
   const listaTarefas = (tarefas.data ?? []) as Tarefa[];
   const listaDespesas = (despesas.data ?? []) as Despesa[];
   const listaFornecedores = (fornecedores.data ?? []) as Fornecedor[];
@@ -64,18 +65,9 @@ export default async function Dashboard() {
   // ocupa lugar igual ao de quem o trouxe. É esse número que o buffet pede.
   type Pessoa = { attends: Presenca | null; gender: Genero | null; age: number | null };
 
-  const listaAcompanhantes = (acompanhantes.data ?? []) as Acompanhante[];
-
-  const pessoas: Pessoa[] = [
-    ...listaConvidados
-      .filter((c) => c.invite_status === "confirmado")
-      .map((c) => ({ attends: c.attends, gender: c.gender, age: c.age })),
-    ...listaAcompanhantes.map((a) => ({
-      attends: a.attends,
-      gender: a.gender,
-      age: a.age,
-    })),
-  ];
+  const pessoas: Pessoa[] = listaConvidados
+    .filter((c) => c.invite_status === "confirmado")
+    .map((c) => ({ attends: c.attends, gender: c.gender, age: c.age }));
 
   const responderam = pessoas.filter((p) => p.attends !== null);
   const vaiPara = (p: Presenca) => responderam.filter((x) => x.attends === p).length;
@@ -298,7 +290,7 @@ export default async function Dashboard() {
               valor={confirmados.length}
               total={listaConvidados.length}
               rotulo="Confirmações"
-              legenda={`${confirmados.length} de ${listaConvidados.length}${conta("nao_contatado") > 0 ? ` · ${conta("nao_contatado")} sem convite` : ""}`}
+              legenda={`${confirmados.length} de ${listaConvidados.length}${conta("nao_contatado") > 0 ? ` · ${conta("nao_contatado")} sem convite` : ""}${noColo > 0 ? ` · ${noColo} no colo` : ""}`}
               tom="lavanda"
             />
             <AnelCompacto

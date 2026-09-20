@@ -377,7 +377,7 @@ export function FormRsvp({
               <p className="text-sm text-terra">
                 {limite === 0
                   ? "Seu convite é individual. Se precisar levar alguém, fale com os noivos."
-                  : `Seu convite comporta ${limite} acompanhante${limite === 1 ? "" : "s"} além de você.`}
+                  : `Seu convite comporta ${limite} acompanhante${limite === 1 ? "" : "s"} além de você. Cada um ganha um cadastro na lista; quem tem 10 anos ou mais recebe um código para entrar no site.`}
               </p>
 
               {acompanhantes.length === 0 && limite > 0 && (
