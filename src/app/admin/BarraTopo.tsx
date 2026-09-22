@@ -18,22 +18,24 @@ export type Pendencias = {
 
 type Item = { href: string; rotulo: string; icone: NomeIcone; chave?: keyof Pendencias };
 
-/** Os que ficam sempre à vista na barra. */
+/** Os que ficam sempre à vista na barra. Mesas e Mural entraram aqui: o
+ *  primeiro pesa mais perto do dia, o segundo é onde mora o aviso de
+ *  denúncia pendente — escondido em "Mais", ninguém via o badge. */
 const PRINCIPAIS: Item[] = [
   { href: "/admin", rotulo: "Dashboard", icone: "dashboard" },
   { href: "/admin/convidados", rotulo: "Convidados", icone: "convidados", chave: "convidados" },
   { href: "/admin/checklist", rotulo: "Tarefas", icone: "tarefas", chave: "tarefas" },
   { href: "/admin/fornecedores", rotulo: "Fornecedores", icone: "fornecedores" },
   { href: "/admin/financeiro", rotulo: "Financeiro", icone: "financeiro", chave: "financeiro" },
+  { href: "/admin/mesas", rotulo: "Mesas", icone: "mesas" },
+  { href: "/admin/mural", rotulo: "Mural", icone: "mural", chave: "mural" },
 ];
 
-/** Os demais entram no menu "Mais" — 12 itens inline não cabem sem cortar. */
+/** Os demais entram no menu "Mais" — 13 itens inline não cabem sem cortar. */
 const SECUNDARIOS: Item[] = [
-  { href: "/admin/mesas", rotulo: "Mesas", icone: "mesas" },
   { href: "/admin/personagens", rotulo: "Personagens", icone: "personagens" },
   { href: "/admin/cronograma", rotulo: "Cronograma", icone: "cronograma" },
   { href: "/admin/timeline", rotulo: "Timeline", icone: "timeline" },
-  { href: "/admin/mural", rotulo: "Mural", icone: "mural", chave: "mural" },
   { href: "/admin/presentes", rotulo: "Presentes", icone: "presentes" },
   { href: "/admin/locais", rotulo: "Local do evento", icone: "local" },
   { href: "/admin/configuracoes", rotulo: "Configurações", icone: "config" },
@@ -122,7 +124,7 @@ export function BarraTopo({ nome, pendencias }: { nome: string; pendencias: Pend
 
         {/* ---------- Navegação, rolando na horizontal quando aperta ---------- */}
         <nav aria-label="Módulos" className="hidden min-w-0 flex-1 lg:block">
-          <ul className="flex items-center gap-1">
+          <ul className="flex items-center justify-center gap-1">
             {PRINCIPAIS.map((item) => {
               const ativo = estaAtivo(caminho, item.href);
               const badge = item.chave ? pendencias[item.chave] : undefined;
