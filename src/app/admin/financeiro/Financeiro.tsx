@@ -87,6 +87,25 @@ export function Financeiro({
     });
   }
 
+  /** Abre as categorias e rola até a primeira: é o que todo alerta faz. */
+  function irParaCategorias(categorias: string[]) {
+    if (categorias.length === 0) return;
+    setAbertas((atual) => {
+      const nova = new Set(atual);
+      categorias.forEach((c) => nova.add(c));
+      return nova;
+    });
+    document
+      .getElementById(`categoria-${encodeURIComponent(categorias[0])}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /** Um alerta apontou para uma despesa: abre a categoria dela e a ficha. */
+  function irParaDespesa(d: Despesa) {
+    irParaCategorias([d.category]);
+    setDetalheId(d.id);
+  }
+
   const resumo = useMemo(() => {
     const previsto = despesas.reduce((s, d) => s + d.estimated_cents, 0);
     const contratado = despesas.reduce((s, d) => s + (d.contracted_cents ?? 0), 0);
@@ -94,12 +113,20 @@ export function Financeiro({
     const comprometido = despesas.reduce((s, d) => s + valorDeReferencia(d), 0);
     const aPagar = Math.max(0, comprometido - pago);
 
-    const vencendo = despesas.filter((d) => {
+    const vencendoLista = despesas.filter((d) => {
       const dias = diasAte(d.due_date);
       return dias !== null && dias <= 30 && totalPago(d) < valorDeReferencia(d);
-    }).length;
+    });
 
-    return { previsto, contratado, pago, comprometido, aPagar, vencendo };
+    return {
+      previsto,
+      contratado,
+      pago,
+      comprometido,
+      aPagar,
+      vencendo: vencendoLista.length,
+      categoriasVencendo: [...new Set(vencendoLista.map((d) => d.category))],
+    };
   }, [despesas]);
 
   const porCategoria = useMemo(() => {
@@ -211,17 +238,15 @@ export function Financeiro({
           valor={reais(resumo.aPagar)}
           tom={resumo.aPagar > 0 ? "alerta" : "oliva"}
           detalhe={resumo.vencendo > 0 ? `${resumo.vencendo} vencendo em 30 dias` : undefined}
+          aoClicar={resumo.vencendo > 0 ? () => irParaCategorias(resumo.categoriasVencendo) : undefined}
         />
       </div>
 
       <AlertasEGraficos
         despesas={despesas}
-        aoEscolherCategoria={(categoria) => {
-          setAbertas((atual) => new Set(atual).add(categoria));
-          document
-            .getElementById(`categoria-${encodeURIComponent(categoria)}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
+        aoEscolherCategoria={(categoria) => irParaCategorias([categoria])}
+        aoAbrirDespesa={irParaDespesa}
+        aoAbrirTodas={(lista) => irParaCategorias([...new Set(lista.map((d) => d.category))])}
       />
 
       <OrcamentoTotal
@@ -449,9 +474,15 @@ export function Financeiro({
 function AlertasEGraficos({
   despesas,
   aoEscolherCategoria,
+  aoAbrirDespesa,
+  aoAbrirTodas,
 }: {
   despesas: Despesa[];
   aoEscolherCategoria: (categoria: string) => void;
+  /** Toque numa conta do alerta: abre a categoria e a ficha dela. */
+  aoAbrirDespesa: (despesa: Despesa) => void;
+  /** Toque no título do alerta: abre as categorias de todas as contas dele. */
+  aoAbrirTodas: (despesas: Despesa[]) => void;
 }) {
   const atrasadas = despesas.filter((d) => statusReal(d) === "atrasado");
   const proximas = despesas.filter((d) => {
@@ -501,39 +532,25 @@ function AlertasEGraficos({
       {(atrasadas.length > 0 || proximas.length > 0) && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {atrasadas.length > 0 && (
-            <div className="rounded-sm border border-red-800/30 bg-red-50/60 px-6 py-5">
-              <p className="titulo-serif text-lg text-red-900 lining-nums">
-                {atrasadas.length} conta{atrasadas.length > 1 ? "s" : ""} em atraso
-              </p>
-              <ul className="mt-3 space-y-1.5">
-                {atrasadas.slice(0, 4).map((d) => (
-                  <li key={d.id} className="flex justify-between gap-4 text-sm text-terra">
-                    <span className="min-w-0 truncate">{d.description}</span>
-                    <span className="shrink-0 font-medium text-red-900 tabular-nums lining-nums">
-                      {reais(valorDeReferencia(d) - totalPago(d))}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <CartaoAlerta
+              tom="alerta"
+              titulo={`${atrasadas.length} conta${atrasadas.length > 1 ? "s" : ""} em atraso`}
+              itens={atrasadas}
+              valorDe={(d) => reais(valorDeReferencia(d) - totalPago(d))}
+              aoAbrir={aoAbrirDespesa}
+              aoAbrirTodas={aoAbrirTodas}
+            />
           )}
 
           {proximas.length > 0 && (
-            <div className="rounded-sm border border-lavanda/40 bg-lavanda/10 px-6 py-5">
-              <p className="titulo-serif text-lg text-lavanda lining-nums">
-                {proximas.length} vencendo em 30 dias
-              </p>
-              <ul className="mt-3 space-y-1.5">
-                {proximas.slice(0, 4).map((d) => (
-                  <li key={d.id} className="flex justify-between gap-4 text-sm text-terra">
-                    <span className="min-w-0 truncate">{d.description}</span>
-                    <span className="shrink-0 font-medium text-lavanda tabular-nums lining-nums">
-                      {formatarData(d.due_date)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <CartaoAlerta
+              tom="lavanda"
+              titulo={`${proximas.length} vencendo em 30 dias`}
+              itens={proximas}
+              valorDe={(d) => formatarData(d.due_date) ?? ""}
+              aoAbrir={aoAbrirDespesa}
+              aoAbrirTodas={aoAbrirTodas}
+            />
           )}
         </div>
       )}
@@ -560,6 +577,80 @@ function AlertasEGraficos({
             )}
           </Bloco>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Um alerta de vencimento. Tudo nele leva a algum lugar: o título abre as
+ * categorias envolvidas, cada conta abre a própria ficha.
+ */
+function CartaoAlerta({
+  tom,
+  titulo,
+  itens,
+  valorDe,
+  aoAbrir,
+  aoAbrirTodas,
+}: {
+  tom: "alerta" | "lavanda";
+  titulo: string;
+  itens: Despesa[];
+  valorDe: (d: Despesa) => string;
+  aoAbrir: (d: Despesa) => void;
+  aoAbrirTodas: (lista: Despesa[]) => void;
+}) {
+  const LIMITE = 4;
+  const estilo =
+    tom === "alerta"
+      ? {
+          caixa: "border-red-800/30 bg-red-50/60",
+          titulo: "text-red-900",
+          valor: "text-red-900",
+          hover: "hover:bg-red-800/5 focus-visible:bg-red-800/5",
+        }
+      : {
+          caixa: "border-lavanda/40 bg-lavanda/10",
+          titulo: "text-lavanda",
+          valor: "text-lavanda",
+          hover: "hover:bg-lavanda/10 focus-visible:bg-lavanda/10",
+        };
+
+  return (
+    <div className={`rounded-sm border px-4 py-4 sm:px-6 sm:py-5 ${estilo.caixa}`}>
+      <button
+        type="button"
+        onClick={() => aoAbrirTodas(itens)}
+        className={`titulo-serif -mx-2 rounded-sm px-2 py-1 text-left text-lg lining-nums underline-offset-4 transition-colors hover:underline ${estilo.titulo}`}
+      >
+        {titulo}
+      </button>
+      <ul className="mt-2 space-y-0.5">
+        {itens.slice(0, LIMITE).map((d) => (
+          <li key={d.id}>
+            <button
+              type="button"
+              onClick={() => aoAbrir(d)}
+              aria-label={`Abrir ${d.description}`}
+              className={`-mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-sm px-2 text-left text-sm text-terra transition-colors ${estilo.hover}`}
+            >
+              <span className="min-w-0 truncate">{d.description}</span>
+              <span className={`shrink-0 font-medium tabular-nums lining-nums ${estilo.valor}`}>
+                {valorDe(d)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {itens.length > LIMITE && (
+        <button
+          type="button"
+          onClick={() => aoAbrirTodas(itens)}
+          className={`versalete mt-2 inline-flex min-h-11 items-center text-xs underline underline-offset-4 ${estilo.titulo}`}
+        >
+          Ver todas as {itens.length}
+        </button>
       )}
     </div>
   );

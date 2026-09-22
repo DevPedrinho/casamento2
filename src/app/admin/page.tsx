@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import type {
   Despesa,
@@ -389,11 +390,14 @@ export default async function Dashboard() {
             />
 
             {orcamentoTotal > 0 && sobraDoOrcamento < orcamentoTotal * 0.05 && (
-              <p className={`rounded-sm border px-3 py-2.5 text-sm ${sobraDoOrcamento < 0 ? "border-red-800/30 bg-red-50/60 text-red-900" : "border-terra/20 bg-creme text-terra"}`}>
+              <Link
+                href="/admin/financeiro"
+                className={`block rounded-sm border px-3 py-2.5 text-sm underline-offset-4 transition-colors hover:underline ${sobraDoOrcamento < 0 ? "border-red-800/30 bg-red-50/60 text-red-900 hover:border-red-800/60" : "border-terra/20 bg-creme text-terra hover:border-oliva/50"}`}
+              >
                 {sobraDoOrcamento < 0
                   ? `Orçamento estourado em ${reais(-sobraDoOrcamento)}.`
                   : `Orçamento no limite: sobram ${reais(sobraDoOrcamento)}.`}
-              </p>
+              </Link>
             )}
           </div>
         </Bloco>

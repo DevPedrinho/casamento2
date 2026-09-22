@@ -24,6 +24,12 @@ import { Icone } from "@/components/Icones";
 import { QuadroRolavel } from "@/components/QuadroRolavel";
 import { FichaFornecedor, TOM_ETAPA } from "./FichaFornecedor";
 
+/** Quem pede retorno nos próximos 7 dias (ou já passou) e ainda está em jogo. */
+function retornaEm7Dias(f: Fornecedor): boolean {
+  const dias = diasAte(f.next_action_at);
+  return dias !== null && dias <= 7 && f.status !== "contratado" && f.status !== "descartado";
+}
+
 /** Duas formas de olhar o mesmo funil. A lista é a padrão; o quadro, opção. */
 const VISOES = ["lista", "kanban"] as const;
 type Visao = (typeof VISOES)[number];
@@ -69,6 +75,8 @@ export function Fornecedores({
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const detalhe = fornecedores.find((f) => f.id === detalheId) ?? null;
   const [visao, setVisao] = useState<Visao>("lista");
+  /** Recorte ligado pelo indicador "Retornar em 7 dias". */
+  const [soRetornos, setSoRetornos] = useState(false);
   /** O cartão que está trocando de etapa agora: fica apagado até gravar. */
   const [movendoId, setMovendoId] = useState<string | null>(null);
 
@@ -81,10 +89,7 @@ export function Fornecedores({
       ["contatado", "proposta", "negociando"].includes(f.status),
     );
     const totalFechado = contratados.reduce((s, f) => s + (f.agreed_cents ?? 0), 0);
-    const proximas = fornecedores.filter((f) => {
-      const dias = diasAte(f.next_action_at);
-      return dias !== null && dias <= 7 && f.status !== "contratado" && f.status !== "descartado";
-    }).length;
+    const proximas = fornecedores.filter(retornaEm7Dias).length;
     const totalPago = [...contas.values()].reduce((s, c) => s + c.pago, 0);
 
     return {
@@ -99,11 +104,12 @@ export function Fornecedores({
   }, [contas, fornecedores]);
 
   const porEtapa = useMemo(() => {
+    const base = soRetornos ? fornecedores.filter(retornaEm7Dias) : fornecedores;
     return ETAPAS_FUNIL.map((etapa) => ({
       etapa,
-      itens: fornecedores.filter((f) => f.status === etapa),
-    })).filter((g) => etapaVisivel === "todas" || g.etapa === etapaVisivel);
-  }, [fornecedores, etapaVisivel]);
+      itens: base.filter((f) => f.status === etapa),
+    })).filter((g) => (etapaVisivel === "todas" || g.etapa === etapaVisivel) && (!soRetornos || g.itens.length > 0));
+  }, [fornecedores, etapaVisivel, soRetornos]);
 
   function limpar() {
     setForm(VAZIO);
@@ -218,6 +224,16 @@ export function Fornecedores({
           rotulo="Retornar em 7 dias"
           valor={resumo.proximas}
           tom={resumo.proximas > 0 ? "alerta" : "neutro"}
+          aoClicar={
+            resumo.proximas > 0
+              ? () => {
+                  setVisao("lista");
+                  setEtapaVisivel("todas");
+                  setSoRetornos(true);
+                  document.getElementById("lista-fornecedores")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              : undefined
+          }
         />
       </div>
 
@@ -238,6 +254,7 @@ export function Fornecedores({
         </div>
       )}
 
+      <div id="lista-fornecedores" className="scroll-mt-4" />
       <Bloco
         titulo="Fornecedores"
         descricao={
@@ -392,6 +409,20 @@ export function Fornecedores({
               )}
             </div>
           </form>
+        )}
+
+        {soRetornos && visao === "lista" && (
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <span className="versalete text-xs text-terra">Mostrando só</span>
+            <button
+              type="button"
+              onClick={() => setSoRetornos(false)}
+              className="versalete inline-flex min-h-9 items-center gap-2 rounded-full border border-red-800/40 bg-red-50/60 px-3 text-xs text-red-900 transition-colors hover:border-red-800"
+            >
+              Retornos em 7 dias
+              <Icone nome="fechar" className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )}
 
         {visao === "lista" && (

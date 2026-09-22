@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { reais } from "@/lib/formato";
 
@@ -9,11 +10,16 @@ export function Indicador({
   valor,
   detalhe,
   tom = "neutro",
+  href,
+  aoClicar,
 }: {
   rotulo: string;
   valor: string | number;
   detalhe?: string;
   tom?: "neutro" | "oliva" | "lavanda" | "alerta";
+  /** Com um destes, o cartão vira link ou botão e leva ao que ele conta. */
+  href?: string;
+  aoClicar?: () => void;
 }) {
   const tons = {
     neutro: "text-oliva",
@@ -22,13 +28,31 @@ export function Indicador({
     alerta: "text-red-800",
   } as const;
 
-  return (
-    <div className="rounded-sm border border-terra/20 bg-creme-claro px-3 py-4 text-center sm:px-5 sm:py-6">
+  const classe = "block w-full rounded-sm border border-terra/20 bg-creme-claro px-3 py-4 text-center sm:px-5 sm:py-6";
+  const clicavel = `${classe} transition-colors hover:border-oliva/50 focus-visible:border-oliva`;
+  const conteudo = (
+    <>
       <span className={`titulo-serif block text-2xl tabular-nums lining-nums sm:text-3xl ${tons[tom]}`}>{valor}</span>
       <span className="versalete mt-1.5 block text-xs text-terra sm:mt-2">{rotulo}</span>
       {detalhe && <span className="mt-1 block text-sm text-terra/85">{detalhe}</span>}
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={clicavel}>
+        {conteudo}
+      </Link>
+    );
+  }
+  if (aoClicar) {
+    return (
+      <button type="button" onClick={aoClicar} className={clicavel}>
+        {conteudo}
+      </button>
+    );
+  }
+  return <div className={classe}>{conteudo}</div>;
 }
 
 /** Barra de progresso simples, usada no checklist e no orçamento. */

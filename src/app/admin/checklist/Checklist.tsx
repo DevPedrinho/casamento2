@@ -163,6 +163,16 @@ export function Checklist({
           rotulo="Atrasadas"
           valor={resumo.atrasadas}
           tom={resumo.atrasadas > 0 ? "alerta" : "neutro"}
+          aoClicar={
+            resumo.atrasadas > 0
+              ? () => {
+                  setVisao("lista");
+                  setFiltro("Tudo");
+                  setPrazo("Atrasadas");
+                  document.getElementById("lista-tarefas")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              : undefined
+          }
         />
       </div>
 
@@ -174,6 +184,7 @@ export function Checklist({
         />
       </div>
 
+      <div id="lista-tarefas" className="scroll-mt-4" />
       <Bloco
         titulo="Checklist do casamento"
         descricao={
