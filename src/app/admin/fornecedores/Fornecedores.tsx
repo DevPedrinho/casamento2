@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type DragEvent, type FormEvent } from "react";
 import {
   CATEGORIAS_FORNECEDOR,
   ETAPAS_FUNIL,
@@ -20,7 +20,13 @@ import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
+import { Icone } from "@/components/Icones";
 import { FichaFornecedor, TOM_ETAPA } from "./FichaFornecedor";
+
+/** Duas formas de olhar o mesmo funil. A lista é a padrão; o quadro, opção. */
+const VISOES = ["lista", "kanban"] as const;
+type Visao = (typeof VISOES)[number];
+const ROTULOS_VISAO: Record<Visao, string> = { lista: "Lista", kanban: "Kanban" };
 
 const VAZIO = {
   name: "",
@@ -61,6 +67,9 @@ export function Fornecedores({
   );
   const [detalheId, setDetalheId] = useState<string | null>(null);
   const detalhe = fornecedores.find((f) => f.id === detalheId) ?? null;
+  const [visao, setVisao] = useState<Visao>("lista");
+  /** O cartão que está trocando de etapa agora: fica apagado até gravar. */
+  const [movendoId, setMovendoId] = useState<string | null>(null);
 
   /** O que o financeiro sabe de cada um: contratado, pago e os lançamentos. */
   const contas = useMemo(() => contasPorFornecedor(despesas), [despesas]);
@@ -181,8 +190,11 @@ export function Fornecedores({
   }
 
   async function moverEtapa(f: Fornecedor, status: StatusFornecedor) {
+    if (f.status === status) return;
+    setMovendoId(f.id);
     const supabase = criarClienteNavegador();
     await supabase.from("vendors").update({ status }).eq("id", f.id);
+    setMovendoId(null);
     router.refresh();
   }
 
@@ -227,18 +239,44 @@ export function Fornecedores({
 
       <Bloco
         titulo="Fornecedores"
-        descricao="Do primeiro contato ao contrato fechado. Toque no fornecedor para abrir a ficha."
+        descricao={
+          visao === "kanban"
+            ? "Arraste o cartão para outra etapa — no celular, use as setas. Toque no nome para abrir a ficha."
+            : "Do primeiro contato ao contrato fechado. Toque no fornecedor para abrir a ficha."
+        }
         acao={
-          <Botao
-            type="button"
-            variante="contorno"
-            onClick={() => {
-              if (aberto) limpar();
-              setAberto((v) => !v);
-            }}
-          >
-            {aberto ? "Fechar" : "Novo fornecedor"}
-          </Botao>
+          <div className="flex flex-wrap items-center gap-3">
+            <div
+              role="group"
+              aria-label="Forma de ver o funil"
+              className="inline-flex rounded-full border border-terra/30 bg-creme p-0.5"
+            >
+              {VISOES.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVisao(v)}
+                  aria-pressed={visao === v}
+                  className={`versalete titulo-serif inline-flex min-h-10 items-center gap-1.5 rounded-full px-3.5 text-xs transition-colors ${
+                    visao === v ? "bg-oliva text-creme-claro" : "text-terra hover:text-oliva"
+                  }`}
+                >
+                  <Icone nome={v === "lista" ? "fornecedores" : "kanban"} className="h-4 w-4" />
+                  {ROTULOS_VISAO[v]}
+                </button>
+              ))}
+            </div>
+            <Botao
+              type="button"
+              variante="contorno"
+              onClick={() => {
+                if (aberto) limpar();
+                setAberto((v) => !v);
+              }}
+            >
+              {aberto ? "Fechar" : "Novo fornecedor"}
+            </Botao>
+          </div>
         }
       >
         {aberto && (
@@ -355,19 +393,29 @@ export function Fornecedores({
           </form>
         )}
 
-        <div className="mb-7 flex flex-wrap gap-2.5">
-          <FiltroEtapa ativo={etapaVisivel === "todas"} onClick={() => setEtapaVisivel("todas")}>
-            Todas
-          </FiltroEtapa>
-          {ETAPAS_FUNIL.map((etapa) => (
-            <FiltroEtapa key={etapa} ativo={etapaVisivel === etapa} onClick={() => setEtapaVisivel(etapa)}>
-              {ROTULOS_FORNECEDOR[etapa]}
+        {visao === "lista" && (
+          <div className="mb-7 flex flex-wrap gap-2.5">
+            <FiltroEtapa ativo={etapaVisivel === "todas"} onClick={() => setEtapaVisivel("todas")}>
+              Todas
             </FiltroEtapa>
-          ))}
-        </div>
+            {ETAPAS_FUNIL.map((etapa) => (
+              <FiltroEtapa key={etapa} ativo={etapaVisivel === etapa} onClick={() => setEtapaVisivel(etapa)}>
+                {ROTULOS_FORNECEDOR[etapa]}
+              </FiltroEtapa>
+            ))}
+          </div>
+        )}
 
         {fornecedores.length === 0 ? (
           <Vazio>Nenhum fornecedor no funil ainda. Comece adicionando os que já pesquisaram.</Vazio>
+        ) : visao === "kanban" ? (
+          <QuadroFornecedores
+            fornecedores={fornecedores}
+            contas={contas}
+            movendoId={movendoId}
+            aoMover={moverEtapa}
+            aoAbrir={(f) => setDetalheId(f.id)}
+          />
         ) : (
           <div className="space-y-9">
             {porEtapa.map(({ etapa, itens }) => (
@@ -411,6 +459,175 @@ export function Fornecedores({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * O mesmo funil em seis colunas, uma por etapa. Arrastar e soltar muda a
+ * etapa no desktop; as setas do cartão fazem o mesmo no toque.
+ */
+function QuadroFornecedores({
+  fornecedores,
+  contas,
+  movendoId,
+  aoMover,
+  aoAbrir,
+}: {
+  fornecedores: Fornecedor[];
+  contas: Map<string, ContaDoFornecedor>;
+  movendoId: string | null;
+  aoMover: (fornecedor: Fornecedor, para: StatusFornecedor) => void;
+  aoAbrir: (fornecedor: Fornecedor) => void;
+}) {
+  const [colunaAlvo, setColunaAlvo] = useState<StatusFornecedor | null>(null);
+
+  function soltar(evento: DragEvent<HTMLElement>, etapa: StatusFornecedor) {
+    evento.preventDefault();
+    setColunaAlvo(null);
+    const id = evento.dataTransfer.getData("text/plain");
+    const f = fornecedores.find((x) => x.id === id);
+    if (f) aoMover(f, etapa);
+  }
+
+  return (
+    <div className="-mx-6 overflow-x-auto px-6 pb-4 sm:-mx-8 sm:px-8">
+      <div className="flex w-max gap-4">
+        {ETAPAS_FUNIL.map((etapa) => {
+          const itens = fornecedores.filter((f) => f.status === etapa);
+          const fechado = itens.reduce((s, f) => s + (f.agreed_cents ?? 0), 0);
+          return (
+            <section
+              key={etapa}
+              aria-label={ROTULOS_FORNECEDOR[etapa]}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                setColunaAlvo(etapa);
+              }}
+              onDragLeave={() => setColunaAlvo((atual) => (atual === etapa ? null : atual))}
+              onDrop={(e) => soltar(e, etapa)}
+              className={`flex w-72 shrink-0 flex-col rounded-sm border p-3 transition-colors ${
+                colunaAlvo === etapa ? "border-oliva bg-oliva/5" : "border-terra/20 bg-creme-claro/60"
+              }`}
+            >
+              <h3 className="versalete titulo-serif mb-1 flex items-center justify-between px-1 text-xs text-lavanda">
+                <span>{ROTULOS_FORNECEDOR[etapa]}</span>
+                <span className="text-terra/85 lining-nums">{itens.length}</span>
+              </h3>
+              <p className="mb-3 min-h-5 px-1 text-xs text-terra/85 tabular-nums lining-nums">
+                {fechado > 0 ? `${reais(fechado)} fechados` : ""}
+              </p>
+
+              {itens.length === 0 ? (
+                <p className="px-1 py-8 text-center text-sm text-terra/85">Solte um fornecedor aqui.</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {itens.map((f) => (
+                    <CartaoKanban
+                      key={f.id}
+                      fornecedor={f}
+                      conta={contas.get(f.id) ?? CONTA_VAZIA}
+                      salvando={movendoId === f.id}
+                      aoMover={(para) => aoMover(f, para)}
+                      aoAbrir={() => aoAbrir(f)}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CartaoKanban({
+  fornecedor: f,
+  conta,
+  salvando,
+  aoMover,
+  aoAbrir,
+}: {
+  fornecedor: Fornecedor;
+  conta: ContaDoFornecedor;
+  salvando: boolean;
+  aoMover: (para: StatusFornecedor) => void;
+  aoAbrir: () => void;
+}) {
+  const dias = diasAte(f.next_action_at);
+  const urgente = dias !== null && dias <= 7 && f.status !== "contratado" && f.status !== "descartado";
+  const semDespesa = f.status === "contratado" && conta.despesas.length === 0;
+  const quitado = conta.despesas.length > 0 && conta.saldo === 0;
+  const valor = f.agreed_cents ?? f.quoted_cents;
+  const posicao = ETAPAS_FUNIL.indexOf(f.status);
+  const anterior = ETAPAS_FUNIL[posicao - 1] as StatusFornecedor | undefined;
+  const proxima = ETAPAS_FUNIL[posicao + 1] as StatusFornecedor | undefined;
+
+  const seta =
+    "inline-flex h-10 w-10 items-center justify-center rounded-full border border-terra/30 text-terra transition-colors hover:border-oliva hover:text-oliva disabled:opacity-30 disabled:hover:border-terra/30 disabled:hover:text-terra";
+
+  return (
+    <li>
+      <article
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData("text/plain", f.id);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        className={`cursor-grab rounded-sm border border-terra/20 bg-creme px-4 py-3 active:cursor-grabbing ${
+          salvando ? "opacity-50" : ""
+        }`}
+      >
+        <button type="button" onClick={aoAbrir} className="block w-full text-left">
+          <p className="titulo-serif text-base leading-snug text-oliva">{f.name}</p>
+          <p className="mt-0.5 truncate text-xs text-terra/85">
+            {[f.category, f.contact_name ?? f.company].filter(Boolean).join(" · ")}
+          </p>
+
+          <span className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-terra/85">
+            {valor !== null && (
+              <span className="titulo-serif text-base text-oliva tabular-nums lining-nums">
+                {reais(valor)}
+                <span className="font-corpo text-xs text-terra/85">
+                  {" "}{f.agreed_cents !== null ? "fechado" : "orçamento"}
+                </span>
+              </span>
+            )}
+            {quitado && <Selo tom="oliva">quitado</Selo>}
+            {semDespesa && <Selo tom="alerta">sem despesa</Selo>}
+          </span>
+
+          {f.next_action && (
+            <span className={`mt-2 line-clamp-2 text-xs ${urgente ? "font-medium text-red-800" : "text-terra/85"}`}>
+              Próximo: {f.next_action}
+              {f.next_action_at && ` — ${formatarData(f.next_action_at)}`}
+            </span>
+          )}
+        </button>
+
+        <div className="mt-3 flex gap-1.5">
+          <button
+            type="button"
+            disabled={!anterior || salvando}
+            onClick={() => anterior && aoMover(anterior)}
+            aria-label={anterior ? `Mover para ${ROTULOS_FORNECEDOR[anterior]}` : "Já está na primeira etapa"}
+            className={seta}
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            disabled={!proxima || salvando}
+            onClick={() => proxima && aoMover(proxima)}
+            aria-label={proxima ? `Mover para ${ROTULOS_FORNECEDOR[proxima]}` : "Já está na última etapa"}
+            className={seta}
+          >
+            →
+          </button>
+        </div>
+      </article>
+    </li>
   );
 }
 
