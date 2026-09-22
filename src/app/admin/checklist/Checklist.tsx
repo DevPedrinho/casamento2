@@ -420,7 +420,7 @@ function QuadroTarefas({
 
   return (
     <QuadroRolavel>
-      <div className="flex w-max gap-4">
+      <div className="flex min-w-full gap-4">
         {COLUNAS.map((status) => {
           const itens = tarefas.filter((t) => t.status === status);
           return (
@@ -434,7 +434,7 @@ function QuadroTarefas({
               }}
               onDragLeave={() => setColunaAlvo((atual) => (atual === status ? null : atual))}
               onDrop={(e) => soltar(e, status)}
-              className={`flex w-72 shrink-0 flex-col rounded-sm border p-3 transition-colors ${
+              className={`flex min-w-72 flex-1 shrink flex-col rounded-sm border p-3 transition-colors ${
                 colunaAlvo === status ? "border-oliva bg-oliva/5" : "border-terra/20 bg-creme-claro/60"
               }`}
             >

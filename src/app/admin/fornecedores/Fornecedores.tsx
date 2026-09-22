@@ -523,7 +523,7 @@ function QuadroFornecedores({
 
   return (
     <QuadroRolavel>
-      <div className="flex w-max gap-4">
+      <div className="flex min-w-full gap-4">
         {ETAPAS_FUNIL.map((etapa) => {
           const itens = fornecedores.filter((f) => f.status === etapa);
           const fechado = itens.reduce((s, f) => s + (f.agreed_cents ?? 0), 0);
@@ -538,7 +538,7 @@ function QuadroFornecedores({
               }}
               onDragLeave={() => setColunaAlvo((atual) => (atual === etapa ? null : atual))}
               onDrop={(e) => soltar(e, etapa)}
-              className={`flex w-72 shrink-0 flex-col rounded-sm border p-3 transition-colors ${
+              className={`flex min-w-72 flex-1 shrink flex-col rounded-sm border p-3 transition-colors ${
                 colunaAlvo === etapa ? "border-oliva bg-oliva/5" : "border-terra/20 bg-creme-claro/60"
               }`}
             >

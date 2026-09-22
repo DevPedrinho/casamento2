@@ -55,7 +55,10 @@ export function QuadroRolavel({ children }: { children: ReactNode }) {
         onScroll={() => acompanhar(quadro.current, faixa.current)}
         className="overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:px-8 [&::-webkit-scrollbar]:hidden"
       >
-        <div ref={conteudo} className="w-max">
+        {/* Sem largura própria: um bloco comum enche o quadro (permitindo as
+            colunas crescerem para preencher) e ainda assim deixa o
+            scrollWidth medir corretamente quando as colunas transbordam. */}
+        <div ref={conteudo}>
           {children}
         </div>
       </div>
