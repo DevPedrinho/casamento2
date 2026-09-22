@@ -14,6 +14,7 @@ import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Icone } from "@/components/Icones";
+import { QuadroRolavel } from "@/components/QuadroRolavel";
 import { Bloco, Indicador, Progresso, Selo, Vazio } from "@/components/painel";
 import { FichaTarefa, PROXIMO, TOM_TAREFA } from "./FichaTarefa";
 
@@ -407,7 +408,7 @@ function QuadroTarefas({
   }
 
   return (
-    <div className="-mx-6 overflow-x-auto px-6 pb-4 sm:-mx-8 sm:px-8">
+    <QuadroRolavel>
       <div className="flex w-max gap-4">
         {COLUNAS.map((status) => {
           const itens = tarefas.filter((t) => t.status === status);
@@ -450,7 +451,7 @@ function QuadroTarefas({
           );
         })}
       </div>
-    </div>
+    </QuadroRolavel>
   );
 }
 

@@ -124,6 +124,28 @@ body {
   font-weight: 600;
 }
 
+/* -------- Barra de rolagem no topo dos quadros (QuadroRolavel) --------
+   Desenhada pela página, e não pelo sistema: assim ela aparece sempre,
+   mesmo onde a barra nativa só surge ao rolar (Mac, celular). */
+.barra-topo::-webkit-scrollbar {
+  height: 10px;
+}
+.barra-topo::-webkit-scrollbar-track {
+  background: var(--color-creme-escuro);
+  border-radius: 999px;
+}
+.barra-topo::-webkit-scrollbar-thumb {
+  background: var(--color-oliva);
+  border-radius: 999px;
+}
+/* Firefox não tem a pseudo-classe; colore a barra fina dele. */
+@supports not selector(::-webkit-scrollbar) {
+  .barra-topo {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-oliva) var(--color-creme-escuro);
+  }
+}
+
 /* -------- Entrada suave das seções conforme aparecem na tela --------
    O conteúdo só começa escondido quando o JavaScript confirma que está
    rodando (classe .js-ativo). Sem JS — ou se o script falhar — o site

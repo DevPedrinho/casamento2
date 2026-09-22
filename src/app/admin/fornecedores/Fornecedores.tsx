@@ -21,6 +21,7 @@ import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
 import { Icone } from "@/components/Icones";
+import { QuadroRolavel } from "@/components/QuadroRolavel";
 import { FichaFornecedor, TOM_ETAPA } from "./FichaFornecedor";
 
 /** Duas formas de olhar o mesmo funil. A lista é a padrão; o quadro, opção. */
@@ -490,7 +491,7 @@ function QuadroFornecedores({
   }
 
   return (
-    <div className="-mx-6 overflow-x-auto px-6 pb-4 sm:-mx-8 sm:px-8">
+    <QuadroRolavel>
       <div className="flex w-max gap-4">
         {ETAPAS_FUNIL.map((etapa) => {
           const itens = fornecedores.filter((f) => f.status === etapa);
@@ -538,7 +539,7 @@ function QuadroFornecedores({
           );
         })}
       </div>
-    </div>
+    </QuadroRolavel>
   );
 }
 
