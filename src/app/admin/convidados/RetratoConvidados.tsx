@@ -36,12 +36,20 @@ export function RetratoConvidados({
   aoFiltrar: (filtro: FiltroDoRetrato) => void;
 }) {
   const retrato = useMemo(() => {
-    // Acompanhante já é cadastro próprio; criança de colo fica fora das contas.
-    const contam = convidados.filter(contaNoTotal);
-    const confirmados = contam.filter((c) => c.invite_status === "confirmado");
-    const responderam = confirmados.filter((c) => c.attends !== null);
-    const naRecepcao = responderam.filter((c) => c.attends === "ambos" || c.attends === "recepcao");
+    // O buffet não cobra pela criança de colo: só o trio "Na festa / Adultos
+    // / Crianças" segue essa regra. Os demais gráficos deste retrato viram
+    // insumo para lembrancinhas — aí toda criança conta, colo incluído.
+    const paraBuffet = convidados.filter(contaNoTotal);
+    const confirmadosBuffet = paraBuffet.filter((c) => c.invite_status === "confirmado");
+    const responderamBuffet = confirmadosBuffet.filter((c) => c.attends !== null);
+    const naRecepcao = responderamBuffet.filter((c) => c.attends === "ambos" || c.attends === "recepcao");
     const criancas = naRecepcao.filter((c) => c.age !== null && c.age < 12).length;
+
+    // Acompanhante já é cadastro próprio, então não é preciso filtrar por
+    // isso aqui — cada convidado, colo incluído, entra uma única vez.
+    const todos = convidados;
+    const confirmados = todos.filter((c) => c.invite_status === "confirmado");
+    const responderam = confirmados.filter((c) => c.attends !== null);
 
     const presenca: Fatia[] = PRESENCAS.map((chave) => ({
       chave,
@@ -58,17 +66,17 @@ export function RetratoConvidados({
       naRecepcao: naRecepcao.length,
       adultos: naRecepcao.length - criancas,
       criancas,
-      familias: new Set(contam.map((c) => c.group_id).filter(Boolean)).size,
+      familias: new Set(todos.map((c) => c.group_id).filter(Boolean)).size,
       presenca,
       responderam: responderam.length,
-      porVinculo: contarPor<Vinculo>(contam.map((c) => c.relationship_kind), VINCULOS, ROTULOS_VINCULO).sort((a, b) => b.valor - a.valor),
-      porFaixa: FAIXAS.map((faixa) => ({ chave: faixa, rotulo: faixa, valor: contam.filter((c) => c.age_range === faixa).length })).filter((f) => f.valor > 0),
-      porGenero: contarPor<Genero>(contam.map((c) => c.gender), ["feminino", "masculino", "outro"], { feminino: "Feminino", masculino: "Masculino", outro: "Outro" }),
+      porVinculo: contarPor<Vinculo>(todos.map((c) => c.relationship_kind), VINCULOS, ROTULOS_VINCULO).sort((a, b) => b.valor - a.valor),
+      porFaixa: FAIXAS.map((faixa) => ({ chave: faixa, rotulo: faixa, valor: todos.filter((c) => c.age_range === faixa).length })).filter((f) => f.valor > 0),
+      porGenero: contarPor<Genero>(todos.map((c) => c.gender), ["feminino", "masculino", "outro"], { feminino: "Feminino", masculino: "Masculino", outro: "Outro" }),
       porLado: (["noiva", "noivo"] as const)
-        .map((lado) => ({ chave: lado, rotulo: lado === "noiva" ? "Lado da noiva" : "Lado do noivo", valor: contam.filter((c) => c.side === lado).length }))
+        .map((lado) => ({ chave: lado, rotulo: lado === "noiva" ? "Lado da noiva" : "Lado do noivo", valor: todos.filter((c) => c.side === lado).length }))
         .filter((f) => f.valor > 0),
-      semVinculo: contam.filter((c) => !c.relationship_kind).length,
-      semFaixa: contam.filter((c) => !c.age_range).length,
+      semVinculo: todos.filter((c) => !c.relationship_kind).length,
+      semFaixa: todos.filter((c) => !c.age_range).length,
     };
   }, [convidados]);
 
