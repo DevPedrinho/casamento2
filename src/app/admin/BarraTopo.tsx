@@ -18,25 +18,25 @@ export type Pendencias = {
 
 type Item = { href: string; rotulo: string; icone: NomeIcone; chave?: keyof Pendencias };
 
-/** Os que ficam sempre à vista na barra. Mesas e Mural entraram aqui: o
- *  primeiro pesa mais perto do dia, o segundo é onde mora o aviso de
- *  denúncia pendente — escondido em "Mais", ninguém via o badge. */
+/** Os que ficam sempre à vista na barra. Presentes e Mural entraram aqui:
+ *  o segundo é onde mora o aviso de denúncia pendente — escondido em
+ *  "Mais", ninguém via o badge. */
 const PRINCIPAIS: Item[] = [
   { href: "/admin", rotulo: "Dashboard", icone: "dashboard" },
   { href: "/admin/convidados", rotulo: "Convidados", icone: "convidados", chave: "convidados" },
   { href: "/admin/checklist", rotulo: "Tarefas", icone: "tarefas", chave: "tarefas" },
   { href: "/admin/fornecedores", rotulo: "Fornecedores", icone: "fornecedores" },
   { href: "/admin/financeiro", rotulo: "Financeiro", icone: "financeiro", chave: "financeiro" },
-  { href: "/admin/mesas", rotulo: "Mesas", icone: "mesas" },
+  { href: "/admin/presentes", rotulo: "Presentes", icone: "presentes" },
   { href: "/admin/mural", rotulo: "Mural", icone: "mural", chave: "mural" },
 ];
 
 /** Os demais entram no menu "Mais" — 13 itens inline não cabem sem cortar. */
 const SECUNDARIOS: Item[] = [
+  { href: "/admin/mesas", rotulo: "Mesas", icone: "mesas" },
   { href: "/admin/personagens", rotulo: "Personagens", icone: "personagens" },
   { href: "/admin/cronograma", rotulo: "Cronograma", icone: "cronograma" },
   { href: "/admin/timeline", rotulo: "Timeline", icone: "timeline" },
-  { href: "/admin/presentes", rotulo: "Presentes", icone: "presentes" },
   { href: "/admin/locais", rotulo: "Local do evento", icone: "local" },
   { href: "/admin/configuracoes", rotulo: "Configurações", icone: "config" },
 ];
