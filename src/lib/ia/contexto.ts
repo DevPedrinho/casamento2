@@ -3,6 +3,7 @@ import "server-only";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { carregarCasamento } from "@/lib/configuracoes";
 import { reais } from "@/lib/formato";
+import { contaNoTotal } from "@/lib/idade";
 
 /**
  * O que cada assistente pode enxergar.
@@ -39,7 +40,7 @@ export async function contextoDoPainel(): Promise<string> {
     await Promise.all([
       supabase
         .from("guests")
-        .select("invite_status, companions_planned, access_code, code_sent_at, user_id, group_id, age, invited_by"),
+        .select("invite_status, companions_planned, access_code, code_sent_at, user_id, group_id, age, invited_by, is_admin, ceremony_role"),
       supabase.from("guest_groups").select("name, invite_limit"),
       supabase.from("tasks").select("title, status, due_date, phase, priority"),
       supabase.from("expenses").select("description, category, estimated_cents, contracted_cents, status, due_date, payments(amount_cents)"),
@@ -57,8 +58,8 @@ export async function contextoDoPainel(): Promise<string> {
   const lista = convidados.data ?? [];
   const conta = (s: string) => lista.filter((c) => c.invite_status === s).length;
   const confirmados = lista.filter((c) => c.invite_status === "confirmado");
-  // Acompanhante já é cadastro próprio; criança de até 3 anos não conta.
-  const pessoasConfirmadas = confirmados.filter((c) => c.age === null || c.age > 3).length;
+  // Acompanhante já é cadastro próprio; criança de até 3 anos e os noivos não contam.
+  const pessoasConfirmadas = confirmados.filter(contaNoTotal).length;
 
   const listaTarefas = tarefas.data ?? [];
   const atrasadas = listaTarefas.filter(

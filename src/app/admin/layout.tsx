@@ -60,7 +60,8 @@ async function carregarPendencias(
     supabase
       .from("guests")
       .select("id", { count: "exact", head: true })
-      .eq("invite_status", "nao_contatado"),
+      .eq("invite_status", "nao_contatado")
+      .eq("is_admin", false),
     supabase
       .from("tasks")
       .select("id", { count: "exact", head: true })

@@ -10,7 +10,7 @@ import {
   type StatusConvite,
 } from "@/lib/tipos";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
-import { contaNoTotal } from "@/lib/idade";
+import { ehDeColo } from "@/lib/idade";
 import { Botao } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
 import { Bloco, Indicador, Selo, Vazio } from "@/components/painel";
@@ -92,7 +92,7 @@ export function MapaDeMesas({
       papel: p.ceremony_role,
       titularId,
       eAcompanhante: p.id !== titularId,
-      colo: !contaNoTotal(p),
+      colo: ehDeColo(p),
     });
     return convidados
       .filter((c) => !c.invited_by)

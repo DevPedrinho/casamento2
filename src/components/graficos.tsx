@@ -91,7 +91,7 @@ export function BarrasInterativas({
                 <span className="titulo-serif text-xl text-oliva">
                   {moeda ? reais(item.valor) : item.valor}
                 </span>
-                {sufixo ? ` ${sufixo}` : ""} · {parte}%
+                {sufixo ? ` ${item.valor === 1 ? sufixo.replace(/s$/, "") : sufixo}` : ""} · {parte}%
               </span>
             </span>
 

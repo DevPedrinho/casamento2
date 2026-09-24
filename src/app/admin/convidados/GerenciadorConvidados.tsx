@@ -18,7 +18,7 @@ import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { confirmarExclusao, excluirConvidado } from "@/lib/excluirConvidado";
-import { contaNoTotal, temAcessoAoSite } from "@/lib/idade";
+import { contaNoTotal, ehDeColo, ehNoivo, faixaEtaria, ROTULOS_LEMBRANCA, temAcessoAoSite, tipoDeLembranca, type TipoLembranca } from "@/lib/idade";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
@@ -28,7 +28,7 @@ import { DetalheConvidado } from "./DetalheConvidado";
 import { Familias } from "./Familias";
 import { FichaConvidado, type AbaDaFicha } from "./FichaConvidado";
 import { FilaDeConvites } from "./FilaDeConvites";
-import { RetratoConvidados, type FiltroDoRetrato } from "./RetratoConvidados";
+import { NAO_INFORMADO, RetratoConvidados, type FiltroDoRetrato } from "./RetratoConvidados";
 import { TOM_STATUS } from "./tons";
 import type { FiltroInicial } from "./page";
 
@@ -76,13 +76,15 @@ export function GerenciadorConvidados({
   );
   const [excederam, setExcederam] = useState(false);
   const [grupo, setGrupo] = useState<string>("todos");
-  const [lado, setLado] = useState<"todos" | "noivo" | "noiva">(
+  const [lado, setLado] = useState<"todos" | "noivo" | "noiva" | typeof NAO_INFORMADO>(
     inicial.lado === "noivo" || inicial.lado === "noiva" ? inicial.lado : "todos",
   );
   const [vinculo, setVinculo] = useState<string>(inicial.vinculo ?? "todos");
   const [faixa, setFaixa] = useState<string>(inicial.faixa ?? "todos");
   const [presenca, setPresenca] = useState<string>(inicial.presenca ?? "todos");
   const [genero, setGenero] = useState<string>(inicial.genero ?? "todos");
+  /** Recorte vindo do gráfico "Tipo de lembrancinha". */
+  const [lembranca, setLembranca] = useState<string>("todos");
   const [ordem, setOrdem] = useState<Ordem>("nome");
   const [filtroCodigo, setFiltroCodigo] = useState<FiltroCodigo>("todos");
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -111,13 +113,13 @@ export function GerenciadorConvidados({
   }, [acompanhantes]);
 
   const resumo = useMemo(() => {
-    // Quem conta: acompanhante já é cadastro próprio; criança de colo fica fora.
+    // Quem conta: acompanhante já é cadastro próprio; criança de colo e os noivos ficam fora.
     const contam = convidados.filter(contaNoTotal);
     const conta = (s: StatusConvite) => contam.filter((c) => c.invite_status === s).length;
     const confirmados = contam.filter((c) => c.invite_status === "confirmado");
     return {
       total: contam.length,
-      colo: convidados.length - contam.length,
+      colo: convidados.filter((c) => !ehNoivo(c) && ehDeColo(c)).length,
       confirmados: confirmados.length,
       pessoas: confirmados.length,
       aguardando: conta("aguardando") + conta("convite_enviado") + conta("visualizou"),
@@ -144,11 +146,18 @@ export function GerenciadorConvidados({
       if (status !== "todos" && status !== "em_espera" && c.invite_status !== status) return false;
       if (excederam && (porTitular.get(c.id)?.length ?? 0) <= c.companions_planned) return false;
       if (grupo !== "todos" && c.group_id !== grupo) return false;
-      if (lado !== "todos" && c.side !== lado) return false;
-      if (vinculo !== "todos" && c.relationship_kind !== vinculo) return false;
-      if (faixa !== "todos" && c.age_range !== faixa) return false;
-      if (genero !== "todos" && c.gender !== genero) return false;
-      if (presenca !== "todos" && c.attends !== presenca) return false;
+      // Um recorte do retrato mostra o mesmo número da barra: os gráficos
+      // não contam os noivos, então a lista recortada também não.
+      const recorteDoRetrato =
+        lado !== "todos" || vinculo !== "todos" || faixa !== "todos" || genero !== "todos" ||
+        presenca !== "todos" || lembranca !== "todos";
+      if (recorteDoRetrato && ehNoivo(c)) return false;
+      if (lado !== "todos" && (c.side ?? NAO_INFORMADO) !== lado) return false;
+      if (vinculo !== "todos" && (c.relationship_kind ?? NAO_INFORMADO) !== vinculo) return false;
+      if (faixa !== "todos" && (faixaEtaria(c) ?? NAO_INFORMADO) !== faixa) return false;
+      if (genero !== "todos" && (c.gender ?? NAO_INFORMADO) !== genero) return false;
+      if (presenca !== "todos" && situacaoDePresenca(c) !== presenca) return false;
+      if (lembranca !== "todos" && tipoDeLembranca(c) !== lembranca) return false;
       if (filtroCodigo === "sem_codigo" && (c.access_code || !temAcessoAoSite(c))) return false;
       if (filtroCodigo === "nao_enviado" && (!c.access_code || c.code_sent_at)) return false;
       if (filtroCodigo === "enviado" && !c.code_sent_at) return false;
@@ -176,7 +185,7 @@ export function GerenciadorConvidados({
       if (ordem === "idade") return (b.age ?? -1) - (a.age ?? -1);
       return a.full_name.localeCompare(b.full_name, "pt-BR");
     });
-  }, [busca, convidados, excederam, faixa, filtroCodigo, genero, grupo, lado, ordem, porTitular, presenca, status, vinculo]);
+  }, [busca, convidados, excederam, faixa, filtroCodigo, genero, grupo, lado, lembranca, ordem, porTitular, presenca, status, vinculo]);
 
   function alternarSelecao(id: string) {
     setSelecionados((atual) => {
@@ -189,11 +198,23 @@ export function GerenciadorConvidados({
 
   /** Um clique no retrato: aplica o filtro daquele eixo e leva até a lista. */
   function filtrarPeloRetrato(f: FiltroDoRetrato) {
-    if (f.eixo === "vinculo") setVinculo(f.valor);
-    if (f.eixo === "faixa") setFaixa(f.valor);
-    if (f.eixo === "genero") setGenero(f.valor);
-    if (f.eixo === "presenca") setPresenca(f.valor);
-    if (f.eixo === "lado") setLado(f.valor === "noiva" || f.valor === "noivo" ? f.valor : "todos");
+    // Zera os outros recortes: a lista precisa mostrar exatamente o número
+    // da barra tocada, sem um filtro antigo escondido mudando a conta.
+    setBusca("");
+    setStatus("todos");
+    setFiltroCodigo("todos");
+    setExcederam(false);
+    setGrupo("todos");
+    setVinculo(f.eixo === "vinculo" ? f.valor : "todos");
+    setFaixa(f.eixo === "faixa" ? f.valor : "todos");
+    setGenero(f.eixo === "genero" ? f.valor : "todos");
+    setPresenca(f.eixo === "presenca" ? f.valor : "todos");
+    setLembranca(f.eixo === "lembranca" ? f.valor : "todos");
+    setLado(
+      f.eixo === "lado" && (f.valor === "noiva" || f.valor === "noivo" || f.valor === NAO_INFORMADO)
+        ? f.valor
+        : "todos",
+    );
     listaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -226,18 +247,33 @@ export function GerenciadorConvidados({
       limpar: () => setFiltroCodigo("todos"),
     },
     vinculo !== "todos" && {
-      rotulo: ROTULOS_VINCULO[vinculo as keyof typeof ROTULOS_VINCULO] ?? vinculo,
+      rotulo: vinculo === NAO_INFORMADO
+        ? "Vínculo não informado"
+        : ROTULOS_VINCULO[vinculo as keyof typeof ROTULOS_VINCULO] ?? vinculo,
       limpar: () => setVinculo("todos"),
     },
-    faixa !== "todos" && { rotulo: faixa, limpar: () => setFaixa("todos") },
+    faixa !== "todos" && {
+      rotulo: faixa === NAO_INFORMADO ? "Faixa etária não informada" : faixa,
+      limpar: () => setFaixa("todos"),
+    },
     presenca !== "todos" && {
-      rotulo: ROTULOS_PRESENCA_CURTO[presenca as keyof typeof ROTULOS_PRESENCA_CURTO] ?? presenca,
+      rotulo:
+        presenca === "nao_vai" ? "Não vão"
+        : presenca === "sem_resposta" ? "Ainda sem resposta"
+        : `Confirmados · ${ROTULOS_PRESENCA_CURTO[presenca as keyof typeof ROTULOS_PRESENCA_CURTO] ?? presenca}`,
       limpar: () => setPresenca("todos"),
     },
-    genero !== "todos" && { rotulo: genero, limpar: () => setGenero("todos") },
+    genero !== "todos" && {
+      rotulo: genero === NAO_INFORMADO ? "Gênero não informado" : genero,
+      limpar: () => setGenero("todos"),
+    },
     lado !== "todos" && {
-      rotulo: lado === "noiva" ? "Lado da noiva" : "Lado do noivo",
+      rotulo: lado === "noiva" ? "Lado da noiva" : lado === "noivo" ? "Lado do noivo" : "Lado não informado",
       limpar: () => setLado("todos"),
+    },
+    lembranca !== "todos" && {
+      rotulo: `Lembrancinha · ${ROTULOS_LEMBRANCA[lembranca as TipoLembranca] ?? lembranca}`,
+      limpar: () => setLembranca("todos"),
     },
   ].filter(Boolean) as { rotulo: string; limpar: () => void }[];
 
@@ -432,7 +468,7 @@ export function GerenciadorConvidados({
 
       {/* ---------- Os números, numa faixa só ---------- */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-sm border border-terra/20 bg-creme-claro px-3 py-2.5" role="group" aria-label="Filtrar pelos números">
-        <Numero rotulo="Convidados" valor={resumo.total} detalhe={resumo.colo > 0 ? `+${resumo.colo} no colo` : undefined} ativo={semRecorteDeStatus} aoClicar={() => recortarPor({})} />
+        <Numero rotulo="Convidados" valor={resumo.total} detalhe={resumo.colo > 0 ? `sem os noivos · +${resumo.colo} no colo` : "sem os noivos"} ativo={semRecorteDeStatus} aoClicar={() => recortarPor({})} />
         <Numero rotulo="Confirmados" valor={resumo.confirmados} tom="oliva" ativo={status === "confirmado"} aoClicar={() => recortarPor({ status: "confirmado" })} />
         <Numero rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" ativo={status === "em_espera"} aoClicar={() => recortarPor({ status: "em_espera" })} />
         <Numero rotulo="Não irão" valor={resumo.naoVao} ativo={status === "nao_vai"} aoClicar={() => recortarPor({ status: "nao_vai" })} />
@@ -964,4 +1000,15 @@ function resumoDaResposta(convidado: ConvidadoCompleto, acompanhantes: Acompanha
     convidado.mesa?.name ?? null,
   ];
   return partes.filter(Boolean).join(" · ");
+}
+
+/**
+ * A fatia de presença do retrato em que o convidado cai: a escolha de quem
+ * confirmou, "não vai", ou "sem resposta" para o resto — inclusive quem
+ * confirmou sem dizer a que vai.
+ */
+function situacaoDePresenca(c: ConvidadoCompleto): string {
+  if (c.invite_status === "nao_vai") return "nao_vai";
+  if (c.invite_status === "confirmado" && c.attends) return c.attends;
+  return "sem_resposta";
 }

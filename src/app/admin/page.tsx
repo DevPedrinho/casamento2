@@ -17,7 +17,7 @@ import {
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
 import { diasAte, reais } from "@/lib/formato";
-import { contaNoTotal } from "@/lib/idade";
+import { contaNoTotal, ehDeColo, ehNoivo } from "@/lib/idade";
 import { AnelCompacto, Bloco } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
 import { ResumoModulos, type DadosResumo, type NumeroChave } from "./ResumoModulos";
@@ -32,7 +32,7 @@ export default async function Dashboard() {
     await Promise.all([
       supabase.from("guests").select(
         `id, full_name, invite_status, companions_planned, group_id, invited_by, next_action,
-         next_action_at, attends, gender, age, age_range, relationship_kind, side`,
+         next_action_at, attends, gender, age, age_range, relationship_kind, side, is_admin, ceremony_role`,
       ),
       supabase.from("tasks").select("*").order("phase_order").order("sort_order"),
       supabase.from("expenses").select("*, payments(*)"),
@@ -44,9 +44,9 @@ export default async function Dashboard() {
       supabase.from("event_venues").select("*").order("sort_order"),
     ]);
 
-  // Acompanhante já é cadastro próprio; criança de colo fica fora das contas.
+  // Acompanhante já é cadastro próprio; criança de colo e os noivos ficam fora das contas.
   const listaConvidados = (convidados.data ?? []).filter(contaNoTotal);
-  const noColo = (convidados.data ?? []).length - listaConvidados.length;
+  const noColo = (convidados.data ?? []).filter((c) => !ehNoivo(c) && ehDeColo(c)).length;
   const listaTarefas = (tarefas.data ?? []) as Tarefa[];
   const listaDespesas = (despesas.data ?? []) as Despesa[];
   const listaFornecedores = (fornecedores.data ?? []) as Fornecedor[];
