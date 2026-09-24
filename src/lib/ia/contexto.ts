@@ -35,7 +35,7 @@ export async function contextoDoPainel(): Promise<string> {
   const casamento = await carregarCasamento();
   const dia = hoje();
 
-  const [convidados, grupos, tarefas, despesas, fornecedores, cronograma, presentes, orcamento] =
+  const [convidados, grupos, tarefas, despesas, fornecedores, cronograma, presentes, orcamento, locais] =
     await Promise.all([
       supabase
         .from("guests")
@@ -47,6 +47,9 @@ export async function contextoDoPainel(): Promise<string> {
       supabase.from("day_schedule").select("starts_at, title, audience, owner").order("starts_at"),
       supabase.from("gifts").select("title, price_cents, is_active"),
       supabase.from("wedding_settings").select("budget_total_cents").eq("id", true).maybeSingle(),
+      // Cerimônia e recepção são locais e horários diferentes: cada um mora
+      // em /admin/locais, não no cadastro geral do site.
+      supabase.from("event_venues").select("kind, name, address, city, starts_at"),
     ]);
 
   const orcamentoTotal = orcamento.data?.budget_total_cents ?? 0;
@@ -83,11 +86,19 @@ export async function contextoDoPainel(): Promise<string> {
     bloco("O casamento", [
       `Noivos: ${casamento.noiva} e ${casamento.noivo}`,
       `Data: ${casamento.dataExtenso} (faltam ${diasAteOCasamento(casamento.dataISO)} dias)`,
-      `Cerimônia às ${casamento.horaCerimonia}, recepção às ${casamento.horaRecepcao}`,
-      casamento.local.nome && `Local: ${casamento.local.nome} — ${casamento.local.cidade}`,
       `Traje: ${casamento.trajes}`,
       casamento.prazoRsvp && `Prazo para confirmar presença: ${casamento.prazoRsvp}`,
     ]),
+
+    bloco(
+      "Cerimônia e recepção",
+      (locais.data ?? []).map(
+        (l) =>
+          `- ${l.kind === "cerimonia" ? "Cerimônia" : "Recepção"}: ${l.name}${l.starts_at ? ` às ${l.starts_at}` : ""}${
+            [l.address, l.city].filter(Boolean).length ? ` — ${[l.address, l.city].filter(Boolean).join(", ")}` : ""
+          }`,
+      ),
+    ),
 
     bloco("Convidados", [
       `Total na lista: ${lista.length}`,
@@ -212,7 +223,6 @@ export async function contextoDoConvidado(): Promise<string> {
       `Lema do casal: ${casamento.lema}`,
       `Frase do convite: ${casamento.frase}`,
       `Data: ${casamento.dataExtenso} (faltam ${diasAteOCasamento(casamento.dataISO)} dias)`,
-      `Cerimônia às ${casamento.horaCerimonia}; recepção às ${casamento.horaRecepcao}`,
       `Traje: ${casamento.trajes}`,
       casamento.prazoRsvp && `Prazo para confirmar presença: ${casamento.prazoRsvp}`,
       casamento.regrasAcompanhante && `Regra dos acompanhantes: ${casamento.regrasAcompanhante}`,

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import type { ConfiguracoesSite } from "@/lib/tipos";
@@ -130,9 +131,9 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
         </div>
       </Bloco>
 
-      {/* ---------- Quando e onde ---------- */}
-      <Bloco titulo="Data, horários e local" descricao="Alimentam a contagem regressiva e o bloco do grande dia.">
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ---------- Quando ---------- */}
+      <Bloco titulo="Data e traje" descricao="A data e a hora alimentam a contagem regressiva e a data mostrada no site.">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div>
             <Rotulo htmlFor="data">Data</Rotulo>
             <input id="data" type="date" className="campo" value={dataLocal}
@@ -144,41 +145,19 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
               onChange={(e) => mudarQuando(dataLocal, e.target.value)} />
           </div>
           <div>
-            <Rotulo htmlFor="hora-cerimonia">Como escrever a cerimônia</Rotulo>
-            <input id="hora-cerimonia" className="campo" placeholder="16h00"
-              value={form.ceremony_time ?? ""} onChange={(e) => set("ceremony_time", e.target.value)} />
-          </div>
-          <div>
-            <Rotulo htmlFor="hora-recepcao">Como escrever a recepção</Rotulo>
-            <input id="hora-recepcao" className="campo" placeholder="18h00"
-              value={form.reception_time ?? ""} onChange={(e) => set("reception_time", e.target.value)} />
-          </div>
-          <div>
             <Rotulo htmlFor="trajes">Traje</Rotulo>
             <input id="trajes" className="campo" value={form.dress_code ?? ""}
               onChange={(e) => set("dress_code", e.target.value)} />
           </div>
-          <div>
-            <Rotulo htmlFor="local-nome">Local</Rotulo>
-            <input id="local-nome" className="campo" value={form.venue_name ?? ""}
-              onChange={(e) => set("venue_name", e.target.value)} />
-          </div>
-          <div>
-            <Rotulo htmlFor="local-endereco">Endereço</Rotulo>
-            <input id="local-endereco" className="campo" value={form.venue_address ?? ""}
-              onChange={(e) => set("venue_address", e.target.value)} />
-          </div>
-          <div>
-            <Rotulo htmlFor="local-cidade">Cidade</Rotulo>
-            <input id="local-cidade" className="campo" value={form.venue_city ?? ""}
-              onChange={(e) => set("venue_city", e.target.value)} />
-          </div>
-          <div className="sm:col-span-2 lg:col-span-4">
-            <Rotulo htmlFor="local-maps">Link do Google Maps</Rotulo>
-            <input id="local-maps" className="campo" placeholder="https://maps.app.goo.gl/…"
-              value={form.venue_maps_url ?? ""} onChange={(e) => set("venue_maps_url", e.target.value)} />
-          </div>
         </div>
+        <p className="mt-5 text-sm leading-relaxed text-terra">
+          Horário, endereço e link do mapa da cerimônia e da recepção — que são locais e
+          horários diferentes — ficam em{" "}
+          <Link href="/admin/locais" className="text-oliva underline underline-offset-4">
+            Local do evento
+          </Link>
+          , no menu "Mais".
+        </p>
       </Bloco>
 
       {/* ---------- Confirmação ---------- */}

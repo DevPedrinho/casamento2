@@ -28,6 +28,8 @@ export default async function Home() {
   const locais = (data ?? []) as LocalEvento[];
   const momentos = (cronograma ?? []) as MomentoDoDia[];
 
+  // Cerimônia e recepção vêm de /admin/locais — a tabela nasce com as duas
+  // linhas e não há como apagá-las por ali, então elas sempre existem.
   const detalhes = [
     ...locais.map((local) => ({
       titulo: ROTULOS_LOCAL[local.kind],
@@ -38,19 +40,6 @@ export default async function Home() {
       ],
       mapsUrl: local.maps_url,
     })),
-    ...(locais.length === 0 && CASAMENTO.local.nome
-      ? [
-          {
-            titulo: "Cerimônia",
-            linhas: [
-              `às ${CASAMENTO.horaCerimonia}`,
-              CASAMENTO.local.nome,
-              [CASAMENTO.local.endereco, CASAMENTO.local.cidade].filter(Boolean).join(" — "),
-            ],
-            mapsUrl: CASAMENTO.local.mapsUrl || null,
-          },
-        ]
-      : []),
     {
       titulo: "Traje",
       linhas: [CASAMENTO.trajes, "Venha confortável —", "a festa é longa"],
