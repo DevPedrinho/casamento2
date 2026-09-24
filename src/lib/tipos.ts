@@ -35,6 +35,7 @@ export type Vinculo =
   | "amigos"
   | "trabalho"
   | "padrinhos"
+  | "acompanhante"
   | "crianca"
   | "outro";
 
@@ -44,6 +45,7 @@ export const ROTULOS_VINCULO: Record<Vinculo, string> = {
   amigos: "Amigos",
   trabalho: "Trabalho",
   padrinhos: "Padrinhos e madrinhas",
+  acompanhante: "Acompanhante",
   crianca: "Criança",
   outro: "Outro",
 };
@@ -54,6 +56,7 @@ export const VINCULOS: Vinculo[] = [
   "amigos",
   "trabalho",
   "padrinhos",
+  "acompanhante",
   "crianca",
   "outro",
 ];
