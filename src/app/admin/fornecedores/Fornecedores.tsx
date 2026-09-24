@@ -527,6 +527,17 @@ function QuadroFornecedores({
         {ETAPAS_FUNIL.map((etapa) => {
           const itens = fornecedores.filter((f) => f.status === etapa);
           const fechado = itens.reduce((s, f) => s + (f.agreed_cents ?? 0), 0);
+          // Quem foi descartado quase nunca tem valor fechado: o que ele
+          // valia é o orçamento que mandou. A soma dá ideia do que ficou
+          // fora — não é economia exata, que seria a diferença para o
+          // contratado da mesma categoria.
+          const recusado = itens.reduce((s, f) => s + (f.quoted_cents ?? f.agreed_cents ?? 0), 0);
+          const totalDaColuna =
+            etapa === "contratado" && fechado > 0
+              ? `${reais(fechado)} fechados`
+              : etapa === "descartado" && recusado > 0
+                ? `${reais(recusado)} em orçamentos recusados`
+                : "";
           return (
             <section
               key={etapa}
@@ -547,7 +558,7 @@ function QuadroFornecedores({
                 <span className="text-terra/85 lining-nums">{itens.length}</span>
               </h3>
               <p className="mb-3 min-h-5 px-1 text-xs text-terra/85 tabular-nums lining-nums">
-                {fechado > 0 ? `${reais(fechado)} fechados` : ""}
+                {totalDaColuna}
               </p>
 
               {itens.length === 0 ? (
