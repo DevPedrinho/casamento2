@@ -153,10 +153,10 @@ export function Configuracoes({ config }: { config: ConfiguracoesSite }) {
         <p className="mt-5 text-sm leading-relaxed text-terra">
           Horário, endereço e link do mapa da cerimônia e da recepção — que são locais e
           horários diferentes — ficam em{" "}
-          <Link href="/admin/locais" className="text-oliva underline underline-offset-4">
+          <Link href="#local-do-evento" className="text-oliva underline underline-offset-4">
             Local do evento
           </Link>
-          , no menu "Mais".
+          , no fim desta página.
         </p>
       </Bloco>
 

@@ -48,7 +48,7 @@ export async function contextoDoPainel(): Promise<string> {
       supabase.from("gifts").select("title, price_cents, is_active"),
       supabase.from("wedding_settings").select("budget_total_cents").eq("id", true).maybeSingle(),
       // Cerimônia e recepção são locais e horários diferentes: cada um mora
-      // em /admin/locais, não no cadastro geral do site.
+      // em Configurações → Local do evento, com horário e endereço próprios.
       supabase.from("event_venues").select("kind, name, address, city, starts_at"),
     ]);
 

@@ -9,7 +9,7 @@ import { Contagem } from "@/components/Contagem";
 import { Divisor, FaixaVersalete } from "@/components/Ornamentos";
 import { CronogramaPublico } from "@/components/CronogramaPublico";
 
-// Os locais vêm do banco: os noivos editam em /admin/locais.
+// Os locais vêm do banco: os noivos editam em Configurações → Local do evento.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
@@ -28,7 +28,7 @@ export default async function Home() {
   const locais = (data ?? []) as LocalEvento[];
   const momentos = (cronograma ?? []) as MomentoDoDia[];
 
-  // Cerimônia e recepção vêm de /admin/locais — a tabela nasce com as duas
+  // Cerimônia e recepção vêm de Local do evento — a tabela nasce com as duas
   // linhas e não há como apagá-las por ali, então elas sempre existem.
   const detalhes = [
     ...locais.map((local) => ({

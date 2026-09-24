@@ -31,13 +31,12 @@ const PRINCIPAIS: Item[] = [
   { href: "/admin/mural", rotulo: "Mural", icone: "mural", chave: "mural" },
 ];
 
-/** Os demais entram no menu "Mais" — 13 itens inline não cabem sem cortar. */
+/** Os demais entram no menu "Mais". Local do evento mora dentro de Configurações. */
 const SECUNDARIOS: Item[] = [
   { href: "/admin/mesas", rotulo: "Mesas", icone: "mesas" },
   { href: "/admin/personagens", rotulo: "Personagens", icone: "personagens" },
   { href: "/admin/cronograma", rotulo: "Cronograma", icone: "cronograma" },
   { href: "/admin/timeline", rotulo: "Timeline", icone: "timeline" },
-  { href: "/admin/locais", rotulo: "Local do evento", icone: "local" },
   { href: "/admin/configuracoes", rotulo: "Configurações", icone: "config" },
 ];
 

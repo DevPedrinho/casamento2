@@ -9,22 +9,31 @@ import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco } from "@/components/painel";
 
+/**
+ * Local do evento, dentro de Configurações. Fica fora do formulário geral
+ * da página porque cada local tem o próprio formulário e botão de salvar
+ * — e um formulário não pode morar dentro de outro.
+ */
 export function Locais({ locais }: { locais: LocalEvento[] }) {
   return (
-    <div className="space-y-8">
+    <section id="local-do-evento" aria-labelledby="titulo-local-do-evento" className="scroll-mt-24 space-y-8">
       <header>
         <p className="versalete titulo-serif text-xs text-terra">Informações do evento</p>
-        <h1 className="titulo-serif mt-2 text-3xl text-oliva sm:text-4xl">Onde é a festa</h1>
+        <h2 id="titulo-local-do-evento" className="titulo-serif mt-2 text-3xl text-oliva">
+          Local do evento
+        </h2>
         <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
-          Estes dados aparecem para os convidados na página inicial e na área
-          logada. O que estiver em branco simplesmente não é exibido.
+          Cerimônia e recepção são locais e horários diferentes: cada um tem o
+          seu horário, endereço e link do mapa. Aparecem para os convidados na
+          página inicial e na área logada; o que estiver em branco não é
+          exibido. Cada local salva no próprio botão.
         </p>
       </header>
 
       {locais.map((local) => (
         <FormLocal key={local.id} local={local} />
       ))}
-    </div>
+    </section>
   );
 }
 

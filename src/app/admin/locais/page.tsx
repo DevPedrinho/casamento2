@@ -1,11 +1,6 @@
-import { criarClienteServidor } from "@/lib/supabase/servidor";
-import type { LocalEvento } from "@/lib/tipos";
-import { Locais } from "./Locais";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function LocaisPage() {
-  const supabase = await criarClienteServidor();
-  const { data } = await supabase.from("event_venues").select("*").order("sort_order");
-  return <Locais locais={(data ?? []) as LocalEvento[]} />;
+/** Local do evento agora mora dentro de Configurações; o endereço antigo leva até lá. */
+export default function LocaisPage() {
+  redirect("/admin/configuracoes#local-do-evento");
 }
