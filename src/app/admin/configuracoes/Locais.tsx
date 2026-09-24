@@ -5,9 +5,7 @@ import { useState, type FormEvent } from "react";
 import { ROTULOS_LOCAL, type LocalEvento } from "@/lib/tipos";
 import { linkSeguro } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
-import { Botao } from "@/components/Botao";
-import { Aviso, Rotulo } from "@/components/CartaoForm";
-import { Bloco } from "@/components/painel";
+import { Ajuda, RodapeSalvar, RotuloConfig, SecaoConfig, type EstadoSalvar } from "./ui";
 
 /**
  * Local do evento, dentro de Configurações. Fica fora do formulário geral
@@ -16,17 +14,16 @@ import { Bloco } from "@/components/painel";
  */
 export function Locais({ locais }: { locais: LocalEvento[] }) {
   return (
-    <section id="local-do-evento" aria-labelledby="titulo-local-do-evento" className="scroll-mt-24 space-y-8">
-      <header>
-        <p className="versalete titulo-serif text-xs text-terra">Informações do evento</p>
-        <h2 id="titulo-local-do-evento" className="titulo-serif mt-2 text-3xl text-oliva">
+    <section id="local-do-evento" aria-labelledby="titulo-local-do-evento" className="scroll-mt-40 space-y-5">
+      <header className="px-1">
+        <p className="versalete titulo-serif text-sm text-lavanda">Informações do evento</p>
+        <h2 id="titulo-local-do-evento" className="titulo-serif mt-1 text-3xl text-oliva sm:text-4xl">
           Local do evento
         </h2>
-        <p className="mt-3 max-w-2xl text-base leading-relaxed text-terra">
-          Cerimônia e recepção são locais e horários diferentes: cada um tem o
-          seu horário, endereço e link do mapa. Aparecem para os convidados na
-          página inicial e na área logada; o que estiver em branco não é
-          exibido. Cada local salva no próprio botão.
+        <p className="mt-2 max-w-3xl text-base leading-relaxed text-terra">
+          Cerimônia e recepção são locais e horários diferentes: cada um tem o seu
+          horário, endereço e link do mapa. Aparece para os convidados na página
+          inicial e na área logada; o que estiver em branco não é exibido.
         </p>
       </header>
 
@@ -51,26 +48,26 @@ function FormLocal({ local }: { local: LocalEvento }) {
     guest_info: local.guest_info ?? "",
     notes: local.notes ?? "",
   });
-  const [erro, setErro] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
+  /** O que está gravado: contra ele o rodapé sabe se há o que salvar. */
+  const [salvo, setSalvo] = useState(form);
+  const [estado, setEstado] = useState<EstadoSalvar>(null);
   const [salvando, setSalvando] = useState(false);
+  const sujo = JSON.stringify(form) !== JSON.stringify(salvo);
 
   function set<K extends keyof typeof form>(campo: K, valor: string) {
     setForm((f) => ({ ...f, [campo]: valor }));
-    setOk(false);
   }
 
   async function salvar(evento: FormEvent) {
     evento.preventDefault();
-    setErro(null);
-    setOk(false);
+    setEstado(null);
 
     if (!form.name.trim()) {
-      setErro("O nome do local é obrigatório.");
+      setEstado({ tipo: "erro", mensagem: "O nome do local é obrigatório." });
       return;
     }
     if (form.maps_url.trim() && !linkSeguro(form.maps_url)) {
-      setErro("O link do mapa precisa começar com https://");
+      setEstado({ tipo: "erro", mensagem: "O link do mapa precisa começar com https://" });
       return;
     }
 
@@ -95,86 +92,88 @@ function FormLocal({ local }: { local: LocalEvento }) {
 
     setSalvando(false);
     if (error) {
-      setErro("Não foi possível salvar. Tente de novo.");
+      setEstado({ tipo: "erro", mensagem: "Não foi possível salvar. Tente de novo." });
       return;
     }
-    setOk(true);
+    setSalvo(form);
+    setEstado({ tipo: "ok" });
     router.refresh();
   }
 
+  const id = local.id;
   return (
-    <Bloco titulo={ROTULOS_LOCAL[local.kind]} descricao={`Dados do local da ${ROTULOS_LOCAL[local.kind].toLowerCase()}.`}>
-      <form onSubmit={salvar} className="space-y-5">
-        {erro && <Aviso tipo="erro">{erro}</Aviso>}
-        {ok && <Aviso tipo="ok">Salvo!</Aviso>}
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+    <SecaoConfig
+      id={`local-${local.kind}`}
+      titulo={ROTULOS_LOCAL[local.kind]}
+      descricao={`Onde e quando é a ${ROTULOS_LOCAL[local.kind].toLowerCase()}.`}
+      onSubmit={salvar}
+      rodape={<RodapeSalvar sujo={sujo} salvando={salvando} estado={estado} />}
+    >
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-[2fr_1fr]">
           <div>
-            <Rotulo htmlFor={`nome-${local.id}`}>Nome do local</Rotulo>
-            <input id={`nome-${local.id}`} required className="campo" value={form.name}
+            <RotuloConfig htmlFor={`nome-${id}`}>Nome do local</RotuloConfig>
+            <input id={`nome-${id}`} required className="campo" value={form.name}
               onChange={(e) => set("name", e.target.value)} />
           </div>
           <div>
-            <Rotulo htmlFor={`hora-${local.id}`}>Horário</Rotulo>
-            <input id={`hora-${local.id}`} className="campo" placeholder="16h00"
+            <RotuloConfig htmlFor={`hora-${id}`}>Horário</RotuloConfig>
+            <input id={`hora-${id}`} className="campo" placeholder="16h00"
               value={form.starts_at} onChange={(e) => set("starts_at", e.target.value)} />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-[2fr_1fr]">
           <div>
-            <Rotulo htmlFor={`end-${local.id}`}>Endereço</Rotulo>
-            <input id={`end-${local.id}`} className="campo" placeholder="Rua, número, bairro"
+            <RotuloConfig htmlFor={`end-${id}`}>Endereço</RotuloConfig>
+            <input id={`end-${id}`} className="campo" placeholder="Rua, número, bairro"
               value={form.address} onChange={(e) => set("address", e.target.value)} />
           </div>
           <div>
-            <Rotulo htmlFor={`cid-${local.id}`}>Cidade</Rotulo>
-            <input id={`cid-${local.id}`} className="campo" value={form.city}
+            <RotuloConfig htmlFor={`cid-${id}`}>Cidade</RotuloConfig>
+            <input id={`cid-${id}`} className="campo" value={form.city}
               onChange={(e) => set("city", e.target.value)} />
           </div>
         </div>
 
         <div>
-          <Rotulo htmlFor={`maps-${local.id}`}>Link de localização (Google Maps)</Rotulo>
-          <input id={`maps-${local.id}`} type="url" className="campo" placeholder="https://maps.app.goo.gl/…"
+          <RotuloConfig htmlFor={`maps-${id}`}>Link de localização (Google Maps)</RotuloConfig>
+          <input id={`maps-${id}`} type="url" className="campo" placeholder="https://maps.app.goo.gl/…"
             value={form.maps_url} onChange={(e) => set("maps_url", e.target.value)} />
+          <Ajuda>Vira o botão &ldquo;Ver no mapa&rdquo; no cartão da página inicial.</Ajuda>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           <div>
-            <Rotulo htmlFor={`insta-${local.id}`}>Instagram</Rotulo>
-            <input id={`insta-${local.id}`} className="campo" placeholder="@perfil"
+            <RotuloConfig htmlFor={`insta-${id}`}>Instagram</RotuloConfig>
+            <input id={`insta-${id}`} className="campo" placeholder="@perfil"
               value={form.instagram} onChange={(e) => set("instagram", e.target.value)} />
           </div>
           <div>
-            <Rotulo htmlFor={`fone-${local.id}`}>Telefone</Rotulo>
-            <input id={`fone-${local.id}`} className="campo" value={form.phone}
+            <RotuloConfig htmlFor={`fone-${id}`}>Telefone</RotuloConfig>
+            <input id={`fone-${id}`} className="campo" value={form.phone}
               onChange={(e) => set("phone", e.target.value)} />
           </div>
           <div>
-            <Rotulo htmlFor={`resp-${local.id}`}>Contato responsável</Rotulo>
-            <input id={`resp-${local.id}`} className="campo" value={form.contact_name}
+            <RotuloConfig htmlFor={`resp-${id}`}>Contato responsável</RotuloConfig>
+            <input id={`resp-${id}`} className="campo" value={form.contact_name}
               onChange={(e) => set("contact_name", e.target.value)} />
           </div>
         </div>
 
         <div>
-          <Rotulo htmlFor={`info-${local.id}`}>Informação para os convidados</Rotulo>
-          <textarea id={`info-${local.id}`} rows={2} className="campo resize-y"
+          <RotuloConfig htmlFor={`info-${id}`}>Informação para os convidados</RotuloConfig>
+          <textarea id={`info-${id}`} rows={3} className="campo resize-y"
             placeholder="Aparece no site para quem foi convidado"
             value={form.guest_info} onChange={(e) => set("guest_info", e.target.value)} />
         </div>
 
         <div>
-          <Rotulo htmlFor={`obs-${local.id}`}>Observações internas</Rotulo>
-          <textarea id={`obs-${local.id}`} rows={2} className="campo resize-y"
+          <RotuloConfig htmlFor={`obs-${id}`}>Observações internas</RotuloConfig>
+          <textarea id={`obs-${id}`} rows={3} className="campo resize-y"
             placeholder="Só vocês veem" value={form.notes} onChange={(e) => set("notes", e.target.value)} />
         </div>
-
-        <Botao type="submit" disabled={salvando}>
-          {salvando ? "Salvando…" : "Salvar"}
-        </Botao>
-      </form>
-    </Bloco>
+      </div>
+    </SecaoConfig>
   );
 }

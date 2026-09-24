@@ -12,16 +12,18 @@ export default async function ConfiguracoesPage() {
     supabase.from("event_venues").select("*").order("sort_order"),
   ]);
 
-  return (
-    <div className="space-y-14">
-      {data ? (
-        <Configuracoes config={data as ConfiguracoesSite} />
-      ) : (
+  const localDoEvento = <Locais locais={(locais ?? []) as LocalEvento[]} />;
+
+  if (!data) {
+    return (
+      <div className="space-y-10">
         <p className="titulo-serif py-10 text-center text-xl text-terra italic">
           As configurações ainda não foram criadas no banco.
         </p>
-      )}
-      <Locais locais={(locais ?? []) as LocalEvento[]} />
-    </div>
-  );
+        {localDoEvento}
+      </div>
+    );
+  }
+
+  return <Configuracoes config={data as ConfiguracoesSite} localDoEvento={localDoEvento} />;
 }
