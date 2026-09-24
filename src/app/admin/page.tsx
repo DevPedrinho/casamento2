@@ -17,7 +17,7 @@ import {
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
 import { diasAte, reais } from "@/lib/formato";
-import { contaNoTotal, ehDeColo, ehNoivo } from "@/lib/idade";
+import { contaNoTotal, ehDeColo, ehNoivo, vagasPorTitular } from "@/lib/idade";
 import { AnelCompacto, Bloco } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
 import { ResumoModulos, type DadosResumo, type NumeroChave } from "./ResumoModulos";
@@ -54,6 +54,13 @@ export default async function Dashboard() {
 
   // ---------- Convidados ----------
   const conta = (s: StatusConvite) => listaConvidados.filter((c) => c.invite_status === s).length;
+  // Acompanhante previsto e ainda sem nome entra no total e no status do convite dele.
+  const vagas = vagasPorTitular(convidados.data ?? []);
+  const vagasNo = (s: StatusConvite) =>
+    (convidados.data ?? [])
+      .filter((c) => c.invite_status === s)
+      .reduce((soma, c) => soma + (vagas.porTitular.get(c.id) ?? 0), 0);
+  const totalConvidados = listaConvidados.length + vagas.total;
   const confirmados = listaConvidados.filter((c) => c.invite_status === "confirmado");
   const familiasComGrupo = new Set(listaConvidados.map((c) => c.group_id).filter(Boolean)).size;
 
@@ -187,16 +194,17 @@ export default async function Dashboard() {
     0,
   );
   const resumoConvidados: DadosResumo["convidados"] = {
-    total: listaConvidados.length,
+    total: totalConvidados,
     fatias: [
       { chave: "confirmado", rotulo: "Confirmados", valor: confirmados.length, href: "/admin/convidados?status=confirmado" },
-      { chave: "em_espera", rotulo: "Aguardando resposta", valor: listaConvidados.filter((c) => emEspera.includes(c.invite_status)).length, href: "/admin/convidados?status=em_espera" },
+      { chave: "em_espera", rotulo: "Aguardando resposta", valor: listaConvidados.filter((c) => emEspera.includes(c.invite_status)).length + emEspera.reduce((s, st) => s + vagasNo(st), 0), href: "/admin/convidados?status=em_espera" },
       { chave: "nao_vai", rotulo: "Não irão", valor: conta("nao_vai"), href: "/admin/convidados?status=nao_vai" },
-      { chave: "nao_contatado", rotulo: "Sem convite", valor: conta("nao_contatado"), href: "/admin/convidados?status=nao_contatado" },
+      { chave: "nao_contatado", rotulo: "Sem convite", valor: conta("nao_contatado") + vagasNo("nao_contatado"), href: "/admin/convidados?status=nao_contatado" },
     ],
     numeros: [
       { rotulo: "Famílias", valor: familiasComGrupo },
       { rotulo: "Acompanhantes", valor: `${acompanhantesCadastrados} de ${acompanhantesPrevistos}`, tom: "lavanda" },
+      ...(vagas.total > 0 ? [{ rotulo: "Previstos sem nome", valor: vagas.total, tom: "lavanda" } satisfies NumeroChave] : []),
       ...(noColo > 0 ? [{ rotulo: "No colo", valor: noColo } satisfies NumeroChave] : []),
     ],
   };
@@ -366,9 +374,9 @@ export default async function Dashboard() {
 
             <AnelCompacto
               valor={confirmados.length}
-              total={listaConvidados.length}
+              total={totalConvidados}
               rotulo="Confirmações"
-              legenda={`${confirmados.length} de ${listaConvidados.length}${conta("nao_contatado") > 0 ? ` · ${conta("nao_contatado")} sem convite` : ""}${noColo > 0 ? ` · ${noColo} no colo` : ""}`}
+              legenda={`${confirmados.length} de ${totalConvidados}${conta("nao_contatado") > 0 ? ` · ${conta("nao_contatado")} sem convite` : ""}${noColo > 0 ? ` · ${noColo} no colo` : ""}`}
               tom="lavanda"
             />
             <AnelCompacto

@@ -18,7 +18,7 @@ import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { confirmarExclusao, excluirConvidado } from "@/lib/excluirConvidado";
-import { contaNoTotal, ehDeColo, ehNoivo, faixaEtaria, ROTULOS_LEMBRANCA, temAcessoAoSite, tipoDeLembranca, type TipoLembranca } from "@/lib/idade";
+import { contaNoTotal, ehDeColo, ehNoivo, faixaEtaria, ROTULOS_LEMBRANCA, temAcessoAoSite, tipoDeLembranca, vagasPorTitular, type TipoLembranca } from "@/lib/idade";
 import { Avatar } from "@/components/Avatar";
 import { Botao, BotaoLink } from "@/components/Botao";
 import { Rotulo } from "@/components/CartaoForm";
@@ -28,7 +28,7 @@ import { DetalheConvidado } from "./DetalheConvidado";
 import { Familias } from "./Familias";
 import { FichaConvidado, type AbaDaFicha } from "./FichaConvidado";
 import { FilaDeConvites } from "./FilaDeConvites";
-import { NAO_INFORMADO, RetratoConvidados, type FiltroDoRetrato } from "./RetratoConvidados";
+import { NAO_INFORMADO, PREVISTOS, RetratoConvidados, type FiltroDoRetrato } from "./RetratoConvidados";
 import { TOM_STATUS } from "./tons";
 import type { FiltroInicial } from "./page";
 
@@ -112,13 +112,25 @@ export function GerenciadorConvidados({
     return mapa;
   }, [acompanhantes]);
 
+  /** Vagas de acompanhante previstas e ainda sem nome, por convite. */
+  const vagas = useMemo(() => vagasPorTitular(convidados), [convidados]);
+
   const resumo = useMemo(() => {
     // Quem conta: acompanhante já é cadastro próprio; criança de colo e os noivos ficam fora.
     const contam = convidados.filter(contaNoTotal);
-    const conta = (s: StatusConvite) => contam.filter((c) => c.invite_status === s).length;
+    // Acompanhante previsto e ainda sem nome também é gente que vem: entra no
+    // total e no número do status do convite dele (confirmado e "não vai"
+    // não têm vaga em aberto — ver vagasPrevistas).
+    const vagasNoStatus = (s: StatusConvite) =>
+      convidados
+        .filter((c) => c.invite_status === s)
+        .reduce((soma, c) => soma + (vagas.porTitular.get(c.id) ?? 0), 0);
+    const conta = (s: StatusConvite) =>
+      contam.filter((c) => c.invite_status === s).length + vagasNoStatus(s);
     const confirmados = contam.filter((c) => c.invite_status === "confirmado");
     return {
-      total: contam.length,
+      total: contam.length + vagas.total,
+      previstos: vagas.total,
       colo: convidados.filter((c) => !ehNoivo(c) && ehDeColo(c)).length,
       confirmados: confirmados.length,
       pessoas: confirmados.length,
@@ -137,7 +149,7 @@ export function GerenciadorConvidados({
       ).length,
       semFamilia: convidados.filter((c) => !c.group_id).length,
     };
-  }, [convidados, porTitular]);
+  }, [convidados, porTitular, vagas]);
 
   const visiveis = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -152,12 +164,17 @@ export function GerenciadorConvidados({
         lado !== "todos" || vinculo !== "todos" || faixa !== "todos" || genero !== "todos" ||
         presenca !== "todos" || lembranca !== "todos";
       if (recorteDoRetrato && ehNoivo(c)) return false;
-      if (lado !== "todos" && (c.side ?? NAO_INFORMADO) !== lado) return false;
-      if (vinculo !== "todos" && (c.relationship_kind ?? NAO_INFORMADO) !== vinculo) return false;
-      if (faixa !== "todos" && (faixaEtaria(c) ?? NAO_INFORMADO) !== faixa) return false;
-      if (genero !== "todos" && (c.gender ?? NAO_INFORMADO) !== genero) return false;
-      if (presenca !== "todos" && situacaoDePresenca(c) !== presenca) return false;
-      if (lembranca !== "todos" && tipoDeLembranca(c) !== lembranca) return false;
+      // Barra "Acompanhantes previstos": a lista mostra os convites que têm vaga em aberto.
+      if (faixa === PREVISTOS || genero === PREVISTOS || lembranca === PREVISTOS) {
+        if (!vagas.porTitular.has(c.id)) return false;
+      } else {
+        if (lado !== "todos" && (c.side ?? NAO_INFORMADO) !== lado) return false;
+        if (vinculo !== "todos" && (c.relationship_kind ?? NAO_INFORMADO) !== vinculo) return false;
+        if (faixa !== "todos" && (faixaEtaria(c) ?? NAO_INFORMADO) !== faixa) return false;
+        if (genero !== "todos" && (c.gender ?? NAO_INFORMADO) !== genero) return false;
+        if (presenca !== "todos" && situacaoDePresenca(c) !== presenca) return false;
+        if (lembranca !== "todos" && tipoDeLembranca(c) !== lembranca) return false;
+      }
       if (filtroCodigo === "sem_codigo" && (c.access_code || !temAcessoAoSite(c))) return false;
       if (filtroCodigo === "nao_enviado" && (!c.access_code || c.code_sent_at)) return false;
       if (filtroCodigo === "enviado" && !c.code_sent_at) return false;
@@ -185,7 +202,7 @@ export function GerenciadorConvidados({
       if (ordem === "idade") return (b.age ?? -1) - (a.age ?? -1);
       return a.full_name.localeCompare(b.full_name, "pt-BR");
     });
-  }, [busca, convidados, excederam, faixa, filtroCodigo, genero, grupo, lado, lembranca, ordem, porTitular, presenca, status, vinculo]);
+  }, [busca, convidados, excederam, faixa, filtroCodigo, genero, grupo, lado, lembranca, ordem, porTitular, presenca, status, vagas, vinculo]);
 
   function alternarSelecao(id: string) {
     setSelecionados((atual) => {
@@ -253,7 +270,7 @@ export function GerenciadorConvidados({
       limpar: () => setVinculo("todos"),
     },
     faixa !== "todos" && {
-      rotulo: faixa === NAO_INFORMADO ? "Faixa etária não informada" : faixa,
+      rotulo: faixa === NAO_INFORMADO ? "Faixa etária não informada" : faixa === PREVISTOS ? "Convites com acompanhantes previstos" : faixa,
       limpar: () => setFaixa("todos"),
     },
     presenca !== "todos" && {
@@ -264,7 +281,7 @@ export function GerenciadorConvidados({
       limpar: () => setPresenca("todos"),
     },
     genero !== "todos" && {
-      rotulo: genero === NAO_INFORMADO ? "Gênero não informado" : genero,
+      rotulo: genero === NAO_INFORMADO ? "Gênero não informado" : genero === PREVISTOS ? "Convites com acompanhantes previstos" : genero,
       limpar: () => setGenero("todos"),
     },
     lado !== "todos" && {
@@ -272,7 +289,9 @@ export function GerenciadorConvidados({
       limpar: () => setLado("todos"),
     },
     lembranca !== "todos" && {
-      rotulo: `Lembrancinha · ${ROTULOS_LEMBRANCA[lembranca as TipoLembranca] ?? lembranca}`,
+      rotulo: lembranca === PREVISTOS
+        ? "Convites com acompanhantes previstos"
+        : `Lembrancinha · ${ROTULOS_LEMBRANCA[lembranca as TipoLembranca] ?? lembranca}`,
       limpar: () => setLembranca("todos"),
     },
   ].filter(Boolean) as { rotulo: string; limpar: () => void }[];
@@ -468,7 +487,11 @@ export function GerenciadorConvidados({
 
       {/* ---------- Os números, numa faixa só ---------- */}
       <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-sm border border-terra/20 bg-creme-claro px-3 py-2.5" role="group" aria-label="Filtrar pelos números">
-        <Numero rotulo="Convidados" valor={resumo.total} detalhe={resumo.colo > 0 ? `sem os noivos · +${resumo.colo} no colo` : "sem os noivos"} ativo={semRecorteDeStatus} aoClicar={() => recortarPor({})} />
+        <Numero rotulo="Convidados" valor={resumo.total} detalhe={[
+          "sem os noivos",
+          resumo.colo > 0 && `+${resumo.colo} no colo`,
+          resumo.previstos > 0 && `inclui ${resumo.previstos} ${resumo.previstos === 1 ? "acompanhante previsto" : "acompanhantes previstos"} sem nome`,
+        ].filter(Boolean).join(" · ")} ativo={semRecorteDeStatus} aoClicar={() => recortarPor({})} />
         <Numero rotulo="Confirmados" valor={resumo.confirmados} tom="oliva" ativo={status === "confirmado"} aoClicar={() => recortarPor({ status: "confirmado" })} />
         <Numero rotulo="Aguardando" valor={resumo.aguardando} tom="lavanda" ativo={status === "em_espera"} aoClicar={() => recortarPor({ status: "em_espera" })} />
         <Numero rotulo="Não irão" valor={resumo.naoVao} ativo={status === "nao_vai"} aoClicar={() => recortarPor({ status: "nao_vai" })} />

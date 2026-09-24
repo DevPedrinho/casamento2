@@ -3,7 +3,7 @@ import "server-only";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { carregarCasamento } from "@/lib/configuracoes";
 import { reais } from "@/lib/formato";
-import { contaNoTotal } from "@/lib/idade";
+import { contaNoTotal, vagasPorTitular } from "@/lib/idade";
 
 /**
  * O que cada assistente pode enxergar.
@@ -40,7 +40,7 @@ export async function contextoDoPainel(): Promise<string> {
     await Promise.all([
       supabase
         .from("guests")
-        .select("invite_status, companions_planned, access_code, code_sent_at, user_id, group_id, age, invited_by, is_admin, ceremony_role"),
+        .select("id, invite_status, companions_planned, access_code, code_sent_at, user_id, group_id, age, invited_by, is_admin, ceremony_role"),
       supabase.from("guest_groups").select("name, invite_limit"),
       supabase.from("tasks").select("title, status, due_date, phase, priority"),
       supabase.from("expenses").select("description, category, estimated_cents, contracted_cents, status, due_date, payments(amount_cents)"),
@@ -60,6 +60,8 @@ export async function contextoDoPainel(): Promise<string> {
   const confirmados = lista.filter((c) => c.invite_status === "confirmado");
   // Acompanhante já é cadastro próprio; criança de até 3 anos e os noivos não contam.
   const pessoasConfirmadas = confirmados.filter(contaNoTotal).length;
+  // Acompanhante previsto e ainda sem nome também conta no total.
+  const vagas = vagasPorTitular(lista);
 
   const listaTarefas = tarefas.data ?? [];
   const atrasadas = listaTarefas.filter(
@@ -102,7 +104,8 @@ export async function contextoDoPainel(): Promise<string> {
     ),
 
     bloco("Convidados", [
-      `Total na lista: ${lista.length}`,
+      `Total de convidados (sem os noivos e sem crianças de colo, com acompanhantes previstos): ${lista.filter(contaNoTotal).length + vagas.total}`,
+      vagas.total > 0 && `Acompanhantes previstos que ainda não têm nome: ${vagas.total}`,
       `Confirmados: ${confirmados.length} (${pessoasConfirmadas} pessoas contando para o buffet; acompanhantes já são cadastros próprios)`,
       `Aguardando resposta: ${conta("aguardando") + conta("convite_enviado") + conta("visualizou")}`,
       `Não vão: ${conta("nao_vai")}`,

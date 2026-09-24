@@ -91,3 +91,50 @@ export function tipoDeLembranca(c: {
   }
   return "sem_idade";
 }
+
+/* ------------------------------------------------------------------
+   Acompanhantes previstos
+   ------------------------------------------------------------------ */
+
+type TitularDoConvite = {
+  id: string;
+  invite_status: string;
+  companions_planned: number | null;
+  invited_by: string | null;
+  is_admin: boolean | null;
+  ceremony_role: string | null;
+};
+
+/**
+ * Quantas vagas de acompanhante do convite ainda não têm nome.
+ *
+ * O acompanhante só vira cadastro quando o titular o nomeia na
+ * confirmação; até lá, ele é só o número previsto. Contamos a diferença
+ * enquanto o convite está em aberto. Quem confirmou já disse quem vem —
+ * vaga não usada deixa de contar —, e quem não vai leva as vagas junto.
+ */
+export function vagasPrevistas(titular: TitularDoConvite, cadastrados: number): number {
+  if (titular.invited_by || ehNoivo(titular)) return 0;
+  if (titular.invite_status === "confirmado" || titular.invite_status === "nao_vai") return 0;
+  return Math.max(0, (titular.companions_planned ?? 0) - cadastrados);
+}
+
+/** As vagas em aberto de cada convite, e o total delas. */
+export function vagasPorTitular<T extends TitularDoConvite>(
+  convidados: T[],
+): { porTitular: Map<string, number>; total: number } {
+  const nomeados = new Map<string, number>();
+  for (const c of convidados) {
+    if (c.invited_by) nomeados.set(c.invited_by, (nomeados.get(c.invited_by) ?? 0) + 1);
+  }
+  const porTitular = new Map<string, number>();
+  let total = 0;
+  for (const c of convidados) {
+    const vagas = vagasPrevistas(c, nomeados.get(c.id) ?? 0);
+    if (vagas > 0) {
+      porTitular.set(c.id, vagas);
+      total += vagas;
+    }
+  }
+  return { porTitular, total };
+}

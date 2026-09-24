@@ -19,6 +19,7 @@ import {
   ROTULOS_LEMBRANCA,
   tipoDeLembranca,
   type TipoLembranca,
+  vagasPorTitular,
 } from "@/lib/idade";
 import { Bloco, Indicador } from "@/components/painel";
 import { BarrasInterativas, Rosca, type Fatia } from "@/components/graficos";
@@ -33,6 +34,8 @@ export type FiltroDoRetrato =
 
 /** Valor de filtro para "a ficha não diz". */
 export const NAO_INFORMADO = "nao_informado";
+/** Valor de filtro para "acompanhantes previstos, ainda sem nome". */
+export const PREVISTOS = "previstos";
 
 const ORDEM_LEMBRANCA: TipoLembranca[] = [
   "mulher",
@@ -61,7 +64,16 @@ export function RetratoConvidados({
 }) {
   const retrato = useMemo(() => {
     const todos = convidados.filter((c) => !ehNoivo(c));
-    const naBarra = todos.filter(contaNoTotal).length;
+    // Acompanhante previsto e ainda sem nome é gente que vem: soma no total e
+    // em cada gráfico, na parte que dá para saber (lado do titular, presença
+    // em aberto) ou numa barra própria (idade, gênero, lembrancinha).
+    const vagas = vagasPorTitular(convidados);
+    const previstos = vagas.total;
+    const convitesComVagas = vagas.porTitular.size;
+    const emConvites = `em ${convitesComVagas} ${convitesComVagas === 1 ? "convite" : "convites"}`;
+    const barraPrevistos = (detalhe: string): Fatia[] =>
+      previstos > 0 ? [{ chave: PREVISTOS, rotulo: "Acompanhantes previstos", valor: previstos, detalhe }] : [];
+    const naBarra = todos.filter(contaNoTotal).length + previstos;
     const colo = todos.filter(ehDeColo).length;
 
     // O buffet cobra por pessoa confirmada na festa: sem colo, sem os noivos
@@ -97,10 +109,14 @@ export function RetratoConvidados({
       {
         chave: "sem_resposta",
         rotulo: "Ainda sem resposta",
-        detalhe: "Não confirmaram ou confirmaram sem dizer a que vão",
-        valor: todos.filter(
-          (c) => c.invite_status !== "nao_vai" && !(c.invite_status === "confirmado" && c.attends !== null),
-        ).length,
+        detalhe:
+          previstos > 0
+            ? `Inclui ${previstos} ${previstos === 1 ? "acompanhante previsto" : "acompanhantes previstos"} ainda sem nome`
+            : "Não confirmaram ou confirmaram sem dizer a que vão",
+        valor:
+          todos.filter(
+            (c) => c.invite_status !== "nao_vai" && !(c.invite_status === "confirmado" && c.attends !== null),
+          ).length + previstos,
       },
     ].filter((f) => f.valor > 0);
 
@@ -112,7 +128,7 @@ export function RetratoConvidados({
       const plural = (n: number, [um, varios]: [string, string]) => `${n} ${n === 1 ? um : varios}`;
       return [f && plural(f, fem), m && plural(m, masc), resto && `${resto} sem gênero`].filter(Boolean).join(" · ");
     };
-    const lembrancas: Fatia[] = ORDEM_LEMBRANCA.map((tipo) => {
+    const lembrancas: Fatia[] = ORDEM_LEMBRANCA.map((tipo): Fatia => {
       const grupo = todos.filter((c) => tipoDeLembranca(c) === tipo);
       const detalhe =
         tipo === "idoso"
@@ -125,10 +141,50 @@ export function RetratoConvidados({
                 ? "Complete a idade ou a faixa na ficha"
                 : undefined;
       return { chave: tipo, rotulo: ROTULOS_LEMBRANCA[tipo], valor: grupo.length, detalhe: detalhe || undefined };
-    }).filter((f) => f.valor > 0);
+    })
+      .filter((f) => f.valor > 0)
+      .concat(
+        previstos > 0
+          ? [{ chave: PREVISTOS, rotulo: "Acompanhantes previstos (a definir)", valor: previstos, detalhe: `Ainda sem nome, idade e gênero · ${emConvites}` }]
+          : [],
+      );
+
+    // Vínculo: as vagas são, por definição, acompanhantes.
+    const porVinculo = distribuir<Vinculo>((c) => c.relationship_kind, VINCULOS, ROTULOS_VINCULO);
+    if (previstos > 0) {
+      const detalhe = `Inclui ${previstos} ${previstos === 1 ? "previsto" : "previstos"} ainda sem nome`;
+      const barra = porVinculo.find((f) => f.chave === "acompanhante");
+      if (barra) {
+        barra.valor += previstos;
+        barra.detalhe = detalhe;
+      } else {
+        const antes = porVinculo.findIndex((f) => VINCULOS.indexOf(f.chave as Vinculo) > VINCULOS.indexOf("acompanhante") || f.chave === NAO_INFORMADO);
+        const nova = { chave: "acompanhante", rotulo: ROTULOS_VINCULO.acompanhante, valor: previstos, detalhe };
+        if (antes === -1) porVinculo.push(nova);
+        else porVinculo.splice(antes, 0, nova);
+      }
+    }
+
+    // Lado: a vaga vem do lado de quem a convidou.
+    const porLado = distribuir<"noiva" | "noivo">(
+      (c) => c.side,
+      ["noiva", "noivo"],
+      { noiva: "Lado da noiva", noivo: "Lado do noivo" },
+    );
+    if (previstos > 0) {
+      for (const titular of convidados) {
+        const n = vagas.porTitular.get(titular.id);
+        if (!n) continue;
+        const chave = titular.side ?? NAO_INFORMADO;
+        const barra = porLado.find((f) => f.chave === chave);
+        if (barra) barra.valor += n;
+        else porLado.push({ chave, rotulo: chave === "noiva" ? "Lado da noiva" : chave === "noivo" ? "Lado do noivo" : "Não informado", valor: n });
+      }
+    }
 
     return {
-      total: todos.length,
+      total: todos.length + previstos,
+      previstos,
       naBarra,
       colo,
       naRecepcao: naRecepcao.length,
@@ -137,22 +193,24 @@ export function RetratoConvidados({
       familias: new Set(todos.map((c) => c.group_id).filter(Boolean)).size,
       presenca,
       lembrancas,
-      porVinculo: distribuir<Vinculo>((c) => c.relationship_kind, VINCULOS, ROTULOS_VINCULO),
-      porFaixa: distribuir(
-        faixaEtaria,
-        FAIXAS_ETARIAS,
-        Object.fromEntries(FAIXAS_ETARIAS.map((f) => [f, f])) as Record<(typeof FAIXAS_ETARIAS)[number], string>,
-      ),
-      porGenero: distribuir<Genero>(
-        (c) => c.gender,
-        ["feminino", "masculino", "outro"],
-        { feminino: "Feminino", masculino: "Masculino", outro: "Outro" },
-      ),
-      porLado: distribuir<"noiva" | "noivo">(
-        (c) => c.side,
-        ["noiva", "noivo"],
-        { noiva: "Lado da noiva", noivo: "Lado do noivo" },
-      ),
+      porVinculo,
+      porFaixa: [
+        ...distribuir(
+          faixaEtaria,
+          FAIXAS_ETARIAS,
+          Object.fromEntries(FAIXAS_ETARIAS.map((f) => [f, f])) as Record<(typeof FAIXAS_ETARIAS)[number], string>,
+        ),
+        ...barraPrevistos(`Idade ainda desconhecida · ${emConvites}`),
+      ],
+      porGenero: [
+        ...distribuir<Genero>(
+          (c) => c.gender,
+          ["feminino", "masculino", "outro"],
+          { feminino: "Feminino", masculino: "Masculino", outro: "Outro" },
+        ),
+        ...barraPrevistos(`Gênero ainda desconhecido · ${emConvites}`),
+      ],
+      porLado,
     };
   }, [convidados]);
 
@@ -180,6 +238,12 @@ export function RetratoConvidados({
             {" = "}
             <strong className="font-semibold">{retrato.total} na lista</strong>
           </p>
+          {retrato.previstos > 0 && (
+            <p className="mt-1 text-base text-oliva">
+              Inclui {retrato.previstos} {retrato.previstos === 1 ? "acompanhante previsto" : "acompanhantes previstos"} que
+              ainda não {retrato.previstos === 1 ? "tem" : "têm"} nome.
+            </p>
+          )}
           <p className="mt-1.5 text-sm leading-relaxed text-terra">
             Noivo e noiva não entram. Cada gráfico abaixo soma {retrato.total}; o que falta na
             ficha aparece como &ldquo;Não informado&rdquo; e, ao tocar, abre a lista de quem
@@ -188,7 +252,7 @@ export function RetratoConvidados({
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <Indicador rotulo="Na lista" valor={retrato.total} detalhe="com colo, sem os noivos" />
+          <Indicador rotulo="Na lista" valor={retrato.total} detalhe="com colo e previstos, sem os noivos" />
           <Indicador rotulo="Na festa" valor={retrato.naRecepcao} tom="oliva" detalhe="confirmados · o que o buffet pede" />
           <Indicador rotulo="Adultos" valor={retrato.adultos} detalhe="na festa" />
           <Indicador rotulo="Crianças" valor={retrato.criancas} tom="lavanda" detalhe="na festa · 4 a 11 anos" />
@@ -239,7 +303,7 @@ export function RetratoConvidados({
             <BarrasInterativas itens={retrato.porGenero} tom={3} sufixo="convidados" aoClicar={(chave) => aoFiltrar({ eixo: "genero", valor: chave })} />
           </Bloco>
 
-          <Bloco titulo="De que lado" descricao="Quem veio da noiva e quem veio do noivo.">
+          <Bloco titulo="De que lado" descricao="Quem veio da noiva e quem veio do noivo. Acompanhante previsto conta no lado de quem o convidou.">
             <BarrasInterativas itens={retrato.porLado} tom={5} sufixo="convidados" aoClicar={(chave) => aoFiltrar({ eixo: "lado", valor: chave })} />
           </Bloco>
         </div>
