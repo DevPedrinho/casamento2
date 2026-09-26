@@ -13,7 +13,8 @@ import { Icone } from "@/components/Icones";
  * longo e a foto ampliada.
  */
 export function Timeline({ capitulos }: { capitulos: CapituloTimeline[] }) {
-  const [ampliada, setAmpliada] = useState<FotoTimeline | null>(null);
+  /** As fotos do capítulo tocado e qual delas está aberta. */
+  const [ampliada, setAmpliada] = useState<{ fotos: FotoTimeline[]; indice: number } | null>(null);
   const [ativo, setAtivo] = useState(0);
   const itensRef = useRef<(HTMLLIElement | null)[]>([]);
 
@@ -110,13 +111,20 @@ export function Timeline({ capitulos }: { capitulos: CapituloTimeline[] }) {
               ref={(el) => {
                 itensRef.current[i] = el;
               }}
-              aoAmpliar={setAmpliada}
+              aoAmpliar={(fotos, indice) => setAmpliada({ fotos, indice })}
             />
           ))}
         </ol>
       </div>
 
-      {ampliada && <FotoAmpliada foto={ampliada} aoFechar={() => setAmpliada(null)} />}
+      {ampliada && (
+        <FotoAmpliada
+          fotos={ampliada.fotos}
+          indice={ampliada.indice}
+          aoMudar={(indice) => setAmpliada({ ...ampliada, indice })}
+          aoFechar={() => setAmpliada(null)}
+        />
+      )}
     </section>
   );
 }
@@ -130,7 +138,7 @@ function Capitulo({
   capitulo: CapituloTimeline;
   esquerda: boolean;
   ref: (el: HTMLLIElement | null) => void;
-  aoAmpliar: (foto: FotoTimeline) => void;
+  aoAmpliar: (fotos: FotoTimeline[], indice: number) => void;
 }) {
   const [expandido, setExpandido] = useState(false);
 
@@ -210,7 +218,7 @@ function Galeria({
 }: {
   capitulo: CapituloTimeline;
   esquerda: boolean;
-  aoAmpliar: (foto: FotoTimeline) => void;
+  aoAmpliar: (fotos: FotoTimeline[], indice: number) => void;
 }) {
   const [capa, ...resto] = capitulo.fotos;
 
@@ -218,7 +226,7 @@ function Galeria({
     <div className="mt-6 space-y-2">
       <button
         type="button"
-        onClick={() => aoAmpliar(capa)}
+        onClick={() => aoAmpliar(capitulo.fotos, 0)}
         className="group relative block aspect-16/10 w-full overflow-hidden rounded-sm border border-terra/20"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -239,11 +247,11 @@ function Galeria({
         <div
           className={`flex flex-wrap gap-2 ${esquerda ? "sm:justify-end" : ""}`}
         >
-          {resto.map((foto) => (
+          {resto.map((foto, i) => (
             <button
               key={foto.id}
               type="button"
-              onClick={() => aoAmpliar(foto)}
+              onClick={() => aoAmpliar(capitulo.fotos, i + 1)}
               className="group relative aspect-square w-[calc((100%-1rem)/3)] overflow-hidden rounded-sm border border-terra/20"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -261,14 +269,36 @@ function Galeria({
   );
 }
 
-function FotoAmpliada({ foto, aoFechar }: { foto: FotoTimeline; aoFechar: () => void }) {
-  // Fecha no Esc e tranca a rolagem do fundo enquanto a foto está aberta.
+/**
+ * A foto ampliada, com as outras fotos do mesmo capítulo a um toque:
+ * botões nas laterais, setas do teclado e o arrastar do dedo no celular.
+ * Não dá a volta — na última foto o capítulo acaba, e o botão some.
+ */
+function FotoAmpliada({
+  fotos,
+  indice,
+  aoMudar,
+  aoFechar,
+}: {
+  fotos: FotoTimeline[];
+  indice: number;
+  aoMudar: (indice: number) => void;
+  aoFechar: () => void;
+}) {
+  const foto = fotos[indice];
+  const temAnterior = indice > 0;
+  const temProxima = indice < fotos.length - 1;
+  const inicioDoToque = useRef<number | null>(null);
+
+  // Fecha no Esc, troca nas setas e tranca a rolagem do fundo.
   useEffect(() => {
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     function aoTeclar(evento: KeyboardEvent) {
       if (evento.key === "Escape") aoFechar();
+      if (evento.key === "ArrowLeft" && temAnterior) aoMudar(indice - 1);
+      if (evento.key === "ArrowRight" && temProxima) aoMudar(indice + 1);
     }
     document.addEventListener("keydown", aoTeclar);
 
@@ -276,31 +306,84 @@ function FotoAmpliada({ foto, aoFechar }: { foto: FotoTimeline; aoFechar: () => 
       document.body.style.overflow = original;
       document.removeEventListener("keydown", aoTeclar);
     };
-  }, [aoFechar]);
+  }, [aoFechar, aoMudar, indice, temAnterior, temProxima]);
+
+  const botaoLateral =
+    "absolute top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-oliva-escuro/60 text-creme-claro ring-1 ring-creme/30 transition-colors hover:bg-creme/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-creme";
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-oliva-escuro/90 p-4 sm:p-5"
       onClick={aoFechar}
+      onTouchStart={(e) => {
+        inicioDoToque.current = e.touches[0]?.clientX ?? null;
+      }}
+      onTouchEnd={(e) => {
+        const inicio = inicioDoToque.current;
+        inicioDoToque.current = null;
+        const fim = e.changedTouches[0]?.clientX;
+        if (inicio === null || fim === undefined) return;
+        const distancia = fim - inicio;
+        if (distancia <= -50 && temProxima) aoMudar(indice + 1);
+        if (distancia >= 50 && temAnterior) aoMudar(indice - 1);
+      }}
       role="dialog"
       aria-modal="true"
       aria-label={foto.caption ?? "Foto ampliada"}
     >
-      <button
-        type="button"
-        onClick={aoFechar}
-        aria-label="Fechar"
-        className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full text-creme-claro transition-colors hover:bg-creme/15"
-      >
-        <Icone nome="fechar" className="h-6 w-6" />
-      </button>
+      <div className="absolute right-4 top-4 flex items-center gap-3">
+        {fotos.length > 1 && (
+          <span className="versalete text-xs text-creme-claro/90 tabular-nums lining-nums" aria-live="polite">
+            {indice + 1} de {fotos.length}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={aoFechar}
+          aria-label="Fechar"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-creme-claro transition-colors hover:bg-creme/15"
+        >
+          <Icone nome="fechar" className="h-6 w-6" />
+        </button>
+      </div>
+
+      {temAnterior && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            aoMudar(indice - 1);
+          }}
+          aria-label="Foto anterior"
+          className={`${botaoLateral} left-3 sm:left-6`}
+        >
+          <Icone nome="recolher" className="h-6 w-6" />
+        </button>
+      )}
+
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        key={foto.id}
         src={foto.url}
         alt={foto.caption ?? ""}
         className="max-h-[80vh] max-w-full rounded-sm object-contain"
         onClick={(e) => e.stopPropagation()}
       />
+
+      {temProxima && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            aoMudar(indice + 1);
+          }}
+          aria-label="Próxima foto"
+          className={`${botaoLateral} right-3 sm:right-6`}
+        >
+          <Icone nome="recolher" className="h-6 w-6 rotate-180" />
+        </button>
+      )}
+
       {foto.caption && (
         <p className="absolute inset-x-0 bottom-6 px-6 text-center text-base text-creme-claro">
           {foto.caption}
