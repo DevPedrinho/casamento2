@@ -400,6 +400,8 @@ export type ConvidadoCompleto = {
   access_code: string | null;
   /** Quando os noivos marcaram que entregaram o código. */
   code_sent_at: string | null;
+  /** Como o convite digital chama a pessoa ("Família Souza"). Vazio = full_name. */
+  invite_name?: string | null;
   /** Foto de perfil no bucket "site". */
   avatar_path: string | null;
   /** Quem trouxe: o titular, quando o cadastro nasceu de um acompanhante. */
@@ -494,6 +496,48 @@ export type MusicaDoSite = {
   file_path: string | null;
   title: string | null;
   artist: string | null;
+};
+
+/* ===================== Convite digital ===================== */
+
+export type IdSecaoConvite =
+  | "apresentacao"
+  | "mensagem"
+  | "grande_dia"
+  | "contagem"
+  | "traje"
+  | "manual"
+  | "confirmacao"
+  | "explorar"
+  | "final";
+
+export type SecaoConvite = { id: IdSecaoConvite; visivel: boolean };
+
+export type ConfiguracaoConvite = {
+  id: boolean;
+  music_enabled: boolean;
+  music_use_story: boolean;
+  music_file_path: string | null;
+  music_title: string | null;
+  /** 0 a 1. */
+  music_volume: number;
+  music_loop: boolean;
+  cover_image_path: string | null;
+  ceremony_image_path: string | null;
+  closing_image_path: string | null;
+  verse_visible: boolean;
+  texts: Record<string, string>;
+  sections: SecaoConvite[];
+};
+
+/** Uma orientação do Manual do Convidado. */
+export type ItemManual = {
+  id: string;
+  title: string;
+  body: string;
+  icon: string;
+  sort_order: number;
+  visible: boolean;
 };
 
 export type CapituloTimeline = {

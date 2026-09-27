@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { codigoCompleto, formatarCodigo, normalizarCodigo, TAMANHO_CODIGO } from "@/lib/codigo";
 import { CartaoForm, Aviso, Rotulo } from "@/components/CartaoForm";
@@ -23,7 +23,8 @@ export function FormCadastrar() {
   const params = useSearchParams();
   const proximo = params.get("proximo") ?? "/confirmar";
 
-  const [codigo, setCodigo] = useState("");
+  // Quem chega pelo convite digital (/convite/CODIGO) já traz o código.
+  const [codigo, setCodigo] = useState(() => normalizarCodigo(params.get("codigo") ?? ""));
   const [convidado, setConvidado] = useState<string | null>(null);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -58,6 +59,13 @@ export function FormCadastrar() {
       setErro(RECADO_DO_CODIGO[resposta?.motivo ?? "invalido"]);
     }
   }
+
+  // O código que veio no link já é conferido ao abrir, para o nome aparecer.
+  useEffect(() => {
+    if (codigoCompleto(codigo)) void conferirCodigo(codigo);
+    // Só na chegada: depois disso, quem confere é a digitação.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function enviar(evento: FormEvent) {
     evento.preventDefault();

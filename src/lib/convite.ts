@@ -1,5 +1,5 @@
 import { CASAMENTO } from "@/lib/config";
-import { formatarCodigo } from "@/lib/codigo";
+import { formatarCodigo, normalizarCodigo } from "@/lib/codigo";
 
 /**
  * O convite pronto para mandar no WhatsApp: mensagem com o código e o
@@ -15,6 +15,11 @@ export function enderecoDoSite(): string {
   return "";
 }
 
+/** O convite digital individual: o mesmo código, sem o traço. */
+export function linkDoConvite(codigo: string): string {
+  return `/convite/${normalizarCodigo(codigo)}`;
+}
+
 export function mensagemDoConvite(nome: string, codigo: string | null): string {
   const primeiro = nome.trim().split(" ")[0] || "você";
   const site = enderecoDoSite();
@@ -24,6 +29,7 @@ export function mensagemDoConvite(nome: string, codigo: string | null): string {
     "",
     `${CASAMENTO.noiva} e ${CASAMENTO.noivo} vão casar em ${CASAMENTO.dataExtenso} e você está na lista.`,
     "",
+    ...(codigo ? [`Seu convite: ${site}${linkDoConvite(codigo)}`, ""] : []),
     `Seu código do convite: ${formatarCodigo(codigo)}`,
     `Confirme sua presença em ${site}/cadastrar`,
     "",

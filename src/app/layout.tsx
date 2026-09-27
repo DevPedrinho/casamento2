@@ -96,6 +96,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="flex-1">{children}</main>
         <SomenteNoSite>
           <Rodape />
+        </SomenteNoSite>
+        <SomenteNoSite ocultarEm={["/admin", "/convite"]}>
           <Assistente
             modo="convidado"
             ativo={Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN)}

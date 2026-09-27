@@ -37,6 +37,7 @@ const SECUNDARIOS: Item[] = [
   { href: "/admin/personagens", rotulo: "Personagens", icone: "personagens" },
   { href: "/admin/cronograma", rotulo: "Cronograma", icone: "cronograma" },
   { href: "/admin/timeline", rotulo: "Timeline", icone: "timeline" },
+  { href: "/admin/convite", rotulo: "Convite Digital", icone: "envelope" },
   { href: "/admin/configuracoes", rotulo: "Configurações", icone: "config" },
 ];
 

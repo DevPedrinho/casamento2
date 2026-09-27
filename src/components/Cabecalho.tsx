@@ -52,7 +52,9 @@ export function Cabecalho({ nomes }: { nomes?: string }) {
   useEffect(() => setAberto(false), [caminho]);
 
   // O painel tem sidebar própria; o cabeçalho do site não aparece lá.
-  if (caminho.startsWith("/admin")) return null;
+  // O convite digital também não: ele abre como um cartão, de tela cheia,
+  // e leva ao resto do site pela seção "Explorar o site".
+  if (caminho.startsWith("/admin") || caminho.startsWith("/convite")) return null;
 
   return (
     <header className="sticky top-0 z-50 border-b border-terra/15 bg-creme/92 backdrop-blur-sm">

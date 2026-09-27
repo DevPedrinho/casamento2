@@ -26,7 +26,20 @@ export type NomeIcone =
   | "mais"
   | "mesas"
   | "personagens"
-  | "estrela";
+  | "estrela"
+  | "relogio"
+  | "camera"
+  | "traje"
+  | "carro"
+  | "crianca"
+  | "celular"
+  | "aliancas"
+  | "igreja"
+  | "taca"
+  | "envelope"
+  | "coracao"
+  | "info"
+  | "mudo";
 
 const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
   dashboard: <><rect x="3" y="3" width="7" height="8" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="11" width="7" height="10" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></>,
@@ -54,6 +67,21 @@ const CAMINHOS: Record<NomeIcone, React.ReactNode> = {
   mesas: <><circle cx="12" cy="12" r="5" /><circle cx="12" cy="4.2" r="1.6" /><circle cx="12" cy="19.8" r="1.6" /><circle cx="4.2" cy="12" r="1.6" /><circle cx="19.8" cy="12" r="1.6" /></>,
   personagens: <><circle cx="12" cy="7.5" r="3.2" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /><path d="M12 1.2l.9 1.9 2.1.3-1.5 1.5.35 2.1L12 6.1l-1.85 1 .35-2.1-1.5-1.5 2.1-.3z" /></>,
   estrela: <path d="M12 3.5l2.6 5.4 5.9.85-4.25 4.2 1 5.9L12 17.05 6.75 19.85l1-5.9L3.5 9.75l5.9-.85z" />,
+  // Os de baixo nasceram para o Manual do Convidado.
+  relogio: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2" /><path d="M9.5 2.5h5" /></>,
+  camera: <><path d="M3 8.5a1.5 1.5 0 0 1 1.5-1.5h2.8L9 4.5h6L16.7 7h2.8A1.5 1.5 0 0 1 21 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" /><circle cx="12" cy="13" r="3.6" /></>,
+  // Cabide.
+  traje: <><path d="M12 7.5a2 2 0 1 1 2-2" /><path d="M12 7.5v1.8L3.4 16a1.3 1.3 0 0 0 .8 2.4h15.6a1.3 1.3 0 0 0 .8-2.4L12 9.3" /></>,
+  carro: <><path d="M4 16.5V12l2-5a1.5 1.5 0 0 1 1.4-1h9.2a1.5 1.5 0 0 1 1.4 1l2 5v4.5" /><path d="M3 12h18v4.5H3z" /><circle cx="7.5" cy="18" r="1.5" /><circle cx="16.5" cy="18" r="1.5" /></>,
+  crianca: <><circle cx="12" cy="5.5" r="2.5" /><path d="M8 11l4-2 4 2" /><path d="M12 9v6" /><path d="M9.5 21l2.5-6 2.5 6" /></>,
+  celular: <><rect x="7" y="2.5" width="10" height="19" rx="2" /><path d="M11 18.5h2" /></>,
+  aliancas: <><circle cx="9" cy="14" r="5.5" /><circle cx="15" cy="14" r="5.5" /><path d="M13.5 5.5l1.5-2 1.5 2-1.5 1.5z" /></>,
+  igreja: <><path d="M12 2v4M10.5 3.5h3" /><path d="M7 21V11l5-4 5 4v10" /><path d="M3 21v-6l4-2.5M21 21v-6l-4-2.5" /><path d="M10.5 21v-3.5a1.5 1.5 0 0 1 3 0V21" /><path d="M2 21h20" /></>,
+  taca: <><path d="M8 3h8l-.5 5a3.5 3.5 0 0 1-7 0z" /><path d="M12 11.5V20M8.5 20.5h7" /></>,
+  envelope: <><rect x="3" y="5.5" width="18" height="13" rx="1.5" /><path d="M3.5 6.5l8.5 6.5 8.5-6.5" /></>,
+  coracao: <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z" />,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5.5" /><path d="M12 7.6v.2" /></>,
+  mudo: <><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M16 10l5 5M21 10l-5 5" /></>,
 };
 
 export function Icone({

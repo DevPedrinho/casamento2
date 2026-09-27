@@ -25,6 +25,10 @@ import { Icone } from "@/components/Icones";
  * página abre e, se o navegador recusar (que é o normal no celular), a
  * música entra no primeiro toque, em qualquer lugar da página. Quem pausar
  * na mão não é interrompido de novo.
+ *
+ * O convite digital usa o mesmo provedor com `autoplay={false}`: lá a
+ * capa fica em silêncio e a música só entra pelo `tocar()`, chamado no
+ * próprio toque de "abrir o convite".
  */
 
 type Contexto = {
@@ -36,6 +40,10 @@ type Contexto = {
   volume: number;
   ajustarVolume: (v: number) => void;
   alternar: () => void;
+  /** Começa a tocar (se ainda não estiver). Chame dentro do clique. */
+  tocar: () => void;
+  mudo: boolean;
+  alternarMudo: () => void;
   /** O controle de dentro da seção avisa quando está na tela, para a
    *  pílula flutuante não aparecer em duplicata. */
   registrarControleVisivel: (visivel: boolean) => void;
@@ -51,18 +59,29 @@ export function ProvedorMusica({
   arquivo,
   titulo,
   artista,
+  autoplay = true,
+  volumeInicial = 0.55,
+  loop = true,
+  pilula = true,
   children,
 }: {
   arquivo: string;
   titulo: string;
   artista?: string;
+  /** false: nada toca antes de alguém chamar tocar() ou alternar(). */
+  autoplay?: boolean;
+  volumeInicial?: number;
+  loop?: boolean;
+  /** false: a pílula flutuante não aparece (a página tem controle próprio). */
+  pilula?: boolean;
   children: ReactNode;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [tocando, setTocando] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [comecou, setComecou] = useState(false);
-  const [volume, setVolume] = useState(0.55);
+  const [volume, setVolume] = useState(volumeInicial);
+  const [mudo, setMudo] = useState(false);
   const [erro, setErro] = useState(false);
   const [controleVisivel, setControleVisivel] = useState(false);
 
@@ -101,6 +120,28 @@ export function ProvedorMusica({
       .finally(() => setCarregando(false));
   }, []);
 
+  const tocar = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !audio.paused) return;
+    pausouNaMao.current = false;
+    setCarregando(true);
+    audio
+      .play()
+      .then(() => {
+        setTocando(true);
+        setComecou(true);
+      })
+      .catch(() => setErro(true))
+      .finally(() => setCarregando(false));
+  }, []);
+
+  const alternarMudo = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.muted = !audio.muted;
+    setMudo(audio.muted);
+  }, []);
+
   const registrarControleVisivel = useCallback(
     (visivel: boolean) => setControleVisivel(visivel),
     [],
@@ -108,7 +149,7 @@ export function ProvedorMusica({
 
   // ---------- Começar sozinha ----------
   useEffect(() => {
-    if (!arquivo) return;
+    if (!arquivo || !autoplay) return;
 
     let encerrado = false;
 
@@ -130,7 +171,14 @@ export function ProvedorMusica({
     void tentar();
 
     // No celular, o primeiro toque em qualquer lugar libera o som.
-    async function aoEncostar() {
+    // Menos no próprio botão de tocar: lá quem manda é o clique dele — se
+    // este toque desse o play, o clique logo em seguida pausaria.
+    async function aoEncostar(evento: Event) {
+      const alvo = evento.target as Element | null;
+      if (alvo?.closest?.("[data-botao-musica]")) {
+        desarmar();
+        return;
+      }
       if (await tentar()) desarmar();
     }
     function desarmar() {
@@ -147,7 +195,7 @@ export function ProvedorMusica({
       encerrado = true;
       desarmar();
     };
-  }, [arquivo]);
+  }, [arquivo, autoplay]);
 
   // Sem arquivo (ou com arquivo quebrado) não há player nenhum.
   const disponivel = Boolean(arquivo) && !erro;
@@ -161,6 +209,9 @@ export function ProvedorMusica({
     volume,
     ajustarVolume: setVolume,
     alternar,
+    tocar,
+    mudo,
+    alternarMudo,
     registrarControleVisivel,
   };
 
@@ -173,7 +224,7 @@ export function ProvedorMusica({
           <audio
             ref={audioRef}
             src={arquivo}
-            loop
+            loop={loop}
             // "auto" e não "none": para começar sozinha, o arquivo precisa
             // estar pronto no instante do primeiro toque.
             preload="auto"
@@ -185,7 +236,7 @@ export function ProvedorMusica({
           />
 
           {/* A pílula só entra quando o controle da seção sai da tela. */}
-          {comecou && !controleVisivel && <PilulaFlutuante />}
+          {pilula && comecou && !controleVisivel && <PilulaFlutuante />}
         </>
       )}
     </ContextoMusica.Provider>
@@ -267,6 +318,7 @@ function BotaoTocar() {
     <button
       type="button"
       onClick={alternar}
+      data-botao-musica
       aria-label={tocando ? "Pausar a música" : "Tocar a música"}
       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-oliva text-creme-claro transition-colors hover:bg-oliva-escuro"
     >

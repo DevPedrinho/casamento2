@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ROTULOS_CONVITE,
   ROTULOS_PRESENCA,
@@ -11,7 +12,7 @@ import {
 import { diasAte, formatarData } from "@/lib/formato";
 import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
-import { linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
+import { enderecoDoSite, linkDoConvite, linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
 import { Avatar } from "@/components/Avatar";
 import { Botao } from "@/components/Botao";
 import { Selo } from "@/components/painel";
@@ -62,6 +63,18 @@ export function DetalheConvidado({
   const c = convidado;
   const telefone = c.whatsapp ?? c.phone;
   const zap = c.access_code ? linkWhatsApp(telefone, mensagemDoConvite(c.full_name, c.access_code)) : null;
+  const [linkCopiado, setLinkCopiado] = useState(false);
+
+  async function copiarLink() {
+    if (!c.access_code) return;
+    try {
+      await navigator.clipboard.writeText(`${enderecoDoSite()}${linkDoConvite(c.access_code)}`);
+      setLinkCopiado(true);
+      window.setTimeout(() => setLinkCopiado(false), 2000);
+    } catch {
+      // Sem permissão de área de transferência: o "ver convite" ao lado resolve.
+    }
+  }
   const passou = acompanhantes.length > c.companions_planned;
   const diasRetorno = diasAte(c.next_action_at);
   const extra = Object.entries(c.extra ?? {});
@@ -125,7 +138,16 @@ export function DetalheConvidado({
                 </a>
               )}
             </div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3">
+              <button type="button" onClick={copiarLink} className={`${ACAO_FICHA} text-oliva`}>
+                {linkCopiado ? "link copiado!" : "copiar link do convite"}
+              </button>
+              <a href={linkDoConvite(c.access_code)} target="_blank" rel="noopener noreferrer" className={`${ACAO_FICHA} text-oliva`}>
+                ver convite
+              </a>
+            </div>
             <div className="mt-2">
+              <LinhaFicha rotulo="Nome no convite" valor={c.invite_name?.trim() || c.full_name} />
               <LinhaFicha
                 rotulo="Entregue"
                 valor={c.code_sent_at ? `sim, em ${formatarData(c.code_sent_at.slice(0, 10))}` : "ainda não"}

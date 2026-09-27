@@ -41,7 +41,7 @@ const VAZIO = {
   attends: "", gender: "", age: "", phone: "", whatsapp: "", email: "",
   invite_status: "nao_contatado" as StatusConvite, companions_planned: "0",
   table_id: "", favor_type: "", dietary_notes: "", notes: "",
-  last_contact_at: "", next_action: "", next_action_at: "",
+  last_contact_at: "", next_action: "", next_action_at: "", invite_name: "",
 };
 
 /**
@@ -89,6 +89,7 @@ export function FichaConvidado({
           last_contact_at: convidado.last_contact_at ?? "",
           next_action: convidado.next_action ?? "",
           next_action_at: convidado.next_action_at ?? "",
+          invite_name: convidado.invite_name ?? "",
         }
       : VAZIO,
   );
@@ -149,6 +150,7 @@ export function FichaConvidado({
       last_contact_at: form.last_contact_at || null,
       next_action: form.next_action.trim() || null,
       next_action_at: form.next_action_at || null,
+      invite_name: form.invite_name.trim() || null,
       avatar_path: avatar,
     };
 
@@ -271,6 +273,11 @@ export function FichaConvidado({
                 <Campo id="acomp" rotulo="Acompanhantes previstos" dica="Quantas pessoas o convite comporta além da própria.">
                   <input id="acomp" inputMode="numeric" className="campo" value={form.companions_planned} onChange={(e) => set("companions_planned", e.target.value)} />
                 </Campo>
+                <div className="sm:col-span-2">
+                  <Campo id="nome-convite" rotulo="Nome no convite" dica="Como a capa do convite digital chama: “Família Souza”, “Maria e João”. Em branco, usa o nome.">
+                    <input id="nome-convite" className="campo" placeholder={form.full_name || "Família Souza"} value={form.invite_name} onChange={(e) => set("invite_name", e.target.value)} />
+                  </Campo>
+                </div>
               </div>
               {convidado && (
                 <div className="mt-4 border-t border-terra/15 pt-2">

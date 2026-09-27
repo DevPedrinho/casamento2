@@ -8,6 +8,7 @@ import { Secao } from "@/components/Secao";
 import { BotaoLink } from "@/components/Botao";
 import { Coracao, Divisor, FaixaVersalete } from "@/components/Ornamentos";
 import { ControleMusica, ProvedorMusica } from "@/components/PlayerMusica";
+import { musicaDaHistoria } from "@/lib/musica";
 import { Timeline } from "./Timeline";
 
 export const metadata: Metadata = {
@@ -49,20 +50,13 @@ export default async function NossaHistoria() {
     };
   });
 
-  // A música enviada pelo painel manda. Sem ela, toca a provisória do
-  // config — e aí o nome mostrado é o dela, não o que está no banco
-  // esperando o arquivo definitivo.
-  const musica = linhaMusica as MusicaDoSite | null;
-  const enviada = urlDoSite(musica?.file_path ?? null);
-  const arquivoMusica = enviada ?? CASAMENTO.musica.arquivo;
-  const tituloMusica = enviada ? musica?.title || "Nossa música" : CASAMENTO.musica.titulo;
-  const artistaMusica = enviada ? (musica?.artist ?? undefined) : CASAMENTO.musica.artista;
+  const musica = musicaDaHistoria(linhaMusica as MusicaDoSite | null);
 
   return (
     <ProvedorMusica
-      arquivo={arquivoMusica}
-      titulo={tituloMusica || "Nossa música"}
-      artista={artistaMusica}
+      arquivo={musica.arquivo}
+      titulo={musica.titulo}
+      artista={musica.artista}
     >
       <section className="relative overflow-hidden bg-creme px-5 py-20 text-center sm:py-28">
         <Image

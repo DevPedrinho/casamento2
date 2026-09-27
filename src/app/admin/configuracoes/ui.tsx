@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { Botao } from "@/components/Botao";
 
 /**
@@ -106,5 +106,46 @@ export function RodapeSalvar({
         {salvando ? "Salvando…" : "Salvar"}
       </Botao>
     </div>
+  );
+}
+
+/** Uma seção que é um formulário próprio, com o rodapé de salvar. */
+export function SecaoSalvavel({
+  id,
+  titulo,
+  descricao,
+  sujo,
+  aoSalvar,
+  children,
+}: {
+  id: string;
+  titulo: string;
+  descricao?: ReactNode;
+  sujo: boolean;
+  aoSalvar: () => Promise<string | null>;
+  children: ReactNode;
+}) {
+  const [salvando, setSalvando] = useState(false);
+  const [estado, setEstado] = useState<EstadoSalvar>(null);
+
+  async function enviar(evento: FormEvent) {
+    evento.preventDefault();
+    setSalvando(true);
+    setEstado(null);
+    const erro = await aoSalvar();
+    setSalvando(false);
+    setEstado(erro ? { tipo: "erro", mensagem: erro } : { tipo: "ok" });
+  }
+
+  return (
+    <SecaoConfig
+      id={id}
+      titulo={titulo}
+      descricao={descricao}
+      onSubmit={enviar}
+      rodape={<RodapeSalvar sujo={sujo} salvando={salvando} estado={estado} />}
+    >
+      {children}
+    </SecaoConfig>
   );
 }

@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ConfiguracoesSite } from "@/lib/tipos";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { urlDoSite } from "@/lib/storage";
 import { UploadImagem } from "@/components/UploadImagem";
-import { Ajuda, RodapeSalvar, RotuloConfig, SecaoConfig, type EstadoSalvar } from "./ui";
+import { Ajuda, RotuloConfig, SecaoConfig, SecaoSalvavel } from "./ui";
 
 /** Campos de texto livre do site, por chave. */
 const TEXTOS = [
@@ -369,43 +369,3 @@ export function Configuracoes({
   );
 }
 
-/** Uma seção que é um formulário próprio, com o rodapé de salvar. */
-function SecaoSalvavel({
-  id,
-  titulo,
-  descricao,
-  sujo,
-  aoSalvar,
-  children,
-}: {
-  id: string;
-  titulo: string;
-  descricao?: ReactNode;
-  sujo: boolean;
-  aoSalvar: () => Promise<string | null>;
-  children: ReactNode;
-}) {
-  const [salvando, setSalvando] = useState(false);
-  const [estado, setEstado] = useState<EstadoSalvar>(null);
-
-  async function enviar(evento: FormEvent) {
-    evento.preventDefault();
-    setSalvando(true);
-    setEstado(null);
-    const erro = await aoSalvar();
-    setSalvando(false);
-    setEstado(erro ? { tipo: "erro", mensagem: erro } : { tipo: "ok" });
-  }
-
-  return (
-    <SecaoConfig
-      id={id}
-      titulo={titulo}
-      descricao={descricao}
-      onSubmit={enviar}
-      rodape={<RodapeSalvar sujo={sujo} salvando={salvando} estado={estado} />}
-    >
-      {children}
-    </SecaoConfig>
-  );
-}

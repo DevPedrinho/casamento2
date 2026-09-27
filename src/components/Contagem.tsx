@@ -17,7 +17,14 @@ function calcular(alvo: number): Restante | null {
 }
 
 /** A data vem do painel; sem ela, vale a do config. */
-export function Contagem({ dataISO }: { dataISO?: string }) {
+export function Contagem({
+  dataISO,
+  rotulosCompletos = false,
+}: {
+  dataISO?: string;
+  /** "minutos" e "segundos" por extenso, como pede o convite digital. */
+  rotulosCompletos?: boolean;
+}) {
   // Guardamos o instante como número, não como Date: um objeto novo a cada
   // render entraria como dependência nova do efeito, e o efeito que marca
   // o estado se chamaria de novo sem parar — um laço que trava a página.
@@ -50,8 +57,8 @@ export function Contagem({ dataISO }: { dataISO?: string }) {
   const blocos = [
     { valor: restante.dias, rotulo: restante.dias === 1 ? "dia" : "dias" },
     { valor: restante.horas, rotulo: "horas" },
-    { valor: restante.minutos, rotulo: "min" },
-    { valor: restante.segundos, rotulo: "seg" },
+    { valor: restante.minutos, rotulo: rotulosCompletos ? "minutos" : "min" },
+    { valor: restante.segundos, rotulo: rotulosCompletos ? "segundos" : "seg" },
   ];
 
   return (
@@ -67,7 +74,15 @@ export function Contagem({ dataISO }: { dataISO?: string }) {
             <span className="titulo-serif block text-3xl leading-none text-oliva tabular-nums lining-nums sm:text-5xl">
               {String(bloco.valor).padStart(2, "0")}
             </span>
-            <span className="versalete mt-2 block text-xs text-terra sm:text-xs">
+            <span
+              className={
+                rotulosCompletos
+                  ? // Por extenso, a versalete larga não cabe em quatro colunas
+                    // num celular de 360px: o espaçamento aperta só no celular.
+                    "mt-2 block text-[0.6875rem] tracking-[0.12em] text-terra uppercase sm:text-xs sm:tracking-[0.25em]"
+                  : "versalete mt-2 block text-xs text-terra sm:text-xs"
+              }
+            >
               {bloco.rotulo}
             </span>
           </div>

@@ -237,3 +237,17 @@ body {
 @utility base-segura {
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
+
+/* Desenhos com fundo de papel próprio (as igrejas do convite): as bordas
+   se dissolvem no creme, sem o retângulo da imagem aparecer. O miolo do
+   desenho fica intacto. */
+.bordas-suaves {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 6%, #000 94%, transparent),
+    linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 6%, #000 94%, transparent),
+    linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
+  mask-composite: intersect;
+}
