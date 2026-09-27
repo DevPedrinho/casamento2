@@ -251,3 +251,85 @@ body {
     linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
   mask-composite: intersect;
 }
+
+/* ---------- Movimento do convite digital ----------
+   Laços lentos, só transform e opacity. A regra de prefers-reduced-motion
+   lá no alto zera todos eles para quem pediu menos movimento. */
+
+/* Lavanda balançando a partir da base, como ao vento. */
+@keyframes balancar {
+  0%, 100% { transform: rotate(-3.5deg); }
+  50% { transform: rotate(4deg); }
+}
+.balancar {
+  transform-origin: 50% 100%;
+  animation: balancar 6s ease-in-out infinite;
+}
+
+/* Estrelinha que acende, gira um pouco e apaga. */
+@keyframes cintilar {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  45%, 55% { opacity: 0.95; transform: scale(1) rotate(35deg); }
+}
+.cintilar {
+  opacity: 0;
+  animation: cintilar 3.4s ease-in-out infinite;
+}
+
+/* Pontinho de luz subindo e se desfazendo. */
+@keyframes flutuar {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 0.75; }
+  100% { transform: translate(var(--dx, 12px), -55vh); opacity: 0; }
+}
+.flutuar {
+  opacity: 0;
+  animation: flutuar 13s linear infinite;
+}
+
+/* Reflexo de luz atravessando a logo (a máscara recorta no desenho dela). */
+@keyframes reflexo {
+  0%, 62% { background-position: 160% 0; }
+  100% { background-position: -60% 0; }
+}
+.reflexo {
+  background-image: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.85) 50%, transparent 62%);
+  background-size: 250% 100%;
+  animation: reflexo 6.5s ease-in-out infinite;
+  mix-blend-mode: soft-light;
+}
+
+/* Halo que "respira" em volta do botão de abrir. */
+@keyframes respirar {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(110, 90, 128, 0.35); }
+  50% { box-shadow: 0 0 0 12px rgba(110, 90, 128, 0); }
+}
+.respirar {
+  animation: respirar 2.8s ease-in-out infinite;
+}
+
+/* As informações do convite chegando uma a uma. Cada filho direto de
+   .aos-poucos entra depois do anterior; grades aninhadas repetem o efeito. */
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.js-ativo .aos-poucos > * {
+  opacity: 0;
+}
+.js-ativo .aos-poucos.revelado > *,
+.js-ativo .aos-poucos.revelado .aos-poucos > * {
+  animation: surgir 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.aos-poucos > *:nth-child(2) { animation-delay: 0.15s !important; }
+.aos-poucos > *:nth-child(3) { animation-delay: 0.3s !important; }
+.aos-poucos > *:nth-child(4) { animation-delay: 0.45s !important; }
+.aos-poucos > *:nth-child(5) { animation-delay: 0.6s !important; }
+.aos-poucos > *:nth-child(6) { animation-delay: 0.75s !important; }
+.aos-poucos > *:nth-child(7) { animation-delay: 0.9s !important; }
+.aos-poucos > *:nth-child(8) { animation-delay: 1.05s !important; }
+.aos-poucos > *:nth-child(n + 9) { animation-delay: 1.2s !important; }
+/* Itens de uma grade dentro da seção: entram depois do título, um a um. */
+.aos-poucos .aos-poucos > * {
+  animation-delay: calc(0.45s + var(--k, 0) * 0.14s) !important;
+}

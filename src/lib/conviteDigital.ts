@@ -70,6 +70,7 @@ export type TextosConvite = Record<ChaveTextoConvite, string>;
 
 /** Os desenhos da igreja que vêm no projeto. Uma imagem enviada no painel manda. */
 export const IMAGENS_PADRAO = {
+  logo: "/img/convite/logo-convite.webp",
   capa: "/img/convite/igreja-fachada.webp",
   cerimonia: "/img/convite/igreja-aquarela.webp",
   final: "/img/convite/igreja-interior.webp",
@@ -84,6 +85,7 @@ export const CONFIG_PADRAO: ConfiguracaoConvite = {
   music_volume: 0.5,
   music_loop: true,
   cover_image_path: null,
+  cover_logo_path: null,
   ceremony_image_path: null,
   closing_image_path: null,
   verse_visible: false,

@@ -523,6 +523,7 @@ export type ConfiguracaoConvite = {
   music_volume: number;
   music_loop: boolean;
   cover_image_path: string | null;
+  cover_logo_path: string | null;
   ceremony_image_path: string | null;
   closing_image_path: string | null;
   verse_visible: boolean;

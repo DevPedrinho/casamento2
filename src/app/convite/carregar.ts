@@ -54,6 +54,7 @@ export async function montarConvite({
     itens: (itens ?? []) as ItemManual[],
     locais: (locais ?? []) as LocalEvento[],
     imagens: {
+      logo: urlDoSite(config.cover_logo_path) ?? IMAGENS_PADRAO.logo,
       capa: urlDoSite(config.cover_image_path) ?? IMAGENS_PADRAO.capa,
       cerimonia: urlDoSite(config.ceremony_image_path) ?? IMAGENS_PADRAO.cerimonia,
       final: urlDoSite(config.closing_image_path) ?? IMAGENS_PADRAO.final,

@@ -44,7 +44,7 @@ const INDICE = [
 ];
 
 type Coluna = Exclude<keyof ConfiguracaoConvite, "id" | "texts">;
-type Imagem = "cover_image_path" | "ceremony_image_path" | "closing_image_path";
+type Imagem = "cover_image_path" | "cover_logo_path" | "ceremony_image_path" | "closing_image_path";
 
 const igual = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
@@ -178,8 +178,8 @@ export function EditorConvite({
         />
         <Ajuda>
           {caminho
-            ? "Imagem enviada por vocês. Remover volta ao desenho da igreja."
-            : "Usando o desenho da igreja que veio com o site."}
+            ? "Imagem enviada por vocês. Remover volta à original do convite."
+            : "Usando a imagem original do convite."}
         </Ajuda>
       </div>
     );
@@ -298,7 +298,7 @@ export function EditorConvite({
         titulo="Capa"
         descricao={
           <>
-            A primeira tela, antes de abrir. Nomes, data e monograma vêm de{" "}
+            A primeira tela, antes de abrir: a logo (que já traz nomes e data), a igreja, a frase e o nome do convidado. Os nomes e a data do resto do convite vêm de{" "}
             <Link href="/admin/configuracoes" className="text-oliva underline underline-offset-4">
               Configurações
             </Link>
@@ -313,7 +313,10 @@ export function EditorConvite({
             {campoTexto({ chave: "capa_frase", rotulo: "Frase acima do nome", linhas: 2 })}
             {campoTexto({ chave: "capa_botao", rotulo: "Texto do botão", placeholder: "Toque para abrir", ajuda: "É neste toque que a música começa — o celular só deixa tocar depois dele." })}
           </div>
-          {campoImagem({ coluna: "cover_image_path", rotulo: "Desenho da capa", padrao: IMAGENS_PADRAO.capa })}
+          <div className="space-y-6">
+            {campoImagem({ coluna: "cover_logo_path", rotulo: "Logo da capa", padrao: IMAGENS_PADRAO.logo })}
+            {campoImagem({ coluna: "cover_image_path", rotulo: "Desenho da capa", padrao: IMAGENS_PADRAO.capa })}
+          </div>
         </div>
       </SecaoSalvavel>
 
