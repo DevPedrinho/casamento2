@@ -663,7 +663,7 @@ function Explorar({ textos, fundo }: PropsSecao) {
   );
 }
 
-function Final({ textos, noiva, noivo, monograma, imagens, fundo }: PropsSecao) {
+function Final({ textos, noiva, noivo, imagens, fundo }: PropsSecao) {
   return (
     <SecaoConvite fundo={fundo} enfeites={<LavandasDoCanto />}>
       <Image
@@ -683,14 +683,14 @@ function Final({ textos, noiva, noivo, monograma, imagens, fundo }: PropsSecao) 
       <span className="sr-only">
         {noiva} &amp; {noivo}
       </span>
-      {/* Só as iniciais: os nomes já estão na logo da capa e no texto. */}
+      {/* A logo completa, com nomes e data, é a assinatura. */}
       <Image
-        src={monograma}
+        src={imagens.logo}
         alt=""
         width={2000}
-        height={1896}
-        sizes="140px"
-        className="mt-5 h-auto w-28 mix-blend-multiply sm:w-32"
+        height={1762}
+        sizes="(max-width: 640px) 176px, 208px"
+        className="mt-4 h-auto w-44 mix-blend-multiply sm:w-52"
       />
     </SecaoConvite>
   );

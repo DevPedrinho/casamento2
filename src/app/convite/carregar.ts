@@ -45,9 +45,7 @@ export async function montarConvite({
     dataExtenso: casamento.dataExtenso,
     trajePadrao: casamento.trajes,
     prazoRsvp: casamento.prazoRsvp,
-    // Só as iniciais, para a assinatura final: o de Configurações → Imagens
-    // manda; sem ele, o D P floral do convite.
-    monograma: urlDoSite(casamento.imagens.monograma) ?? "/img/convite/monograma-floral.webp",
+    monograma: urlDoSite(casamento.imagens.monograma) ?? "/img/monograma-dp.png",
     convidado,
     confirmarHref,
     textos: textosDoConvite(config),
