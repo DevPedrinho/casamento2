@@ -356,3 +356,12 @@ body {
 .aos-poucos .aos-poucos > * {
   animation-delay: calc(0.45s + var(--k, 0) * 0.14s) !important;
 }
+
+/* O mesmo "respirar", discreto, para o botão de música do convite. */
+@keyframes respirar-suave {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(110, 90, 128, 0.3); }
+  50% { box-shadow: 0 0 0 4px rgba(110, 90, 128, 0); }
+}
+.respirar-suave {
+  animation: respirar-suave 2.4s ease-in-out infinite;
+}

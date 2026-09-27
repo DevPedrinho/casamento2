@@ -39,6 +39,7 @@ export const ORDEM_PADRAO: IdSecaoConvite[] = [
 export const TEXTOS_PADRAO = {
   capa_frase: "Preparamos este convite especialmente para você.",
   capa_botao: "Toque para abrir",
+  apresentacao_titulo: "Convite",
   apresentacao_texto:
     "Com a bênção de Deus e de nossas famílias,\nconvidamos você para celebrar conosco o início de uma nova etapa da nossa história.",
   versiculo_texto: "",

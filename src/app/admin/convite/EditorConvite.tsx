@@ -208,7 +208,7 @@ export function EditorConvite({
 
   const T = {
     capa: ["capa_frase", "capa_botao"],
-    apresentacao: ["apresentacao_texto", "versiculo_texto", "versiculo_referencia"],
+    apresentacao: ["apresentacao_titulo", "apresentacao_texto", "versiculo_texto", "versiculo_referencia"],
     mensagem: ["mensagem_titulo", "mensagem_texto"],
     grandeDia: ["grande_dia_titulo"],
     contagem: ["contagem_titulo"],
@@ -381,6 +381,7 @@ export function EditorConvite({
         aoSalvar={salvar(["verse_visible"], T.apresentacao)}
       >
         <div className="space-y-6">
+          {campoTexto({ chave: "apresentacao_titulo", rotulo: "Título", placeholder: "Convite", ajuda: "Em branco, a seção começa direto pelo texto." })}
           {campoTexto({ chave: "apresentacao_texto", rotulo: "Texto do convite", linhas: 4, ajuda: "As quebras de linha aparecem no convite como vocês digitarem." })}
           <label className="flex cursor-pointer items-center gap-3 text-base text-oliva-escuro">
             <input

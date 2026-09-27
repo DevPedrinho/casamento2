@@ -15,7 +15,7 @@ import { ProvedorMusica, useMusica } from "@/components/PlayerMusica";
 import { BotaoLink } from "@/components/Botao";
 import { Contagem } from "@/components/Contagem";
 import { Icone, type NomeIcone } from "@/components/Icones";
-import { Divisor, FaixaVersalete } from "@/components/Ornamentos";
+import { Divisor, Raminho } from "@/components/Ornamentos";
 import { iconeDoManual, type TextosConvite } from "@/lib/conviteDigital";
 import type { FaixaDoSite } from "@/lib/musica";
 import { ROTULOS_LOCAL, type IdSecaoConvite, type ItemManual, type LocalEvento } from "@/lib/tipos";
@@ -303,24 +303,24 @@ function ControleDiscreto() {
   if (!musica) return null;
   const { tocando, carregando, alternar, mudo, alternarMudo, titulo } = musica;
 
+  // Só os dois botões, sem nome: no celular a pílula com "Música" por
+  // extenso disputava o topo com o texto do convite.
   const botao =
-    "flex h-10 w-10 items-center justify-center rounded-full text-oliva transition-colors hover:bg-oliva/10 focus-visible:outline-2 focus-visible:outline-oliva";
+    "flex h-9 w-9 items-center justify-center rounded-full text-oliva transition-colors hover:bg-oliva/10 focus-visible:outline-2 focus-visible:outline-oliva";
 
   return (
     <div
-      className="fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-40 flex items-center gap-0.5 rounded-full border border-terra/25 bg-creme-claro/90 py-0.5 pr-0.5 pl-3 shadow-sm backdrop-blur-sm sm:right-5"
+      className="fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-40 flex items-center gap-0.5 rounded-full border border-terra/20 bg-creme-claro/85 p-0.5 shadow-sm backdrop-blur-sm sm:right-5"
       role="group"
       aria-label={`Música: ${titulo}`}
+      title={titulo}
     >
-      <Icone nome="musica" className="h-4 w-4 text-lavanda" />
-      <span className="versalete titulo-serif mr-1 ml-1.5 hidden text-xs text-terra min-[380px]:inline">
-        Música
-      </span>
       <button
         type="button"
         onClick={alternar}
         aria-label={tocando ? "Pausar a música" : "Continuar a música"}
-        className={botao}
+        // Um anel lilás bem leve pulsando diz que há música tocando.
+        className={`${botao} ${tocando && !mudo ? "respirar-suave" : ""}`}
       >
         {carregando ? (
           <span
@@ -467,8 +467,17 @@ function Apresentacao({ textos, versiculoVisivel, noiva, noivo, dataExtenso, fun
   const versiculo = versiculoVisivel && textos.versiculo_texto.trim();
   return (
     <SecaoConvite fundo={fundo} enfeites={<LavandasDoCanto />}>
-      <FaixaVersalete>Convite</FaixaVersalete>
-      <Paragrafo className="titulo-serif mt-9 max-w-xl text-xl leading-snug text-oliva italic sm:text-2xl">
+      {textos.apresentacao_titulo.trim() && (
+        <div className="flex items-center justify-center gap-3 sm:gap-5">
+          <Raminho lado="esquerda" className="w-10 text-oliva/70 sm:w-14" />
+          <h2 className="titulo-serif text-[2.4rem] leading-none text-oliva sm:text-[3.25rem]">
+            {textos.apresentacao_titulo}
+          </h2>
+          <Raminho lado="direita" className="w-10 text-oliva/70 sm:w-14" />
+        </div>
+      )}
+      {textos.apresentacao_titulo.trim() && <Divisor className="mt-5" />}
+      <Paragrafo className="titulo-serif mt-8 max-w-xl text-xl leading-snug text-oliva italic sm:text-2xl">
         {textos.apresentacao_texto}
       </Paragrafo>
       <p className="titulo-serif versalete mt-9 text-xl text-oliva sm:text-3xl">
