@@ -94,7 +94,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="flex min-h-screen flex-col">
         <Cabecalho nomes={`${casamento.noiva} & ${casamento.noivo}`} />
         <main className="flex-1">{children}</main>
-        <SomenteNoSite>
+        {/* O convite termina na própria assinatura; o rodapé repetiria nomes e data. */}
+        <SomenteNoSite ocultarEm={["/admin", "/convite"]}>
           <Rodape />
         </SomenteNoSite>
         <SomenteNoSite ocultarEm={["/admin", "/convite"]}>
