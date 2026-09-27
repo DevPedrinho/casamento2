@@ -207,18 +207,20 @@ function Capa({
           <Lavanda className="h-[20svh] max-h-56" duracao={6} atraso={-0.8} espelhar />
         </div>
 
-        <div className="relative mx-auto flex min-h-[100svh] max-w-lg flex-col items-center justify-center gap-5 px-8 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] text-center sm:gap-6">
+        <div className="relative mx-auto flex min-h-[100svh] max-w-lg flex-col items-center justify-center gap-[2.2svh] px-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] text-center">
           <h1 className="sr-only">
             {noiva} &amp; {noivo} — {dataCurta}
           </h1>
-          <div className="relative w-[74vw] max-w-[330px] sm:max-w-[350px]">
+          {/* A logo cede espaço ao desenho: limitada também pela altura da
+              tela, para logo + arco + texto caberem juntos no celular. */}
+          <div className="relative w-[min(52vw,26svh,300px)]">
             <Image
               src={imagens.logo}
               alt=""
               width={2000}
               height={1762}
               priority
-              sizes="(max-width: 640px) 74vw, 350px"
+              sizes="(max-width: 640px) 52vw, 300px"
               className="h-auto w-full mix-blend-multiply"
             />
             {logoTransparente && (
@@ -230,15 +232,7 @@ function Capa({
             )}
           </div>
 
-          <Image
-            src={imagens.capa}
-            alt="Desenho da igreja onde será a cerimônia"
-            width={1448}
-            height={1086}
-            priority
-            sizes="(max-width: 640px) 80vw, 340px"
-            className="bordas-suaves h-auto max-h-[21svh] w-auto max-w-[85%] object-contain mix-blend-multiply"
-          />
+          <ArcoDaCapa src={imagens.capa} />
 
           <div className="flex flex-col items-center">
             {textos.capa_frase && (
@@ -268,6 +262,34 @@ function Capa({
           className="pointer-events-none absolute inset-0 bg-gradient-to-l from-terra/35 via-terra/10 to-transparent"
           style={{ opacity: abrindo ? 1 : 0, transition: `opacity ${DURACAO_ABERTURA * 0.7}ms ease-in` }}
         />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * O desenho da capa, a peça principal: recortado num arco, como uma janela
+ * de igreja, com um brilho percorrendo a borda da imagem. O recorte
+ * (object-cover) serve para qualquer proporção enviada pelo painel.
+ */
+function ArcoDaCapa({ src }: { src: string }) {
+  const arco = "rounded-t-full rounded-b-[6px]";
+  return (
+    <div className="relative">
+      {/* Fio fino acompanhando o arco, por fora. */}
+      <span aria-hidden="true" className={`pointer-events-none absolute -inset-2 border border-terra/25 ${arco}`} />
+      <div className={`relative h-[min(42svh,440px)] w-[min(76vw,300px)] overflow-hidden bg-terra/20 p-[3px] ${arco}`}>
+        <span aria-hidden="true" className="borda-giratoria absolute top-1/2 left-1/2 aspect-square w-[260%]" />
+        <div className={`relative h-full w-full overflow-hidden bg-creme ${arco}`}>
+          <Image
+            src={src}
+            alt="Desenho de dentro da igreja onde será a cerimônia"
+            fill
+            priority
+            sizes="(max-width: 640px) 76vw, 300px"
+            className="object-cover object-[50%_60%] mix-blend-multiply"
+          />
+        </div>
       </div>
     </div>
   );
@@ -637,11 +659,11 @@ function Final({ textos, noiva, noivo, imagens, fundo }: PropsSecao) {
     <SecaoConvite fundo={fundo} enfeites={<LavandasDoCanto />}>
       <Image
         src={imagens.final}
-        alt="Desenho do corredor da igreja com gipsófilas"
-        width={941}
-        height={1672}
-        sizes="(max-width: 640px) 60vw, 260px"
-        className="bordas-suaves h-auto max-h-[52svh] w-auto max-w-[60%] mix-blend-multiply sm:max-w-[260px]"
+        alt="Desenho da igreja"
+        width={1448}
+        height={1086}
+        sizes="(max-width: 640px) 85vw, 360px"
+        className="bordas-suaves h-auto max-h-[46svh] w-auto max-w-[min(85%,22rem)] object-contain mix-blend-multiply"
       />
       <Paragrafo className="titulo-serif mt-10 max-w-md text-xl leading-snug text-oliva italic sm:text-2xl">
         {textos.final_texto}

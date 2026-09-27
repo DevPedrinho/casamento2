@@ -1,8 +1,8 @@
-import type { CSSProperties } from "react";
+import { useId, type CSSProperties } from "react";
 
 /**
  * O que se mexe no convite: raminhos de lavanda balançando, estrelinhas
- * cintilando e pontinhos de luz subindo devagar.
+ * cintilando nas margens e pétalas de rosa lilás caindo devagar.
  *
  * Tudo é CSS (keyframes em globals.css, só transform e opacity — não pesa
  * no celular), decorativo e fora do caminho do dedo. Com "reduzir
@@ -67,22 +67,45 @@ function Estrela({ style }: { style: CSSProperties }) {
 }
 
 // Posições fixas (em %), para o servidor e o navegador desenharem igual.
+// Só nas faixas laterais e nas quinas: o brilho nunca passa por cima de
+// texto, logo ou botão, que ficam no miolo.
 const ESTRELAS = [
-  { top: 7, left: 14, t: 20, d: 0 }, { top: 12, left: 84, t: 16, d: 1.1 }, { top: 24, left: 8, t: 15, d: 2.3 },
-  { top: 30, left: 91, t: 19, d: 0.6 }, { top: 44, left: 5, t: 17, d: 1.8 }, { top: 49, left: 94, t: 15, d: 2.9 },
-  { top: 61, left: 12, t: 18, d: 0.3 }, { top: 66, left: 86, t: 20, d: 1.5 }, { top: 78, left: 20, t: 15, d: 2.6 },
-  { top: 83, left: 78, t: 17, d: 0.9 }, { top: 18, left: 50, t: 14, d: 3.2 }, { top: 91, left: 50, t: 16, d: 2 },
+  { top: 6, left: 4, t: 18, d: 0 }, { top: 10, left: 90, t: 16, d: 1.1 }, { top: 22, left: 8, t: 14, d: 2.3 },
+  { top: 27, left: 92, t: 19, d: 0.6 }, { top: 38, left: 3, t: 16, d: 1.8 }, { top: 44, left: 89, t: 14, d: 2.9 },
+  { top: 53, left: 7, t: 18, d: 0.3 }, { top: 58, left: 93, t: 17, d: 1.5 }, { top: 67, left: 4, t: 14, d: 2.6 },
+  { top: 71, left: 90, t: 16, d: 0.9 }, { top: 15, left: 95, t: 12, d: 3.2 }, { top: 32, left: 2, t: 12, d: 2 },
 ];
 
-const LUZES = [
-  { left: 16, d: 0, t: 13, dx: 18 }, { left: 32, d: 4, t: 15, dx: -14 }, { left: 50, d: 8, t: 12, dx: 10 },
-  { left: 67, d: 2, t: 16, dx: -18 }, { left: 83, d: 6, t: 13, dx: 14 }, { left: 96, d: 10, t: 15, dx: -10 },
+// Pétalas: onde começam (% da largura), quanto balançam e o ritmo.
+const PETALAS = [
+  { left: 8, d: 0, t: 14, dx: 26, w: 13 }, { left: 72, d: 3, t: 17, dx: -22, w: 11 },
+  { left: 34, d: 6.5, t: 15, dx: 18, w: 14 }, { left: 88, d: 9, t: 13, dx: -28, w: 12 },
+  { left: 20, d: 11, t: 18, dx: 20, w: 10 }, { left: 55, d: 1.5, t: 16, dx: -18, w: 12 },
+  { left: 94, d: 5, t: 14, dx: -16, w: 11 },
 ];
 
-/** Estrelinhas cintilando e luz subindo, espalhadas pela área do pai (que deve ser relative). */
+/** Uma pétala de rosa lilás: gota arredondada, degradê suave e nervura. */
+function Petala({ style, id }: { style: CSSProperties; id: string }) {
+  return (
+    <svg viewBox="0 0 20 28" className="cair absolute top-0" style={style} aria-hidden="true">
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#e6dcef" />
+          <stop offset="1" stopColor="#b6a1cb" />
+        </linearGradient>
+      </defs>
+      <path d="M10 1C17 6 19.5 14.5 15.5 21.5 13.2 25.6 6.8 25.6 4.5 21.5 0.5 14.5 3 6 10 1Z" fill={`url(#${id})`} />
+      <path d="M10 5C10.6 11 10.4 17 9.4 22" stroke="#9d8bb0" strokeWidth="0.7" fill="none" opacity="0.45" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Estrelinhas cintilando nas margens e pétalas caindo, na área do pai (que deve ser relative). */
 export function Brilhos({ densidade = 1, className = "" }: { densidade?: 1 | 2; className?: string }) {
   const estrelas = densidade === 2 ? ESTRELAS : ESTRELAS.filter((_, i) => i % 2 === 0);
-  const luzes = densidade === 2 ? LUZES : LUZES.slice(0, 3);
+  const petalas = densidade === 2 ? PETALAS : PETALAS.slice(0, 4);
+  // O id do degradê precisa ser único por página: cada Brilhos ganha o seu.
+  const base = useId().replace(/:/g, "");
   return (
     <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
       {estrelas.map((e, i) => (
@@ -100,11 +123,11 @@ export function Brilhos({ densidade = 1, className = "" }: { densidade?: 1 | 2; 
           }}
         />
       ))}
-      {luzes.map((l, i) => (
-        <span
+      {petalas.map((p, i) => (
+        <Petala
           key={i}
-          className="flutuar absolute bottom-0 block h-1.5 w-1.5 rounded-full bg-lavanda-claro"
-          style={{ left: `${l.left}%`, animationDelay: `${l.d}s`, animationDuration: `${l.t}s`, "--dx": `${l.dx}px` } as CSSProperties}
+          id={`petala-${base}-${i}`}
+          style={{ left: `${p.left}%`, width: p.w, height: p.w * 1.4, animationDelay: `${p.d}s`, animationDuration: `${p.t}s`, "--dx": `${p.dx}px` } as CSSProperties}
         />
       ))}
     </div>

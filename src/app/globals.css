@@ -276,15 +276,38 @@ body {
   animation: cintilar 3.4s ease-in-out infinite;
 }
 
-/* Pontinho de luz subindo e se desfazendo. */
-@keyframes flutuar {
-  0% { transform: translate(0, 0); opacity: 0; }
-  15% { opacity: 0.75; }
-  100% { transform: translate(var(--dx, 12px), -55vh); opacity: 0; }
+/* Pétala caindo do alto ao pé da tela, balançando e girando devagar. */
+@keyframes cair {
+  0% { transform: translate3d(0, -6vh, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: 0.9; }
+  25% { transform: translate3d(var(--dx, 16px), 22vh, 0) rotate(95deg); }
+  50% { transform: translate3d(calc(var(--dx, 16px) * -0.6), 50vh, 0) rotate(200deg); }
+  75% { transform: translate3d(var(--dx, 16px), 78vh, 0) rotate(290deg); }
+  92% { opacity: 0.8; }
+  100% { transform: translate3d(0, 106vh, 0) rotate(380deg); opacity: 0; }
 }
-.flutuar {
+.cair {
   opacity: 0;
-  animation: flutuar 13s linear infinite;
+  animation: cair 15s linear infinite;
+}
+
+/* Borda da imagem da capa: um brilho percorre o contorno do arco. Um
+   quadrado com degradê cônico gira atrás da imagem, e só a faixa de 3px
+   que sobra em volta dela aparece. */
+@keyframes girar {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.borda-giratoria {
+  transform: translate(-50%, -50%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 52%,
+    rgba(183, 168, 196, 0.95) 64%,
+    rgba(255, 255, 255, 0.95) 70%,
+    rgba(125, 129, 89, 0.85) 77%,
+    transparent 90%
+  );
+  animation: girar 9s linear infinite;
 }
 
 /* Reflexo de luz atravessando a logo (a máscara recorta no desenho dela). */
