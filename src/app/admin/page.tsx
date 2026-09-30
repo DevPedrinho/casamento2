@@ -137,7 +137,9 @@ export default async function Dashboard() {
         alta: t.priority === "alta",
       })),
     ...listaFornecedores
-      .filter((f) => f.next_action_at && f.status !== "contratado" && f.status !== "descartado")
+      // Contratado também entra: depois de fechar ainda há prova, reunião,
+      // entrega de material. Só o descartado sai da agenda.
+      .filter((f) => f.next_action_at && f.status !== "descartado")
       .map((f) => ({
         data: f.next_action_at,
         titulo: `${f.next_action ?? "Retornar"} — ${f.name}`,
