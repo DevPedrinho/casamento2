@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { ProvedorMusica, useMusica } from "@/components/PlayerMusica";
+import { Colapsavel } from "@/components/ui/collapsible";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { BotaoLink } from "@/components/Botao";
 import { Contagem } from "@/components/Contagem";
@@ -607,20 +608,21 @@ function Manual({ textos, itens, fundo }: PropsSecao) {
       <Paragrafo className="-mt-3 mb-10 max-w-xl text-base leading-relaxed text-terra sm:text-lg">
         {textos.manual_intro}
       </Paragrafo>
-      <ul className="aos-poucos grid w-full max-w-4xl grid-cols-1 gap-4 text-left sm:grid-cols-2 sm:gap-5">
+      {/* Cada orientação abre e fecha: o convidado vê os títulos de uma vez
+          e abre só o que quer ler. */}
+      <ul className="aos-poucos flex w-full max-w-2xl flex-col gap-3 text-left">
         {itens.map((item, i) => (
-          <li
-            key={item.id}
-            style={{ "--k": i } as CSSProperties}
-            className="flex gap-4 rounded-sm border border-terra/15 bg-creme-claro/70 p-5 sm:p-6"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lavanda/10 text-lavanda">
-              <Icone nome={iconeDoManual(item.icon)} className="h-5 w-5" />
-            </span>
-            <div className="min-w-0">
-              <h3 className="titulo-serif text-lg leading-snug text-oliva sm:text-xl">{item.title}</h3>
-              <Paragrafo className="mt-1 text-sm leading-relaxed text-terra sm:text-base">{item.body}</Paragrafo>
-            </div>
+          <li key={item.id} style={{ "--k": i } as CSSProperties}>
+            <Colapsavel
+              titulo={item.title}
+              icone={
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lavanda/10 text-lavanda">
+                  <Icone nome={iconeDoManual(item.icon)} className="h-5 w-5" />
+                </span>
+              }
+            >
+              <Paragrafo className="text-base leading-relaxed text-terra">{item.body}</Paragrafo>
+            </Colapsavel>
           </li>
         ))}
       </ul>

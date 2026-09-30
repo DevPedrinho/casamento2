@@ -365,3 +365,23 @@ body {
 .respirar-suave {
   animation: respirar-suave 2.4s ease-in-out infinite;
 }
+
+/* Colapsável (components/ui/collapsible.tsx): abre e fecha pela altura
+   real do conteúdo, que a Ark UI entrega em --height. */
+@keyframes colapsavel-abrir {
+  from { height: 0; opacity: 0; }
+  to { height: var(--height); opacity: 1; }
+}
+@keyframes colapsavel-fechar {
+  from { height: var(--height); opacity: 1; }
+  to { height: 0; opacity: 0; }
+}
+.colapsavel-conteudo {
+  overflow: hidden;
+}
+.colapsavel-conteudo[data-state="open"] {
+  animation: colapsavel-abrir 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.colapsavel-conteudo[data-state="closed"] {
+  animation: colapsavel-fechar 240ms ease-in;
+}
