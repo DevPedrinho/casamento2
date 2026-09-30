@@ -133,6 +133,18 @@ export function FormRsvp({
       setErro("Falta o nome de um acompanhante. Escreva ou remova a linha.");
       return;
     }
+    // A idade decide se o acompanhante já entra confirmado (menor de 18) ou
+    // aguarda a própria resposta (18 ou mais): sem ela, não dá para saber.
+    if (
+      vai &&
+      preenchidos.some((a) => {
+        const n = Number(a.idade);
+        return a.idade.trim() === "" || !Number.isInteger(n) || n < 0 || n > 130;
+      })
+    ) {
+      setErro("Falta a idade de um acompanhante. Ela é obrigatória: é ela que diz quem confirma sozinho.");
+      return;
+    }
     if (vai && preenchidos.length > limite) {
       setErro(
         limite === 0
@@ -407,15 +419,17 @@ export function FormRsvp({
                       />
                     </div>
                     <div>
-                      <Rotulo htmlFor={`ac-idade-${i}`}>Idade</Rotulo>
+                      <Rotulo htmlFor={`ac-idade-${i}`}>Idade *</Rotulo>
                       <input
                         id={`ac-idade-${i}`}
                         type="number"
                         min={0}
                         max={130}
                         inputMode="numeric"
+                        required
+                        aria-required="true"
                         className="campo"
-                        placeholder="—"
+                        placeholder="Anos"
                         value={linha.idade}
                         onChange={(e) => alterar(i, "idade", e.target.value)}
                       />
