@@ -55,6 +55,7 @@ export default async function ConviteIndividual({
   const props = await montarConvite({
     convidado: dono?.ok ? (dono.nome ?? null) : null,
     confirmarHref,
+    codigo: dono?.ok ? codigo : null,
   });
   return <Convite {...props} />;
 }

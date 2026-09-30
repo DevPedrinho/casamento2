@@ -402,6 +402,9 @@ export type ConvidadoCompleto = {
   code_sent_at: string | null;
   /** Como o convite digital chama a pessoa ("Família Souza"). Vazio = full_name. */
   invite_name?: string | null;
+  /** Última vez com o site aberto, e em que página. */
+  last_seen_at?: string | null;
+  last_seen_path?: string | null;
   /** Foto de perfil no bucket "site". */
   avatar_path: string | null;
   /** Quem trouxe: o titular, quando o cadastro nasceu de um acompanhante. */

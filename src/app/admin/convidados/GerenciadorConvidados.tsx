@@ -90,7 +90,7 @@ export function GerenciadorConvidados({
   const [copiado, setCopiado] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
-  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [detalheId, setDetalheId] = useState<string | null>(inicial.convidado ?? null);
   const [editando, setEditando] = useState<{ convidado: ConvidadoCompleto; aba: AbaDaFicha } | null>(null);
   const [filaAberta, setFilaAberta] = useState(false);
   const listaRef = useRef<HTMLDivElement>(null);

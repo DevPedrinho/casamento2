@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { ProvedorMusica, useMusica } from "@/components/PlayerMusica";
+import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { BotaoLink } from "@/components/Botao";
 import { Contagem } from "@/components/Contagem";
 import { Icone, type NomeIcone } from "@/components/Icones";
@@ -32,6 +33,8 @@ export type PropsConvite = {
   monograma: string;
   /** Nome de quem recebeu o link; null = convite geral. */
   convidado: string | null;
+  /** O código do link individual, para registrar que foi aberto. */
+  codigo: string | null;
   confirmarHref: string;
   textos: TextosConvite;
   versiculoVisivel: boolean;
@@ -86,6 +89,19 @@ function Casca(props: PropsConvite) {
   const [revelar, setRevelar] = useState(false);
   const inicio = useRef<HTMLDivElement>(null);
 
+  // Os noivos veem no painel quem abriu o link e quem tocou para abrir.
+  // Com código, conta para o dono do código; sem, para quem está logado.
+  const registrar = (evento: "abriu_link" | "abriu_convite") =>
+    void criarClienteNavegador()
+      .rpc("registrar_convite", { p_codigo: props.codigo, p_evento: evento })
+      .then(() => undefined);
+
+  useEffect(() => {
+    registrar("abriu_link");
+    // Uma vez por abertura da página.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Enquanto a capa está na frente, a página não rola por baixo dela.
   useEffect(() => {
     if (fase === "aberto") return;
@@ -102,6 +118,7 @@ function Casca(props: PropsConvite) {
     // Primeiro a música, ainda dentro do gesto — depois de um setTimeout
     // o iPhone já não considera que foi a pessoa que pediu.
     musica?.tocar();
+    registrar("abriu_convite");
     window.scrollTo(0, 0);
     setFase("abrindo");
 

@@ -6,6 +6,7 @@ import { Cabecalho } from "@/components/Cabecalho";
 import { Rodape } from "@/components/Rodape";
 import { SomenteNoSite } from "@/components/CasulaSite";
 import { Assistente } from "@/components/assistente/Assistente";
+import { RegistroDeVisita } from "@/components/RegistroDeVisita";
 import "./globals.css";
 
 // Serifada de traço fino e elegante, no espírito do monograma da IDV.
@@ -94,6 +95,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="flex min-h-screen flex-col">
         <Cabecalho nomes={`${casamento.noiva} & ${casamento.noivo}`} />
         <main className="flex-1">{children}</main>
+        {/* Quem está no site agora, para o painel dos noivos. Fora do painel. */}
+        <SomenteNoSite>
+          <RegistroDeVisita />
+        </SomenteNoSite>
         {/* O convite termina na própria assinatura; o rodapé repetiria nomes e data. */}
         <SomenteNoSite ocultarEm={["/admin", "/convite"]}>
           <Rodape />

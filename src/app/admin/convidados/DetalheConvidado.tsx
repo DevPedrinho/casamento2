@@ -18,6 +18,7 @@ import { Botao } from "@/components/Botao";
 import { Selo } from "@/components/painel";
 import { ACAO_FICHA, CartaoFicha, Ficha, LinhaFicha } from "@/components/Ficha";
 import { TOM_STATUS } from "./tons";
+import { AtividadeNoSite } from "./AtividadeNoSite";
 import type { AbaDaFicha } from "./FichaConvidado";
 
 const LADO: Record<string, string> = { noivo: "do noivo", noiva: "da noiva", ambos: "dos dois" };
@@ -167,6 +168,13 @@ export function DetalheConvidado({
           </div>
         )}
       </CartaoFicha>
+
+      {/* ---------- Atividade no site ---------- */}
+      <AtividadeNoSite
+        guestId={c.id}
+        ultimoAcesso={c.last_seen_at ?? null}
+        ultimaPagina={c.last_seen_path ?? null}
+      />
 
       {/* ---------- Família ---------- */}
       <CartaoFicha titulo="Família">

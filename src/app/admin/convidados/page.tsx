@@ -10,6 +10,7 @@ const SELECT = `
   favor_type, invite_status, confirmed_at, companions_planned, table_id,
   dietary_notes, notes, last_contact_at, next_action, next_action_at,
   access_code, code_sent_at, is_featured, featured_order, avatar_path, invited_by, extra, created_at,
+  last_seen_at, last_seen_path, invite_name,
   grupo:guest_groups!guests_group_id_fkey ( id, name, side, notes ),
   mesa:wedding_tables!guests_table_id_fkey ( id, name, seats, notes, sort_order )
 `;
@@ -22,6 +23,8 @@ export type FiltroInicial = {
   presenca?: string;
   genero?: string;
   lado?: string;
+  /** Abre direto a ficha deste convidado (links do Dashboard). */
+  convidado?: string;
 };
 
 export default async function ConvidadosPage({
@@ -67,6 +70,7 @@ export default async function ConvidadosPage({
         presenca: texto(params.presenca),
         genero: texto(params.genero),
         lado: texto(params.lado),
+        convidado: texto(params.convidado),
       }}
     />
   );

@@ -20,6 +20,7 @@ import { diasAte, reais } from "@/lib/formato";
 import { contaNoTotal, ehDeColo, ehNoivo, vagasPorTitular } from "@/lib/idade";
 import { AnelCompacto, Bloco } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
+import { MovimentoConvidados } from "./MovimentoConvidados";
 import { ResumoModulos, type DadosResumo, type NumeroChave } from "./ResumoModulos";
 import type { Fatia, Semana } from "@/components/graficos";
 
@@ -361,7 +362,8 @@ export default async function Dashboard() {
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* ---------- O termômetro ---------- */}
+        {/* ---------- O termômetro e, embaixo, o movimento dos convidados ---------- */}
+        <div className="space-y-6">
         <Bloco titulo="Onde estamos">
           <div className="space-y-6">
             <div>
@@ -411,6 +413,9 @@ export default async function Dashboard() {
             )}
           </div>
         </Bloco>
+
+        <MovimentoConvidados />
+        </div>
 
         {/* ---------- Mês a mês ---------- */}
         <div className="lg:col-span-2">

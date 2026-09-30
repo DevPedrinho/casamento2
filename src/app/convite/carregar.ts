@@ -21,9 +21,11 @@ import type { PropsConvite } from "./Convite";
 export async function montarConvite({
   convidado,
   confirmarHref,
+  codigo = null,
 }: {
   convidado: string | null;
   confirmarHref: string;
+  codigo?: string | null;
 }): Promise<PropsConvite> {
   const supabase = await criarClienteServidor();
   const [casamento, { data: linha }, { data: itens }, { data: locais }, { data: historia }] =
@@ -48,6 +50,7 @@ export async function montarConvite({
     monograma: urlDoSite(casamento.imagens.monograma) ?? "/img/monograma-dp.png",
     convidado,
     confirmarHref,
+    codigo,
     textos: textosDoConvite(config),
     versiculoVisivel: config.verse_visible,
     secoes: config.sections.filter((s) => s.visivel).map((s) => s.id),
