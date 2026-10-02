@@ -14,6 +14,8 @@ import { Aviso, Rotulo } from "@/components/CartaoForm";
  * para que a lista e a ficha nunca discordem entre si.
  */
 
+export { contaNoOrcamento, rotuloTerceiros } from "@/lib/orcamento";
+
 /** Soma dos pagamentos já lançados em uma despesa. */
 export function totalPago(despesa: Despesa): number {
   return (despesa.payments ?? []).reduce((s, p) => s + p.amount_cents, 0);

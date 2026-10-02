@@ -7,7 +7,7 @@ import { Botao } from "@/components/Botao";
 import { Progresso, Selo } from "@/components/painel";
 import { Icone } from "@/components/Icones";
 import { ACAO_FICHA, CartaoFicha, Ficha, LinhaFicha, NumeroFicha } from "@/components/Ficha";
-import { FormPagamento, statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
+import { contaNoOrcamento, FormPagamento, rotuloTerceiros, statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
 
 /**
  * A ficha de uma despesa, aberta por cima da lista.
@@ -79,6 +79,12 @@ export function FichaDespesa({
             <Selo tom={TOM_DESPESA[situacao]}>{ROTULOS_DESPESA[situacao]}</Selo>
             {!quitado && pago > 0 && <Selo tom="lavanda">parcial</Selo>}
           </div>
+          {!contaNoOrcamento(despesa) && (
+            <p className="mt-3 rounded-sm border border-lavanda/30 bg-lavanda/5 px-3 py-2 text-sm text-terra">
+              <span className="font-medium text-lavanda">{rotuloTerceiros(despesa)}.</span> Fica registrada aqui,
+              mas fora do orçamento de vocês, dos totais e dos gráficos.
+            </p>
+          )}
         </>
       }
       rodape={

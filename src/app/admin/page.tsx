@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { contaNoOrcamento } from "@/lib/orcamento";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import type {
   Despesa,
@@ -49,7 +50,9 @@ export default async function Dashboard() {
   const listaConvidados = (convidados.data ?? []).filter(contaNoTotal);
   const noColo = (convidados.data ?? []).filter((c) => !ehNoivo(c) && ehDeColo(c)).length;
   const listaTarefas = (tarefas.data ?? []) as Tarefa[];
-  const listaDespesas = (despesas.data ?? []) as Despesa[];
+  // O que é pago por terceiros fica fora de todo o Dashboard: anel,
+  // comprometido, orçamento estourado, Mês a mês e resumo do Financeiro.
+  const listaDespesas = ((despesas.data ?? []) as Despesa[]).filter(contaNoOrcamento);
   const listaFornecedores = (fornecedores.data ?? []) as Fornecedor[];
   const orcamentoTotal = config.data?.budget_total_cents ?? 0;
 

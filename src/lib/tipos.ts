@@ -224,6 +224,10 @@ export type Despesa = {
   status: StatusDespesa;
   payment_method: string | null;
   installments: number;
+  /** Paga por outra pessoa: aparece no Financeiro, mas fora do orçamento. */
+  paid_by_third?: boolean;
+  /** Quem paga, quando é por terceiros. */
+  paid_by_name?: string | null;
   payments: Pagamento[];
 };
 
