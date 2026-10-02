@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { Despesa, StatusDespesa } from "@/lib/tipos";
+import type { Despesa, Pagamento, StatusDespesa } from "@/lib/tipos";
 import { diasAte, paraCampo, paraCentavos } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
@@ -44,22 +44,31 @@ export const TOM_DESPESA: Record<StatusDespesa, "neutro" | "oliva" | "lavanda" |
   cancelado: "apagado",
 };
 
+/**
+ * Lançar um pagamento novo ou, com `pagamento`, corrigir um já lançado
+ * (valor, data, forma, quem pagou) — ou removê-lo, se foi engano.
+ */
 export function FormPagamento({
   despesaId,
-  sugestao,
+  sugestao = 0,
+  pagamento,
   aoSalvar,
   aoCancelar,
 }: {
   despesaId: string;
-  sugestao: number;
+  sugestao?: number;
+  pagamento?: Pagamento;
   aoSalvar: () => void;
   aoCancelar: () => void;
 }) {
-  const [valor, setValor] = useState(sugestao > 0 ? paraCampo(sugestao) : "");
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
-  const [metodo, setMetodo] = useState("");
-  const [deOutraPessoa, setDeOutraPessoa] = useState(false);
-  const [quem, setQuem] = useState("");
+  const chave = pagamento?.id ?? despesaId;
+  const [valor, setValor] = useState(
+    pagamento ? paraCampo(pagamento.amount_cents) : sugestao > 0 ? paraCampo(sugestao) : "",
+  );
+  const [data, setData] = useState(pagamento?.paid_at ?? new Date().toISOString().slice(0, 10));
+  const [metodo, setMetodo] = useState(pagamento?.method ?? "");
+  const [deOutraPessoa, setDeOutraPessoa] = useState(Boolean(pagamento?.paid_by_third));
+  const [quem, setQuem] = useState(pagamento?.paid_by_name ?? "");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -75,18 +84,34 @@ export function FormPagamento({
 
     setSalvando(true);
     const supabase = criarClienteNavegador();
-    const { error } = await supabase.from("payments").insert({
-      expense_id: despesaId,
+    const dados = {
       amount_cents: centavos,
       paid_at: data,
       method: metodo.trim() || null,
       paid_by_third: deOutraPessoa,
       paid_by_name: deOutraPessoa ? quem.trim() || null : null,
-    });
+    };
+    const { error } = pagamento
+      ? await supabase.from("payments").update(dados).eq("id", pagamento.id)
+      : await supabase.from("payments").insert({ expense_id: despesaId, ...dados });
     setSalvando(false);
 
     if (error) {
-      setErro("Não foi possível lançar o pagamento.");
+      setErro(pagamento ? "Não foi possível salvar a correção." : "Não foi possível lançar o pagamento.");
+      return;
+    }
+    aoSalvar();
+  }
+
+  async function remover() {
+    if (!pagamento) return;
+    if (!confirm("Remover este lançamento? O valor sai do que já foi pago.")) return;
+    setErro(null);
+    setSalvando(true);
+    const { error } = await criarClienteNavegador().from("payments").delete().eq("id", pagamento.id);
+    setSalvando(false);
+    if (error) {
+      setErro("Não foi possível remover o lançamento.");
       return;
     }
     aoSalvar();
@@ -97,16 +122,16 @@ export function FormPagamento({
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
-          <Rotulo htmlFor={`p-valor-${despesaId}`}>Valor (R$)</Rotulo>
-          <input id={`p-valor-${despesaId}`} inputMode="decimal" className="campo" value={valor} onChange={(e) => setValor(e.target.value)} />
+          <Rotulo htmlFor={`p-valor-${chave}`}>Valor (R$)</Rotulo>
+          <input id={`p-valor-${chave}`} inputMode="decimal" className="campo" value={valor} onChange={(e) => setValor(e.target.value)} />
         </div>
         <div>
-          <Rotulo htmlFor={`p-data-${despesaId}`}>Data</Rotulo>
-          <input id={`p-data-${despesaId}`} type="date" className="campo" value={data} onChange={(e) => setData(e.target.value)} />
+          <Rotulo htmlFor={`p-data-${chave}`}>Data</Rotulo>
+          <input id={`p-data-${chave}`} type="date" className="campo" value={data} onChange={(e) => setData(e.target.value)} />
         </div>
         <div>
-          <Rotulo htmlFor={`p-metodo-${despesaId}`}>Forma</Rotulo>
-          <input id={`p-metodo-${despesaId}`} className="campo" placeholder="Pix, cartão…" value={metodo} onChange={(e) => setMetodo(e.target.value)} />
+          <Rotulo htmlFor={`p-metodo-${chave}`}>Forma</Rotulo>
+          <input id={`p-metodo-${chave}`} className="campo" placeholder="Pix, cartão…" value={metodo} onChange={(e) => setMetodo(e.target.value)} />
         </div>
       </div>
       <fieldset>
@@ -135,9 +160,9 @@ export function FormPagamento({
         </div>
         {deOutraPessoa && (
           <div className="mt-3 max-w-sm">
-            <Rotulo htmlFor={`p-quem-${despesaId}`}>Nome</Rotulo>
+            <Rotulo htmlFor={`p-quem-${chave}`}>Nome</Rotulo>
             <input
-              id={`p-quem-${despesaId}`}
+              id={`p-quem-${chave}`}
               className="campo"
               placeholder="Pais da noiva, padrinho João…"
               value={quem}
@@ -149,11 +174,21 @@ export function FormPagamento({
       </fieldset>
       <div className="flex flex-wrap gap-3">
         <Botao type="submit" disabled={salvando}>
-          {salvando ? "Lançando…" : "Lançar"}
+          {salvando ? (pagamento ? "Salvando…" : "Lançando…") : pagamento ? "Salvar" : "Lançar"}
         </Botao>
         <Botao type="button" variante="contorno" onClick={aoCancelar}>
           Cancelar
         </Botao>
+        {pagamento && (
+          <button
+            type="button"
+            onClick={remover}
+            disabled={salvando}
+            className="versalete ml-auto self-center text-xs text-red-800 underline-offset-4 hover:underline disabled:opacity-50"
+          >
+            Remover lançamento
+          </button>
+        )}
       </div>
     </form>
   );

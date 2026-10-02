@@ -33,6 +33,8 @@ export function FichaDespesa({
   aoAtualizar: () => void;
 }) {
   const [lancando, setLancando] = useState(false);
+  /** O lançamento aberto para correção (um por vez). */
+  const [corrigindo, setCorrigindo] = useState<string | null>(null);
 
   const pago = totalPago(despesa);
   const nosso = pagoPorNos(despesa);
@@ -158,7 +160,10 @@ export function FichaDespesa({
           !lancando && situacao !== "cancelado" ? (
             <button
               type="button"
-              onClick={() => setLancando(true)}
+              onClick={() => {
+                setCorrigindo(null);
+                setLancando(true);
+              }}
               className={`${ACAO_FICHA} text-oliva`}
             >
               <Icone nome="mais" className="h-3.5 w-3.5" />
@@ -171,24 +176,52 @@ export function FichaDespesa({
           <p className="text-sm text-terra">Nenhum pagamento lançado ainda.</p>
         ) : (
           <ul className="divide-y divide-terra/15">
-            {pagamentos.map((p) => (
-              <li key={p.id} className="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
-                <span className="min-w-0 text-sm text-terra">
-                  <span className="block text-oliva">{formatarData(p.paid_at)}</span>
-                  {p.method && <span className="block truncate text-terra/90">{p.method}</span>}
-                  {p.paid_by_third ? (
-                    <span className="mt-1 inline-block rounded-full bg-lavanda/15 px-2 py-0.5 text-xs text-oliva">
-                      Pago por {quemPagou(p)} · fora do orçamento
+            {pagamentos.map((p) =>
+              corrigindo === p.id ? (
+                <li key={p.id} className="py-2.5 first:pt-0 last:pb-0">
+                  <p className="text-sm text-oliva">Corrigindo o lançamento de {formatarData(p.paid_at)}</p>
+                  <FormPagamento
+                    despesaId={despesa.id}
+                    pagamento={p}
+                    aoSalvar={() => {
+                      setCorrigindo(null);
+                      aoAtualizar();
+                    }}
+                    aoCancelar={() => setCorrigindo(null)}
+                  />
+                </li>
+              ) : (
+                <li key={p.id} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+                  <span className="min-w-0 text-sm text-terra">
+                    <span className="block text-oliva">{formatarData(p.paid_at)}</span>
+                    {p.method && <span className="block truncate text-terra/90">{p.method}</span>}
+                    {p.paid_by_third ? (
+                      <span className="mt-1 inline-block rounded-full bg-lavanda/15 px-2 py-0.5 text-xs text-oliva">
+                        Pago por {quemPagou(p)} · fora do orçamento
+                      </span>
+                    ) : (
+                      <span className="block text-xs text-terra/80">Pago por nós</span>
+                    )}
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="titulo-serif text-lg text-oliva tabular-nums lining-nums">
+                      {reais(p.amount_cents)}
                     </span>
-                  ) : (
-                    <span className="block text-xs text-terra/80">Pago por nós</span>
-                  )}
-                </span>
-                <span className="titulo-serif shrink-0 text-lg text-oliva tabular-nums lining-nums">
-                  {reais(p.amount_cents)}
-                </span>
-              </li>
-            ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLancando(false);
+                        setCorrigindo(p.id);
+                      }}
+                      aria-label={`Editar o lançamento de ${formatarData(p.paid_at)}`}
+                      className="versalete -mr-2 min-h-9 px-2 text-xs text-terra underline-offset-4 hover:text-oliva hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )}
 
