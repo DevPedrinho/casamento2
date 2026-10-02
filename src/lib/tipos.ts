@@ -179,7 +179,7 @@ export type Fornecedor = {
 /** Categorias usadas no cadastro de fornecedor. */
 export const CATEGORIAS_FORNECEDOR = [
   "Buffet", "Decoração", "Fotografia", "Filmagem", "Música", "Cerimonial",
-  "Convites", "Doces", "Bolo", "Roupa", "Beleza", "Transporte", "Outros",
+  "Convites", "Doces", "Bolo", "Lembrancinhas", "Roupa", "Beleza", "Transporte", "Outros",
 ];
 
 /** As etapas do funil, na ordem em que acontecem. */
