@@ -532,12 +532,15 @@ function QuadroFornecedores({
           // fora — não é economia exata, que seria a diferença para o
           // contratado da mesma categoria.
           const recusado = itens.reduce((s, f) => s + (f.quoted_cents ?? f.agreed_cents ?? 0), 0);
+          // Nas etapas em aberto, soma o mesmo valor que o cartão mostra:
+          // o fechado, se já houver, senão o orçamento.
+          const emAberto = itens.reduce((s, f) => s + (f.agreed_cents ?? f.quoted_cents ?? 0), 0);
           const totalDaColuna =
-            etapa === "contratado" && fechado > 0
-              ? `${reais(fechado)} fechados`
-              : etapa === "descartado" && recusado > 0
-                ? `${reais(recusado)} em orçamentos recusados`
-                : "";
+            etapa === "contratado"
+              ? fechado > 0 ? `${reais(fechado)} fechados` : ""
+              : etapa === "descartado"
+                ? recusado > 0 ? `${reais(recusado)} em orçamentos recusados` : ""
+                : emAberto > 0 ? `${reais(emAberto)} em orçamentos` : "";
           return (
             <section
               key={etapa}
