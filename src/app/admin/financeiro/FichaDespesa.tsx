@@ -7,7 +7,7 @@ import { Botao } from "@/components/Botao";
 import { Progresso, Selo } from "@/components/painel";
 import { Icone } from "@/components/Icones";
 import { ACAO_FICHA, CartaoFicha, Ficha, LinhaFicha, NumeroFicha } from "@/components/Ficha";
-import { contaNoOrcamento, FormPagamento, rotuloTerceiros, statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
+import { FormPagamento, pagoPorNos, pagoPorOutros, quemPagou, statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
 
 /**
  * A ficha de uma despesa, aberta por cima da lista.
@@ -35,6 +35,8 @@ export function FichaDespesa({
   const [lancando, setLancando] = useState(false);
 
   const pago = totalPago(despesa);
+  const nosso = pagoPorNos(despesa);
+  const deOutros = pagoPorOutros(despesa);
   const referencia = valorDeReferencia(despesa);
   const falta = Math.max(0, referencia - pago);
   const quitado = referencia > 0 && falta === 0;
@@ -79,10 +81,10 @@ export function FichaDespesa({
             <Selo tom={TOM_DESPESA[situacao]}>{ROTULOS_DESPESA[situacao]}</Selo>
             {!quitado && pago > 0 && <Selo tom="lavanda">parcial</Selo>}
           </div>
-          {!contaNoOrcamento(despesa) && (
+          {deOutros > 0 && (
             <p className="mt-3 rounded-sm border border-lavanda/30 bg-lavanda/5 px-3 py-2 text-sm text-terra">
-              <span className="font-medium text-lavanda">{rotuloTerceiros(despesa)}.</span> Fica registrada aqui,
-              mas fora do orçamento de vocês, dos totais e dos gráficos.
+              <span className="font-medium text-lavanda">{reais(deOutros)} pagos por outras pessoas.</span> Quitam
+              a conta, mas ficam fora do orçamento de vocês, dos totais e dos gráficos.
             </p>
           )}
         </>
@@ -105,8 +107,9 @@ export function FichaDespesa({
       {/* ---------- Quanto já foi, quanto falta ---------- */}
       {referencia > 0 && (
         <CartaoFicha titulo="Pagamento">
-          <div className="grid grid-cols-2 gap-3">
-            <NumeroFicha rotulo="Já pago" valor={reais(pago)} tom="oliva" />
+          <div className={`grid gap-3 ${deOutros > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+            <NumeroFicha rotulo={deOutros > 0 ? "Pago por nós" : "Já pago"} valor={reais(nosso)} tom="oliva" />
+            {deOutros > 0 && <NumeroFicha rotulo="Por outros" valor={reais(deOutros)} tom="lavanda" />}
             <NumeroFicha rotulo="Falta" valor={reais(falta)} tom={falta > 0 ? "lavanda" : "oliva"} />
           </div>
           <div className="mt-4">
@@ -173,6 +176,13 @@ export function FichaDespesa({
                 <span className="min-w-0 text-sm text-terra">
                   <span className="block text-oliva">{formatarData(p.paid_at)}</span>
                   {p.method && <span className="block truncate text-terra/90">{p.method}</span>}
+                  {p.paid_by_third ? (
+                    <span className="mt-1 inline-block rounded-full bg-lavanda/15 px-2 py-0.5 text-xs text-oliva">
+                      Pago por {quemPagou(p)} · fora do orçamento
+                    </span>
+                  ) : (
+                    <span className="block text-xs text-terra/80">Pago por nós</span>
+                  )}
                 </span>
                 <span className="titulo-serif shrink-0 text-lg text-oliva tabular-nums lining-nums">
                   {reais(p.amount_cents)}

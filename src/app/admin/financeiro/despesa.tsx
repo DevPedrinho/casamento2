@@ -6,6 +6,7 @@ import { diasAte, paraCampo, paraCentavos } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
+import { valorDeReferencia } from "@/lib/orcamento";
 
 /**
  * O que é comum à lista de despesas e à ficha de uma despesa.
@@ -14,16 +15,12 @@ import { Aviso, Rotulo } from "@/components/CartaoForm";
  * para que a lista e a ficha nunca discordem entre si.
  */
 
-export { contaNoOrcamento, rotuloTerceiros } from "@/lib/orcamento";
+export { compromissoNosso, pagoPorNos, pagoPorOutros, quemPagou, valorDeReferencia } from "@/lib/orcamento";
 
-/** Soma dos pagamentos já lançados em uma despesa. */
+/** Soma de todos os lançamentos de uma despesa, de quem quer que tenham
+ *  vindo — é o que diz se a conta com o fornecedor está quitada. */
 export function totalPago(despesa: Despesa): number {
   return (despesa.payments ?? []).reduce((s, p) => s + p.amount_cents, 0);
-}
-
-/** O valor que vale para o caixa: o contratado quando existe, senão o previsto. */
-export function valorDeReferencia(despesa: Despesa): number {
-  return despesa.contracted_cents ?? despesa.estimated_cents;
 }
 
 /** O status guardado, corrigido pela realidade: quitado é pago; vencido e
@@ -61,6 +58,8 @@ export function FormPagamento({
   const [valor, setValor] = useState(sugestao > 0 ? paraCampo(sugestao) : "");
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [metodo, setMetodo] = useState("");
+  const [deOutraPessoa, setDeOutraPessoa] = useState(false);
+  const [quem, setQuem] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -81,6 +80,8 @@ export function FormPagamento({
       amount_cents: centavos,
       paid_at: data,
       method: metodo.trim() || null,
+      paid_by_third: deOutraPessoa,
+      paid_by_name: deOutraPessoa ? quem.trim() || null : null,
     });
     setSalvando(false);
 
@@ -108,6 +109,44 @@ export function FormPagamento({
           <input id={`p-metodo-${despesaId}`} className="campo" placeholder="Pix, cartão…" value={metodo} onChange={(e) => setMetodo(e.target.value)} />
         </div>
       </div>
+      <fieldset>
+        <legend className="versalete mb-2 block text-xs text-terra">Quem pagou?</legend>
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { valor: false, rotulo: "Nós (noivos)" },
+            { valor: true, rotulo: "Outra pessoa" },
+          ].map((opcao) => (
+            <button
+              key={opcao.rotulo}
+              type="button"
+              aria-pressed={deOutraPessoa === opcao.valor}
+              onClick={() => setDeOutraPessoa(opcao.valor)}
+              className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                deOutraPessoa === opcao.valor
+                  ? opcao.valor
+                    ? "border-lavanda bg-lavanda/15 text-oliva"
+                    : "border-oliva bg-oliva text-creme-claro"
+                  : "border-terra/25 text-terra hover:border-oliva/50"
+              }`}
+            >
+              {opcao.rotulo}
+            </button>
+          ))}
+        </div>
+        {deOutraPessoa && (
+          <div className="mt-3 max-w-sm">
+            <Rotulo htmlFor={`p-quem-${despesaId}`}>Nome</Rotulo>
+            <input
+              id={`p-quem-${despesaId}`}
+              className="campo"
+              placeholder="Pais da noiva, padrinho João…"
+              value={quem}
+              onChange={(e) => setQuem(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-terra">Fica registrado, mas não entra no nosso orçamento.</p>
+          </div>
+        )}
+      </fieldset>
       <div className="flex flex-wrap gap-3">
         <Botao type="submit" disabled={salvando}>
           {salvando ? "Lançando…" : "Lançar"}

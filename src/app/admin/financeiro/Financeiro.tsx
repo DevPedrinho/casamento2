@@ -11,7 +11,8 @@ import { Bloco, BarrasCategoria, Indicador, LinhaValor, Progresso, Selo, Vazio }
 import { BarrasInterativas, type Fatia } from "@/components/graficos";
 import { Icone } from "@/components/Icones";
 import { ACAO_FICHA } from "@/components/Ficha";
-import { contaNoOrcamento, rotuloTerceiros, statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
+import { compromissoNosso, pagoPorNos, pagoPorOutros, statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
+import { lancamentoNosso } from "@/lib/orcamento";
 import { FichaDespesa } from "./FichaDespesa";
 
 const VAZIO = {
@@ -25,8 +26,6 @@ const VAZIO = {
   status: "previsto" as StatusDespesa,
   payment_method: "",
   installments: "1",
-  paid_by_third: false,
-  paid_by_name: "",
 };
 
 export function Financeiro({
@@ -108,22 +107,21 @@ export function Financeiro({
     setDetalheId(d.id);
   }
 
-  // Pagas por terceiros ficam registradas, mas fora de totais, gráficos e
-  // alertas: o painel fala do dinheiro de vocês.
-  const nossas = useMemo(() => despesas.filter(contaNoOrcamento), [despesas]);
-  const deTerceiros = useMemo(
-    () => despesas.filter((d) => !contaNoOrcamento(d)).reduce((s, d) => s + valorDeReferencia(d), 0),
-    [despesas],
-  );
+  // O que outras pessoas pagaram (pais, padrinhos…) quita as contas, mas
+  // fica fora de totais e gráficos: o painel fala do dinheiro de vocês.
+  const deOutros = useMemo(() => despesas.reduce((s, d) => s + pagoPorOutros(d), 0), [despesas]);
 
   const resumo = useMemo(() => {
-    const previsto = nossas.reduce((s, d) => s + d.estimated_cents, 0);
-    const contratado = nossas.reduce((s, d) => s + (d.contracted_cents ?? 0), 0);
-    const pago = nossas.reduce((s, d) => s + totalPago(d), 0);
-    const comprometido = nossas.reduce((s, d) => s + valorDeReferencia(d), 0);
-    const aPagar = Math.max(0, comprometido - pago);
+    const previsto = despesas.reduce((s, d) => s + compromissoNosso(d, d.estimated_cents), 0);
+    const contratado = despesas.reduce(
+      (s, d) => s + (d.contracted_cents === null ? 0 : compromissoNosso(d, d.contracted_cents)),
+      0,
+    );
+    const pago = despesas.reduce((s, d) => s + pagoPorNos(d), 0);
+    const comprometido = despesas.reduce((s, d) => s + compromissoNosso(d), 0);
+    const aPagar = despesas.reduce((s, d) => s + Math.max(0, valorDeReferencia(d) - totalPago(d)), 0);
 
-    const vencendoLista = nossas.filter((d) => {
+    const vencendoLista = despesas.filter((d) => {
       const dias = diasAte(d.due_date);
       return dias !== null && dias <= 30 && totalPago(d) < valorDeReferencia(d);
     });
@@ -137,7 +135,7 @@ export function Financeiro({
       vencendo: vencendoLista.length,
       categoriasVencendo: [...new Set(vencendoLista.map((d) => d.category))],
     };
-  }, [nossas]);
+  }, [despesas]);
 
   const porCategoria = useMemo(() => {
     const mapa = new Map<string, Despesa[]>();
@@ -176,8 +174,6 @@ export function Financeiro({
       status: d.status,
       payment_method: d.payment_method ?? "",
       installments: String(d.installments ?? 1),
-      paid_by_third: Boolean(d.paid_by_third),
-      paid_by_name: d.paid_by_name ?? "",
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -213,8 +209,6 @@ export function Financeiro({
       status: form.status,
       payment_method: form.payment_method.trim() || null,
       installments: Math.max(1, Number(form.installments) || 1),
-      paid_by_third: form.paid_by_third,
-      paid_by_name: form.paid_by_third ? form.paid_by_name.trim() || null : null,
     };
 
     const { error } = editando
@@ -256,15 +250,15 @@ export function Financeiro({
         />
       </div>
 
-      {deTerceiros > 0 && (
+      {deOutros > 0 && (
         <p className="-mt-4 text-sm text-terra">
-          <span className="font-medium text-lavanda">{reais(deTerceiros)}</span> pagos por terceiros — fora
+          <span className="font-medium text-lavanda">{reais(deOutros)}</span> pagos por outras pessoas — fora
           do orçamento e destes totais.
         </p>
       )}
 
       <AlertasEGraficos
-        despesas={nossas}
+        despesas={despesas}
         aoEscolherCategoria={(categoria) => irParaCategorias([categoria])}
         aoAbrirDespesa={irParaDespesa}
         aoAbrirTodas={(lista) => irParaCategorias([...new Set(lista.map((d) => d.category))])}
@@ -360,31 +354,6 @@ export function Financeiro({
               </div>
             </div>
 
-            <div className="rounded-sm border border-lavanda/25 bg-lavanda/5 px-4 py-3.5">
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={form.paid_by_third}
-                  onChange={(e) => setForm({ ...form, paid_by_third: e.target.checked })}
-                  className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-lavanda)]"
-                />
-                <span>
-                  <span className="block text-base font-medium text-oliva-escuro">Pago por terceiros</span>
-                  <span className="block text-sm text-terra">
-                    Fica registrado aqui, mas não entra no orçamento de vocês, nos totais nem nos gráficos.
-                  </span>
-                </span>
-              </label>
-              {form.paid_by_third && (
-                <div className="mt-3 pl-8">
-                  <Rotulo htmlFor="d-quem">Quem paga</Rotulo>
-                  <input id="d-quem" className="campo" placeholder="Pais da noiva, padrinho João…"
-                    value={form.paid_by_name}
-                    onChange={(e) => setForm({ ...form, paid_by_name: e.target.value })} />
-                </div>
-              )}
-            </div>
-
             <div>
               <Rotulo htmlFor="d-forn">Fornecedor</Rotulo>
               <select id="d-forn" className="campo" value={form.vendor_id} onChange={(e) => setForm({ ...form, vendor_id: e.target.value })}>
@@ -436,14 +405,13 @@ export function Financeiro({
         ) : (
           <div className="space-y-9">
             {porCategoria.map(([categoria, itens]) => {
-              const contam = itens.filter(contaNoOrcamento);
-              const catPrevisto = contam.reduce((s, d) => s + d.estimated_cents, 0);
-              const catReferencia = contam.reduce((s, d) => s + valorDeReferencia(d), 0);
-              const catPago = contam.reduce((s, d) => s + totalPago(d), 0);
-              const catTerceiros = itens
-                .filter((d) => !contaNoOrcamento(d))
-                .reduce((s, d) => s + valorDeReferencia(d), 0);
-              const catQuitada = catReferencia > 0 && catPago >= catReferencia;
+              const catPrevisto = itens.reduce((s, d) => s + compromissoNosso(d, d.estimated_cents), 0);
+              const catPago = itens.reduce((s, d) => s + pagoPorNos(d), 0);
+              const catOutros = itens.reduce((s, d) => s + pagoPorOutros(d), 0);
+              // A barra mostra o quanto das contas já foi quitado, venha de quem vier.
+              const catReferencia = itens.reduce((s, d) => s + valorDeReferencia(d), 0);
+              const catQuitado = itens.reduce((s, d) => s + totalPago(d), 0);
+              const catQuitada = catReferencia > 0 && catQuitado >= catReferencia;
               const aberta = abertas.has(categoria);
               // O cabeçalho é uma linha de verdade — nome em corpo de título,
               // números legíveis à direita e uma barra fina do quanto já foi.
@@ -472,15 +440,15 @@ export function Financeiro({
                         <span className={catPago > 0 ? "font-medium text-oliva" : ""}>
                           pago {reais(catPago)}
                         </span>
-                        {catTerceiros > 0 && (
-                          <span className="text-lavanda">+ {reais(catTerceiros)} de terceiros</span>
+                        {catOutros > 0 && (
+                          <span className="text-lavanda">+ {reais(catOutros)} de outras pessoas</span>
                         )}
                       </p>
                     </div>
                     {catReferencia > 0 && (
                       <div className="mt-2.5 pl-[1.9rem]">
                         <Progresso
-                          atual={catPago}
+                          atual={catQuitado}
                           total={catReferencia}
                           tom={catQuitada ? "oliva" : "lavanda"}
                         />
@@ -546,8 +514,8 @@ function AlertasEGraficos({
   const porCategoria = [...despesas.reduce((mapa, d) => {
     const atual = mapa.get(d.category) ?? { previsto: 0, pago: 0 };
     mapa.set(d.category, {
-      previsto: atual.previsto + d.estimated_cents,
-      pago: atual.pago + totalPago(d),
+      previsto: atual.previsto + compromissoNosso(d, d.estimated_cents),
+      pago: atual.pago + pagoPorNos(d),
     });
     return mapa;
   }, new Map<string, { previsto: number; pago: number }>())]
@@ -561,10 +529,11 @@ function AlertasEGraficos({
     detalhe: `${reais(v.pago)} já pagos`,
   }));
 
-  // Evolução: pagamentos acumulados mês a mês.
+  // Evolução: o que os noivos pagaram, acumulado mês a mês.
   const evolucao = (() => {
     const pagamentos = despesas
       .flatMap((d) => d.payments ?? [])
+      .filter(lancamentoNosso)
       .sort((a, b) => a.paid_at.localeCompare(b.paid_at));
     let acumulado = 0;
     const meses = new Map<string, number>();
@@ -826,8 +795,8 @@ function LinhaDespesa({
   const quitado = referencia > 0 && falta === 0;
   const situacao = statusReal(despesa);
   const dias = diasAte(despesa.due_date);
-  const terceiros = !contaNoOrcamento(despesa);
-  const vencendo = !terceiros && !quitado && dias !== null && dias <= 30;
+  const deOutros = pagoPorOutros(despesa);
+  const vencendo = !quitado && dias !== null && dias <= 30;
 
   // O cartão é só o resumo: tudo o mais fica na ficha, com espaço. No
   // celular o valor desce para baixo do nome em vez de disputar a linha —
@@ -844,22 +813,22 @@ function LinhaDespesa({
           <div className="min-w-0 flex-1">
             <h4 className="titulo-serif text-lg leading-snug text-oliva">{despesa.description}</h4>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
-              {terceiros && <Selo tom="lavanda">{rotuloTerceiros(despesa)}</Selo>}
               <Selo tom={TOM_DESPESA[situacao]}>{ROTULOS_DESPESA[situacao]}</Selo>
               {!quitado && pago > 0 && <Selo tom="lavanda">parcial</Selo>}
               {despesa.installments > 1 && (
                 <Selo>{despesa.payments.length}/{despesa.installments} parcelas</Selo>
               )}
+              {deOutros > 0 && <Selo tom="lavanda">{reais(deOutros)} de outras pessoas</Selo>}
             </div>
             {fornecedor && <p className="mt-1.5 truncate text-sm text-terra">{fornecedor.name}</p>}
           </div>
 
           <div className="flex items-baseline justify-between gap-3 sm:block sm:shrink-0 sm:text-right">
-            <p className={`titulo-serif text-xl tabular-nums lining-nums ${terceiros ? "text-terra/75" : "text-oliva"}`}>
+            <p className="titulo-serif text-xl tabular-nums lining-nums text-oliva">
               {reais(referencia)}
             </p>
             <p className="text-sm text-terra">
-              {terceiros ? "fora do orçamento" : despesa.contracted_cents === null ? "previsto" : "contratado"}
+              {despesa.contracted_cents === null ? "previsto" : "contratado"}
             </p>
           </div>
         </div>

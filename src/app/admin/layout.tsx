@@ -70,7 +70,6 @@ async function carregarPendencias(
     supabase
       .from("expenses")
       .select("id", { count: "exact", head: true })
-      .eq("paid_by_third", false)
       .not("due_date", "is", null)
       .lte("due_date", hoje),
     supabase.from("post_reports").select("id", { count: "exact", head: true }),

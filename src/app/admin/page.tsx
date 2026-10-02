@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { contaNoOrcamento } from "@/lib/orcamento";
+import { compromissoNosso, pagoPorNos } from "@/lib/orcamento";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 import type {
   Despesa,
@@ -50,9 +50,7 @@ export default async function Dashboard() {
   const listaConvidados = (convidados.data ?? []).filter(contaNoTotal);
   const noColo = (convidados.data ?? []).filter((c) => !ehNoivo(c) && ehDeColo(c)).length;
   const listaTarefas = (tarefas.data ?? []) as Tarefa[];
-  // O que é pago por terceiros fica fora de todo o Dashboard: anel,
-  // comprometido, orçamento estourado, Mês a mês e resumo do Financeiro.
-  const listaDespesas = ((despesas.data ?? []) as Despesa[]).filter(contaNoOrcamento);
+  const listaDespesas = (despesas.data ?? []) as Despesa[];
   const listaFornecedores = (fornecedores.data ?? []) as Fornecedor[];
   const orcamentoTotal = config.data?.budget_total_cents ?? 0;
 
@@ -77,18 +75,24 @@ export default async function Dashboard() {
   });
 
   // ---------- Financeiro ----------
+  // pagoDe: tudo o que foi lançado (diz se a conta está quitada). O que
+  // outras pessoas pagaram fica fora do anel, do comprometido e do
+  // "estourado": aqui só conta o dinheiro dos noivos.
   const pagoDe = (d: Despesa) => (d.payments ?? []).reduce((s, p) => s + p.amount_cents, 0);
   const refDe = (d: Despesa) => d.contracted_cents ?? d.estimated_cents;
-  const pago = listaDespesas.reduce((s, d) => s + pagoDe(d), 0);
-  const contratado = listaDespesas.reduce((s, d) => s + (d.contracted_cents ?? 0), 0);
-  const comprometido = listaDespesas.reduce((s, d) => s + refDe(d), 0);
-  const pendente = Math.max(0, comprometido - pago);
+  const pago = listaDespesas.reduce((s, d) => s + pagoPorNos(d), 0);
+  const contratado = listaDespesas.reduce(
+    (s, d) => s + (d.contracted_cents === null ? 0 : compromissoNosso(d, d.contracted_cents)),
+    0,
+  );
+  const comprometido = listaDespesas.reduce((s, d) => s + compromissoNosso(d), 0);
+  const pendente = listaDespesas.reduce((s, d) => s + Math.max(0, refDe(d) - pagoDe(d)), 0);
 
   const porCategoria = [...listaDespesas.reduce((mapa, d) => {
     const atual = mapa.get(d.category) ?? { previsto: 0, pago: 0 };
     mapa.set(d.category, {
-      previsto: atual.previsto + d.estimated_cents,
-      pago: atual.pago + pagoDe(d),
+      previsto: atual.previsto + compromissoNosso(d, d.estimated_cents),
+      pago: atual.pago + pagoPorNos(d),
     });
     return mapa;
   }, new Map<string, { previsto: number; pago: number }>())]

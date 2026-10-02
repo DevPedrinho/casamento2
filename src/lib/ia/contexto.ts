@@ -4,6 +4,7 @@ import { criarClienteServidor } from "@/lib/supabase/servidor";
 import { carregarCasamento } from "@/lib/configuracoes";
 import { reais } from "@/lib/formato";
 import { contaNoTotal, vagasPorTitular } from "@/lib/idade";
+import { compromissoNosso, pagoPorNos, quemPagou, valorDeReferencia } from "@/lib/orcamento";
 
 /**
  * O que cada assistente pode enxergar.
@@ -43,7 +44,7 @@ export async function contextoDoPainel(): Promise<string> {
         .select("id, invite_status, companions_planned, access_code, code_sent_at, user_id, group_id, age, invited_by, is_admin, ceremony_role"),
       supabase.from("guest_groups").select("name, invite_limit"),
       supabase.from("tasks").select("title, status, due_date, phase, priority"),
-      supabase.from("expenses").select("description, category, estimated_cents, contracted_cents, status, due_date, paid_by_third, paid_by_name, payments(amount_cents)"),
+      supabase.from("expenses").select("description, category, estimated_cents, contracted_cents, status, due_date, payments(amount_cents, paid_by_third, paid_by_name)"),
       supabase.from("vendors").select("name, category, status, agreed_cents, next_action, next_action_at"),
       supabase.from("day_schedule").select("starts_at, title, audience, owner").order("starts_at"),
       supabase.from("gifts").select("title, price_cents, is_active"),
@@ -72,16 +73,20 @@ export async function contextoDoPainel(): Promise<string> {
     .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
     .slice(0, 8);
 
-  // Pagas por terceiros não são dinheiro dos noivos: ficam fora dos totais
-  // e aparecem listadas à parte.
-  const todasDespesas = despesas.data ?? [];
-  const listaDespesas = todasDespesas.filter((d) => !d.paid_by_third);
-  const deTerceiros = todasDespesas.filter((d) => d.paid_by_third);
+  // O que outras pessoas pagaram quita a conta, mas não é dinheiro dos
+  // noivos: fica fora dos totais e aparece listado à parte.
+  const listaDespesas = despesas.data ?? [];
   const pagoDe = (d: (typeof listaDespesas)[number]) =>
     (d.payments ?? []).reduce((s: number, p: { amount_cents: number }) => s + p.amount_cents, 0);
-  const referencia = (d: (typeof listaDespesas)[number]) => d.contracted_cents ?? d.estimated_cents;
-  const comprometido = listaDespesas.reduce((s, d) => s + referencia(d), 0);
-  const pago = listaDespesas.reduce((s, d) => s + pagoDe(d), 0);
+  const referencia = (d: (typeof listaDespesas)[number]) => valorDeReferencia(d);
+  const comprometido = listaDespesas.reduce((s, d) => s + compromissoNosso(d), 0);
+  const pago = listaDespesas.reduce((s, d) => s + pagoPorNos(d), 0);
+  const aPagar = listaDespesas.reduce((s, d) => s + Math.max(0, referencia(d) - pagoDe(d)), 0);
+  const deOutros = listaDespesas.flatMap((d) =>
+    (d.payments ?? [])
+      .filter((p) => p.paid_by_third)
+      .map((p) => ({ despesa: d, valor: p.amount_cents, quem: quemPagou(p) })),
+  );
   const aVencer = listaDespesas
     .filter((d) => d.due_date && pagoDe(d) < referencia(d))
     .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
@@ -139,13 +144,11 @@ export async function contextoDoPainel(): Promise<string> {
         ? `Orçamento total planejado: ${reais(orcamentoTotal)}`
         : "Orçamento total ainda não definido no painel.",
       `Comprometido: ${reais(comprometido)}`,
-      `Pago: ${reais(pago)} · a pagar: ${reais(Math.max(0, comprometido - pago))}`,
+      `Pago pelos noivos: ${reais(pago)} · falta pagar: ${reais(aPagar)}`,
       aVencer.length > 0 && "Próximos pagamentos:",
       ...aVencer.map((d) => `- ${d.description} (${d.category}) ${reais(referencia(d) - pagoDe(d))} até ${d.due_date}`),
-      deTerceiros.length > 0 && "Pagos por terceiros (fora do orçamento dos noivos):",
-      ...deTerceiros.map(
-        (d) => `- ${d.description} (${d.category}) ${reais(referencia(d))}${d.paid_by_name ? ` · pago por ${d.paid_by_name}` : ""}`,
-      ),
+      deOutros.length > 0 && "Pago por outras pessoas (quita a conta, mas fica fora do orçamento dos noivos):",
+      ...deOutros.map((o) => `- ${o.despesa.description} (${o.despesa.category}) ${reais(o.valor)} · pago por ${o.quem}`),
     ]),
 
     bloco("Fornecedores", [
