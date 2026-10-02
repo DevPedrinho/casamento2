@@ -79,6 +79,19 @@ export function Fornecedores({
   const [soRetornos, setSoRetornos] = useState(false);
   /** O cartão que está trocando de etapa agora: fica apagado até gravar. */
   const [movendoId, setMovendoId] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+
+  // A busca só filtra o que se vê: os números do topo seguem sobre todos.
+  // Procura no nome e também em empresa, contato e categoria, sem ligar
+  // para maiúsculas nem acentos ("cartorio" acha "Cartório").
+  const filtrados = useMemo(() => {
+    const termo = semAcento(busca.trim());
+    if (!termo) return fornecedores;
+    return fornecedores.filter((f) =>
+      [f.name, f.company, f.contact_name, f.category].some((campo) => campo && semAcento(campo).includes(termo)),
+    );
+  }, [busca, fornecedores]);
+  const buscando = busca.trim() !== "";
 
   /** O que o financeiro sabe de cada um: contratado, pago e os lançamentos. */
   const contas = useMemo(() => contasPorFornecedor(despesas), [despesas]);
@@ -104,12 +117,16 @@ export function Fornecedores({
   }, [contas, fornecedores]);
 
   const porEtapa = useMemo(() => {
-    const base = soRetornos ? fornecedores.filter(retornaEm7Dias) : fornecedores;
+    const base = soRetornos ? filtrados.filter(retornaEm7Dias) : filtrados;
     return ETAPAS_FUNIL.map((etapa) => ({
       etapa,
       itens: base.filter((f) => f.status === etapa),
-    })).filter((g) => (etapaVisivel === "todas" || g.etapa === etapaVisivel) && (!soRetornos || g.itens.length > 0));
-  }, [fornecedores, etapaVisivel, soRetornos]);
+    })).filter(
+      (g) =>
+        (etapaVisivel === "todas" || g.etapa === etapaVisivel) &&
+        (!(soRetornos || buscando) || g.itens.length > 0),
+    );
+  }, [filtrados, etapaVisivel, soRetornos, buscando]);
 
   function limpar() {
     setForm(VAZIO);
@@ -425,6 +442,31 @@ export function Fornecedores({
           </div>
         )}
 
+        {fornecedores.length > 0 && (
+          <div className="relative mb-5 max-w-xl">
+            <Icone nome="busca" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-terra/85" />
+            <input
+              type="search"
+              className="campo pl-10 pr-11 [&::-webkit-search-cancel-button]:hidden"
+              placeholder="Buscar por nome, empresa ou contato…"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setBusca("")}
+              aria-label="Buscar fornecedor"
+            />
+            {buscando && (
+              <button
+                type="button"
+                onClick={() => setBusca("")}
+                aria-label="Limpar a busca"
+                className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-terra hover:bg-oliva/10 hover:text-oliva"
+              >
+                <Icone nome="fechar" className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
+
         {visao === "lista" && (
           <div className="mb-7 flex flex-wrap gap-2.5">
             <FiltroEtapa ativo={etapaVisivel === "todas"} onClick={() => setEtapaVisivel("todas")}>
@@ -440,9 +482,16 @@ export function Fornecedores({
 
         {fornecedores.length === 0 ? (
           <Vazio>Nenhum fornecedor no funil ainda. Comece adicionando os que já pesquisaram.</Vazio>
+        ) : buscando && filtrados.length === 0 ? (
+          <div className="py-8 text-center">
+            <Vazio>Nenhum fornecedor com “{busca.trim()}”.</Vazio>
+            <Botao type="button" variante="contorno" onClick={() => setBusca("")}>
+              Limpar a busca
+            </Botao>
+          </div>
         ) : visao === "kanban" ? (
           <QuadroFornecedores
-            fornecedores={fornecedores}
+            fornecedores={filtrados}
             contas={contas}
             movendoId={movendoId}
             aoMover={moverEtapa}
@@ -781,4 +830,9 @@ function CartaoFornecedor({
       </button>
     </li>
   );
+}
+
+/** Minúsculas e sem acento, para a busca casar "cartorio" com "Cartório". */
+function semAcento(texto: string): string {
+  return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
