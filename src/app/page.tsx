@@ -202,7 +202,7 @@ export default async function Home() {
               daminhas e pajens — as pessoas que fazem parte da nossa história.
             </p>
             <div className="mt-auto pt-8">
-              <BotaoLink href="/personagens" variante="contorno">
+              <BotaoLink href="/personagens" variante="terra">
                 Conhecer os personagens
               </BotaoLink>
             </div>

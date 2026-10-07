@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-type Variante = "solido" | "contorno" | "lavanda";
+type Variante = "solido" | "contorno" | "lavanda" | "terra";
 
 const BASE =
   "inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm sm:px-7 sm:py-3 versalete titulo-serif transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oliva";
@@ -10,6 +10,7 @@ const VARIANTES: Record<Variante, string> = {
   solido: "bg-oliva text-creme-claro hover:bg-oliva-escuro shadow-sm",
   contorno: "border border-oliva/45 text-oliva hover:bg-oliva hover:text-creme-claro",
   lavanda: "bg-lavanda text-creme-claro hover:bg-lavanda/85 shadow-sm",
+  terra: "bg-terra text-creme-claro hover:bg-terra/85 shadow-sm",
 };
 
 export function Botao({
