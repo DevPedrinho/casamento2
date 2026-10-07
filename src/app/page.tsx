@@ -168,27 +168,44 @@ export default async function Home() {
 
       {/* ---------- Chamadas finais ---------- */}
       <Secao fundo="claro" sobretitulo="Participe" titulo="Como estar com a gente">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-          <article className="rounded-sm border border-terra/20 bg-creme p-9 text-center">
+        {/* Os botões descem para a base de cada quadro (mt-auto), para ficarem
+            alinhados mesmo com textos de tamanhos diferentes. */}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <article className="flex flex-col rounded-sm border border-terra/20 bg-creme p-9 text-center">
             <h3 className="titulo-serif text-2xl text-oliva">Confirme sua presença</h3>
             <p className="mt-4 text-base leading-relaxed text-terra">
               Faça seu cadastro no site, diga se vem e quem vem com você. Assim a
               gente organiza tudo com carinho e ninguém fica sem lugar.
             </p>
-            <BotaoLink href="/confirmar" className="mt-8">
-              Confirmar presença
-            </BotaoLink>
+            <div className="mt-auto pt-8">
+              <BotaoLink href="/confirmar">Confirmar presença</BotaoLink>
+            </div>
           </article>
 
-          <article className="rounded-sm border border-terra/20 bg-creme p-9 text-center">
+          <article className="flex flex-col rounded-sm border border-terra/20 bg-creme p-9 text-center">
             <h3 className="titulo-serif text-2xl text-oliva">Nos presenteie</h3>
             <p className="mt-4 text-base leading-relaxed text-terra">
               Sua presença já é o maior presente. Mas se quiser nos ajudar a montar
               esse novo começo, escolha um item da lista — é rapidinho.
             </p>
-            <BotaoLink href="/presentes" variante="lavanda" className="mt-8">
-              Ver lista de presentes
-            </BotaoLink>
+            <div className="mt-auto pt-8">
+              <BotaoLink href="/presentes" variante="lavanda">
+                Ver lista de presentes
+              </BotaoLink>
+            </div>
+          </article>
+
+          <article className="flex flex-col rounded-sm border border-terra/20 bg-creme p-9 text-center md:col-span-2 lg:col-span-1">
+            <h3 className="titulo-serif text-2xl text-oliva">Personagens da cerimônia</h3>
+            <p className="mt-4 text-base leading-relaxed text-terra">
+              Conheça quem vai estar ao nosso lado no altar: pais, padrinhos,
+              daminhas e pajens — as pessoas que fazem parte da nossa história.
+            </p>
+            <div className="mt-auto pt-8">
+              <BotaoLink href="/personagens" variante="contorno">
+                Conhecer os personagens
+              </BotaoLink>
+            </div>
           </article>
         </div>
       </Secao>
