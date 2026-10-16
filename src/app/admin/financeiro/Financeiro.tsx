@@ -46,6 +46,10 @@ export function Financeiro({
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
   const [editando, setEditando] = useState<string | null>(null);
+  /** O vencimento como estava ao abrir o Editar. Se o campo não mudou, a
+   *  data não vai no update: lançar uma parcela com o formulário aberto
+   *  avança o vencimento no banco, e salvar não pode desfazer isso. */
+  const [dataAoAbrir, setDataAoAbrir] = useState("");
   const [aberto, setAberto] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -156,11 +160,13 @@ export function Financeiro({
   function limpar() {
     setForm(VAZIO);
     setEditando(null);
+    setDataAoAbrir("");
     setErro(null);
   }
 
   function editar(d: Despesa) {
     setEditando(d.id);
+    setDataAoAbrir(d.due_date ?? "");
     setAberto(true);
     setErro(null);
     setForm({
@@ -211,8 +217,12 @@ export function Financeiro({
       installments: Math.max(1, Number(form.installments) || 1),
     };
 
+    const { due_date, ...semData } = dados;
     const { error } = editando
-      ? await supabase.from("expenses").update(dados).eq("id", editando)
+      ? await supabase
+          .from("expenses")
+          .update(form.due_date === dataAoAbrir ? semData : { ...semData, due_date })
+          .eq("id", editando)
       : await supabase.from("expenses").insert(dados);
     setSalvando(false);
 
