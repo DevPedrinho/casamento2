@@ -142,7 +142,7 @@ export function FichaDespesa({
       {/* ---------- Datas ---------- */}
       <CartaoFicha titulo="Datas">
         <LinhaFicha
-          rotulo="Vencimento"
+          rotulo={despesa.installments > 1 && !quitado ? "Próxima parcela" : "Vencimento"}
           valor={despesa.due_date ? formatarData(despesa.due_date) ?? "—" : "sem data"}
           detalhe={prazo}
           alerta={dias !== null && dias < 0 && !quitado}

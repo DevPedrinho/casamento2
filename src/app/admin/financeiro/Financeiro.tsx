@@ -505,11 +505,15 @@ function AlertasEGraficos({
   /** Toque no título do alerta: abre as categorias de todas as contas dele. */
   aoAbrirTodas: (despesas: Despesa[]) => void;
 }) {
-  const atrasadas = despesas.filter((d) => statusReal(d) === "atrasado");
-  const proximas = despesas.filter((d) => {
-    const dias = diasAte(d.due_date);
-    return dias !== null && dias >= 0 && dias <= 30 && statusReal(d) !== "pago";
-  });
+  // A lista chega em ordem alfabética; nos alertas, a mais urgente vem primeiro.
+  const porVencimento = (a: Despesa, b: Despesa) => (a.due_date ?? "").localeCompare(b.due_date ?? "");
+  const atrasadas = despesas.filter((d) => statusReal(d) === "atrasado").sort(porVencimento);
+  const proximas = despesas
+    .filter((d) => {
+      const dias = diasAte(d.due_date);
+      return dias !== null && dias >= 0 && dias <= 30 && statusReal(d) !== "pago";
+    })
+    .sort(porVencimento);
 
   const porCategoria = [...despesas.reduce((mapa, d) => {
     const atual = mapa.get(d.category) ?? { previsto: 0, pago: 0 };
@@ -569,7 +573,12 @@ function AlertasEGraficos({
               tom="lavanda"
               titulo={`${proximas.length} vencendo em 30 dias`}
               itens={proximas}
-              valorDe={(d) => formatarData(d.due_date) ?? ""}
+              valorDe={(d) => {
+                const dias = diasAte(d.due_date) ?? 0;
+                const quando = dias === 0 ? "hoje" : dias === 1 ? "amanhã" : `em ${dias} dias`;
+                // Sem o ano: são no máximo 30 dias, e o nome da conta precisa do espaço.
+                return `${(formatarData(d.due_date) ?? "").slice(0, 5)} · ${quando}`;
+              }}
               aoAbrir={aoAbrirDespesa}
               aoAbrirTodas={aoAbrirTodas}
             />
@@ -624,6 +633,8 @@ function CartaoAlerta({
   aoAbrirTodas: (lista: Despesa[]) => void;
 }) {
   const LIMITE = 4;
+  const [todas, setTodas] = useState(false);
+  const visiveis = todas ? itens : itens.slice(0, LIMITE);
   const estilo =
     tom === "alerta"
       ? {
@@ -649,7 +660,7 @@ function CartaoAlerta({
         {titulo}
       </button>
       <ul className="mt-2 space-y-0.5">
-        {itens.slice(0, LIMITE).map((d) => (
+        {visiveis.map((d) => (
           <li key={d.id}>
             <button
               type="button"
@@ -657,7 +668,14 @@ function CartaoAlerta({
               aria-label={`Abrir ${d.description}`}
               className={`-mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-sm px-2 text-left text-sm text-terra transition-colors ${estilo.hover}`}
             >
-              <span className="min-w-0 truncate">{d.description}</span>
+              <span className="min-w-0">
+                <span className="block truncate">{d.description}</span>
+                {d.installments > 1 && (
+                  <span className="block text-xs text-terra/80">
+                    parcela {Math.min((d.payments?.length ?? 0) + 1, d.installments)}/{d.installments}
+                  </span>
+                )}
+              </span>
               <span className={`shrink-0 font-medium tabular-nums lining-nums ${estilo.valor}`}>
                 {valorDe(d)}
               </span>
@@ -668,10 +686,11 @@ function CartaoAlerta({
       {itens.length > LIMITE && (
         <button
           type="button"
-          onClick={() => aoAbrirTodas(itens)}
+          onClick={() => setTodas((t) => !t)}
+          aria-expanded={todas}
           className={`versalete mt-2 inline-flex min-h-11 items-center text-xs underline underline-offset-4 ${estilo.titulo}`}
         >
-          Ver todas as {itens.length}
+          {todas ? "Mostrar menos" : `Ver todas as ${itens.length}`}
         </button>
       )}
     </div>
