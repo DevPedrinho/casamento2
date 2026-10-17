@@ -51,8 +51,6 @@ const ARTE = {
   igreja: "/img/convite/igreja-interior.webp",
   coracao: "/img/convite/coracao.webp",
   moldura: "/img/convite/moldura-aquarela.webp",
-  /** A guirlanda de lavanda da moldura, recortada à parte para entrar nítida. */
-  guirlanda: "/img/convite/guirlanda-aquarela.webp",
 };
 
 function carregar(src: string): Promise<HTMLImageElement> {
@@ -180,8 +178,7 @@ function pintarCapela(ctx: CanvasRenderingContext2D, igreja: HTMLImageElement) {
 /**
  * Acabamento em aquarela (arte de 1500x1000, centro transparente): as
  * manchas lilás e o brilho dourado entram bem leves, só nas beiradas; o
- * buquê do canto inferior esquerdo entra nítido, como arremate da
- * guirlanda de lavanda que nasce dele.
+ * buquê do canto inferior esquerdo entra nítido, como arremate.
  */
 function pintarMolduraAquarela(ctx: CanvasRenderingContext2D, moldura: HTMLImageElement) {
   ctx.save();
@@ -292,12 +289,11 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
     ? (px: number) => `400 ${px}px ${cursiva}`
     : (px: number) => `italic 400 ${px}px ${titulo}`;
 
-  const [monograma, igreja, coracao, moldura, guirlanda] = await Promise.all([
+  const [monograma, igreja, coracao, moldura] = await Promise.all([
     carregar(ARTE.monograma),
     carregar(ARTE.igreja),
     carregar(ARTE.coracao),
     carregar(ARTE.moldura),
-    carregar(ARTE.guirlanda),
   ]);
 
   const canvas = document.createElement("canvas");
@@ -322,11 +318,7 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
   ctx.strokeRect(40, 40, LARGURA - 80, ALTURA - 80);
   ctx.restore();
 
-  // Guirlanda e buquê passam por cima da moldura, como arremate da lateral.
-  ctx.save();
-  ctx.globalAlpha = 0.9;
-  ctx.drawImage(guirlanda, 0, 0, LARGURA, ALTURA);
-  ctx.restore();
+  // O buquê passa por cima da moldura, como um arremate de canto.
   pintarBuque(ctx, moldura);
 
   // Monograma no alto, presente sem mandar.
