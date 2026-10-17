@@ -41,14 +41,15 @@ export function UploadImagem({
     setEnviando(true);
 
     try {
-      const foto = await comprimirFoto(arquivo);
+      // Logo e monograma costumam ter fundo transparente: ele precisa sobreviver.
+      const foto = await comprimirFoto(arquivo, { manterTransparencia: true });
       setPrevia(foto.previa);
 
-      const caminho = `${pasta}/${crypto.randomUUID()}.jpg`;
+      const caminho = `${pasta}/${crypto.randomUUID()}.${foto.extensao}`;
       const supabase = criarClienteNavegador();
       const { error } = await supabase.storage
         .from("site")
-        .upload(caminho, foto.arquivo, { contentType: "image/jpeg" });
+        .upload(caminho, foto.arquivo, { contentType: foto.tipo });
 
       if (error) throw new Error("upload");
 

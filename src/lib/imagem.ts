@@ -17,7 +17,22 @@ export type FotoPronta = {
   largura: number;
   altura: number;
   previa: string;
+  /** "image/jpeg", ou "image/png" quando a transparência foi mantida. */
+  tipo: "image/jpeg" | "image/png";
+  extensao: "jpg" | "png";
 };
+
+/** Formatos que podem ter fundo transparente. */
+const PODE_TER_TRANSPARENCIA = ["image/png", "image/webp", "image/gif"];
+
+/** Algum pixel não é totalmente opaco? (logo, monograma, ramo recortado) */
+function temTransparencia(ctx: CanvasRenderingContext2D, largura: number, altura: number): boolean {
+  const { data } = ctx.getImageData(0, 0, largura, altura);
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 255) return true;
+  }
+  return false;
+}
 
 /** Lê o arquivo como imagem, respeitando a orientação gravada pela câmera. */
 async function carregarImagem(arquivo: File): Promise<ImageBitmap | HTMLImageElement> {
@@ -44,7 +59,15 @@ async function carregarImagem(arquivo: File): Promise<ImageBitmap | HTMLImageEle
   }
 }
 
-export async function comprimirFoto(arquivo: File): Promise<FotoPronta> {
+/**
+ * Com `manterTransparencia`, uma imagem de fundo transparente (PNG, WebP,
+ * GIF) sai em PNG: o JPEG não tem transparência, e o fundo virava preto.
+ * Foto comum continua indo em JPEG, leve como sempre.
+ */
+export async function comprimirFoto(
+  arquivo: File,
+  { manterTransparencia = false }: { manterTransparencia?: boolean } = {},
+): Promise<FotoPronta> {
   if (!arquivo.type.startsWith("image/")) {
     throw new Error("Escolha uma imagem.");
   }
@@ -76,8 +99,13 @@ export async function comprimirFoto(arquivo: File): Promise<FotoPronta> {
 
   if ("close" in fonte && typeof fonte.close === "function") fonte.close();
 
+  const png =
+    manterTransparencia &&
+    PODE_TER_TRANSPARENCIA.includes(arquivo.type) &&
+    temTransparencia(ctx, largura, altura);
+
   const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/jpeg", QUALIDADE),
+    png ? canvas.toBlob(resolve, "image/png") : canvas.toBlob(resolve, "image/jpeg", QUALIDADE),
   );
   if (!blob) throw new Error("Não foi possível processar a imagem.");
 
@@ -85,7 +113,9 @@ export async function comprimirFoto(arquivo: File): Promise<FotoPronta> {
     arquivo: blob,
     largura,
     altura,
-    previa: canvas.toDataURL("image/jpeg", 0.5),
+    previa: png ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.5),
+    tipo: png ? "image/png" : "image/jpeg",
+    extensao: png ? "png" : "jpg",
   };
 }
 
