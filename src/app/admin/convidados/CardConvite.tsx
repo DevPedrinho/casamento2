@@ -51,6 +51,7 @@ const ARTE = {
   igreja: "/img/convite/igreja-interior.webp",
   lavanda: "/img/convite/ramo-lavanda.webp",
   coracao: "/img/convite/coracao.webp",
+  moldura: "/img/convite/moldura-aquarela.webp",
 };
 
 function carregar(src: string): Promise<HTMLImageElement> {
@@ -150,28 +151,27 @@ function pintarCapela(ctx: CanvasRenderingContext2D, igreja: HTMLImageElement) {
   // Some da esquerda para a direita…
   c.globalCompositeOperation = "destination-in";
   // Curva suave (não linear): o desenho nasce do papel, sem borda de bloco.
-  const lateral = c.createLinearGradient(x, 0, x + largura * 0.85, 0);
+  const lateral = c.createLinearGradient(x, 0, x + largura * 0.7, 0);
   lateral.addColorStop(0, "rgba(0,0,0,0)");
-  lateral.addColorStop(0.2, "rgba(0,0,0,0.04)");
-  lateral.addColorStop(0.4, "rgba(0,0,0,0.16)");
-  lateral.addColorStop(0.6, "rgba(0,0,0,0.42)");
-  lateral.addColorStop(0.8, "rgba(0,0,0,0.75)");
+  lateral.addColorStop(0.25, "rgba(0,0,0,0.14)");
+  lateral.addColorStop(0.5, "rgba(0,0,0,0.5)");
+  lateral.addColorStop(0.75, "rgba(0,0,0,0.85)");
   lateral.addColorStop(1, "rgba(0,0,0,1)");
   c.fillStyle = lateral;
   c.fillRect(0, 0, LARGURA, ALTURA);
   // …e suaviza no alto e embaixo, para não bater na moldura.
   const vertical = c.createLinearGradient(0, 0, 0, ALTURA);
-  vertical.addColorStop(0, "rgba(0,0,0,0)");
-  vertical.addColorStop(0.25, "rgba(0,0,0,1)");
-  vertical.addColorStop(0.78, "rgba(0,0,0,1)");
-  vertical.addColorStop(1, "rgba(0,0,0,0.1)");
+  vertical.addColorStop(0, "rgba(0,0,0,0.1)");
+  vertical.addColorStop(0.18, "rgba(0,0,0,1)");
+  vertical.addColorStop(0.84, "rgba(0,0,0,1)");
+  vertical.addColorStop(1, "rgba(0,0,0,0.25)");
   c.fillStyle = vertical;
   c.fillRect(0, 0, LARGURA, ALTURA);
 
   // "multiply": o branco do desenho vira papel, o traço fica como lápis.
   ctx.save();
   ctx.globalCompositeOperation = "multiply";
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.5;
   ctx.drawImage(camada, 0, 0);
   ctx.restore();
 }
@@ -201,7 +201,8 @@ function pintarMolduraLavanda(ctx: CanvasRenderingContext2D, lavanda: HTMLImageE
   ctx.restore();
 
   // Os raminhos: maiores no meio, menores nas pontas.
-  const quantos = 9;
+  // Bem juntinhos: os raminhos se tocam e a haste vira uma guirlanda só.
+  const quantos = 14;
   for (let i = 0; i < quantos; i++) {
     const t = i / (quantos - 1);
     const y = base - 20 - t * (base - topo - 40);
@@ -211,7 +212,8 @@ function pintarMolduraLavanda(ctx: CanvasRenderingContext2D, lavanda: HTMLImageE
     ctx.globalAlpha = 0.92;
     ctx.translate(xDaHaste(y), y);
     ctx.scale(lado, 1);
-    ctx.rotate(-0.18);
+    // Inclinações levemente diferentes, para não parecer carimbo.
+    ctx.rotate(-0.12 - (i % 3) * 0.06);
     // A base do ramo (canto de baixo à esquerda da arte) fica presa na haste.
     ctx.drawImage(lavanda, -4, -altura + 4, altura * proporcao, altura);
     ctx.restore();
@@ -223,6 +225,41 @@ function pintarMolduraLavanda(ctx: CanvasRenderingContext2D, lavanda: HTMLImageE
   ctx.translate(xDaHaste(topo), topo + 6);
   ctx.rotate(-0.6);
   ctx.drawImage(lavanda, -4, -70, 70 * proporcao, 70);
+  ctx.restore();
+}
+
+/**
+ * Acabamento em aquarela (arte de 1500x1000, centro transparente): as
+ * manchas lilás e o brilho dourado entram bem leves, só nas beiradas; o
+ * buquê do canto inferior esquerdo entra nítido, como arremate da
+ * guirlanda de lavanda que nasce dele.
+ */
+function pintarMolduraAquarela(ctx: CanvasRenderingContext2D, moldura: HTMLImageElement) {
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  ctx.globalAlpha = 0.32;
+  ctx.drawImage(moldura, 0, 0, LARGURA, ALTURA);
+  ctx.restore();
+}
+
+function pintarBuque(ctx: CanvasRenderingContext2D, moldura: HTMLImageElement) {
+  // Só o canto do buquê, com borda suave para não aparecer o recorte.
+  const camada = document.createElement("canvas");
+  camada.width = LARGURA;
+  camada.height = ALTURA;
+  const c = camada.getContext("2d");
+  if (!c) return;
+  c.drawImage(moldura, 0, 0, LARGURA, ALTURA);
+  c.globalCompositeOperation = "destination-in";
+  const canto = c.createRadialGradient(0, ALTURA, 180, 0, ALTURA, 440);
+  canto.addColorStop(0, "rgba(0,0,0,1)");
+  canto.addColorStop(1, "rgba(0,0,0,0)");
+  c.fillStyle = canto;
+  c.fillRect(0, 0, LARGURA, ALTURA);
+
+  ctx.save();
+  ctx.globalAlpha = 0.78;
+  ctx.drawImage(camada, 0, 0);
   ctx.restore();
 }
 
@@ -297,11 +334,12 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
     ? (px: number) => `400 ${px}px ${cursiva}`
     : (px: number) => `italic 400 ${px}px ${titulo}`;
 
-  const [monograma, igreja, lavanda, coracao] = await Promise.all([
+  const [monograma, igreja, lavanda, coracao, moldura] = await Promise.all([
     carregar(ARTE.monograma),
     carregar(ARTE.igreja),
     carregar(ARTE.lavanda),
     carregar(ARTE.coracao),
+    carregar(ARTE.moldura),
   ]);
 
   const canvas = document.createElement("canvas");
@@ -313,6 +351,7 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
 
   pintarPapel(ctx);
   pintarCapela(ctx, igreja);
+  pintarMolduraAquarela(ctx, moldura);
   pintarMolduraLavanda(ctx, lavanda);
 
   // Moldura fina em lavanda.
@@ -325,6 +364,9 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
   ctx.lineWidth = 1;
   ctx.strokeRect(40, 40, LARGURA - 80, ALTURA - 80);
   ctx.restore();
+
+  // O buquê passa por cima da moldura, como um arremate de canto.
+  pintarBuque(ctx, moldura);
 
   // Monograma no alto, presente sem mandar.
   const alturaMono = 170;
