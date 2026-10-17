@@ -49,6 +49,7 @@ export function BarrasInterativas({
   sufixo,
   moeda = false,
   aoClicar,
+  limite,
 }: {
   itens: Fatia[];
   /** Índice na paleta. Gráficos diferentes, tons diferentes. */
@@ -66,7 +67,11 @@ export function BarrasInterativas({
   moeda?: boolean;
   /** Quando o destino está na mesma tela, em vez de em outra página. */
   aoClicar?: (chave: string) => void;
+  /** Quantas barras mostrar antes do "Ver todas". A escala e os
+   *  percentuais seguem calculados sobre todas, mostradas ou não. */
+  limite?: number;
 }) {
+  const [todas, setTodas] = useState(false);
   const cor = TONS[tom % TONS.length];
   const maior = Math.max(1, ...itens.map((i) => i.valor));
   const total = itens.reduce((s, i) => s + i.valor, 0);
@@ -77,65 +82,97 @@ export function BarrasInterativas({
     );
   }
 
+  const corta = limite !== undefined && itens.length > limite;
+  const visiveis = corta && !todas ? itens.slice(0, limite) : itens;
+
   return (
-    <ul className="space-y-3">
-      {itens.map((item) => {
-        const proporcao = item.valor / maior;
-        const parte = total > 0 ? Math.round((item.valor / total) * 100) : 0;
+    <>
+      <ul className="space-y-3">
+        {visiveis.map((item) => {
+          const proporcao = item.valor / maior;
+          const parte = total > 0 ? Math.round((item.valor / total) * 100) : 0;
 
-        const conteudo = (
-          <>
-            <span className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <span className="titulo-serif truncate text-lg text-oliva">{item.rotulo}</span>
-              <span className="shrink-0 text-base text-terra tabular-nums lining-nums">
-                <span className="titulo-serif text-xl text-oliva">
-                  {moeda ? reais(item.valor) : item.valor}
+          const conteudo = (
+            <>
+              <span className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <span className="titulo-serif truncate text-lg text-oliva">{item.rotulo}</span>
+                <span className="shrink-0 text-base text-terra tabular-nums lining-nums">
+                  <span className="titulo-serif text-xl text-oliva">
+                    {moeda ? reais(item.valor) : item.valor}
+                  </span>
+                  {sufixo ? ` ${item.valor === 1 ? sufixo.replace(/s$/, "") : sufixo}` : ""} · {parte}%
                 </span>
-                {sufixo ? ` ${item.valor === 1 ? sufixo.replace(/s$/, "") : sufixo}` : ""} · {parte}%
               </span>
-            </span>
 
-            {/* A trilha dá a escala: a barra cheia seria o maior valor. */}
-            <span className="block h-2.5 w-full rounded-full bg-terra/15">
-              <span
-                className="block h-2.5 rounded-full transition-[width] duration-500"
-                style={{
-                  width: `${Math.max(2, proporcao * 100)}%`,
-                  backgroundColor: cor,
-                }}
-              />
-            </span>
+              {/* A trilha dá a escala: a barra cheia seria o maior valor. */}
+              <span className="block h-2.5 w-full rounded-full bg-terra/15">
+                <span
+                  className="block h-2.5 rounded-full transition-[width] duration-500"
+                  style={{
+                    width: `${Math.max(2, proporcao * 100)}%`,
+                    backgroundColor: cor,
+                  }}
+                />
+              </span>
 
-            {item.detalhe && (
-              <span className="mt-1.5 block text-sm text-terra/85">{item.detalhe}</span>
-            )}
-          </>
-        );
+              {item.detalhe && (
+                <span className="mt-1.5 block text-sm text-terra/85">{item.detalhe}</span>
+              )}
+            </>
+          );
 
-        return (
-          <li key={item.chave}>
-            {aoClicar ? (
-              <button
-                type="button"
-                onClick={() => aoClicar(item.chave)}
-                className="block w-full rounded-sm px-1 py-1 text-left transition-colors hover:bg-oliva/5 focus-visible:bg-oliva/5"
-              >
-                {conteudo}
-              </button>
-            ) : item.href ? (
-              <Link
-                href={item.href}
-                className="block rounded-sm px-1 py-1 transition-colors hover:bg-oliva/5 focus-visible:bg-oliva/5"
-              >
-                {conteudo}
-              </Link>
-            ) : (
-              <span className="block px-1 py-1">{conteudo}</span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+          return (
+            <li key={item.chave}>
+              {aoClicar ? (
+                <button
+                  type="button"
+                  onClick={() => aoClicar(item.chave)}
+                  className="block w-full rounded-sm px-1 py-1 text-left transition-colors hover:bg-oliva/5 focus-visible:bg-oliva/5"
+                >
+                  {conteudo}
+                </button>
+              ) : item.href ? (
+                <Link
+                  href={item.href}
+                  className="block rounded-sm px-1 py-1 transition-colors hover:bg-oliva/5 focus-visible:bg-oliva/5"
+                >
+                  {conteudo}
+                </Link>
+              ) : (
+                <span className="block px-1 py-1">{conteudo}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {corta && (
+        <BotaoVerTodas aberto={todas} total={itens.length} aoAlternar={() => setTodas((t) => !t)} />
+      )}
+    </>
+  );
+}
+
+/** "Ver todas (12)" / "Mostrar menos", embaixo de uma lista encurtada. */
+export function BotaoVerTodas({
+  aberto,
+  total,
+  aoAlternar,
+  rotulo = "Ver todas",
+}: {
+  aberto: boolean;
+  total: number;
+  aoAlternar: () => void;
+  rotulo?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={aoAlternar}
+      aria-expanded={aberto}
+      className="versalete mt-3 inline-flex min-h-11 items-center text-xs text-oliva underline underline-offset-4 hover:text-oliva-escuro"
+    >
+      {aberto ? "Mostrar menos" : `${rotulo} (${total})`}
+    </button>
   );
 }
 

@@ -8,7 +8,7 @@ import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
 import { Bloco, BarrasCategoria, Indicador, LinhaValor, Progresso, Selo, Vazio } from "@/components/painel";
-import { BarrasInterativas, type Fatia } from "@/components/graficos";
+import { BarrasInterativas, BotaoVerTodas, type Fatia } from "@/components/graficos";
 import { Icone } from "@/components/Icones";
 import { ACAO_FICHA } from "@/components/Ficha";
 import { compromissoNosso, pagoPorNos, pagoPorOutros, statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "./despesa";
@@ -544,6 +544,8 @@ function AlertasEGraficos({
   }));
 
   // Evolução: o que os noivos pagaram, acumulado mês a mês.
+  const MESES_VISIVEIS = 4;
+  const [todosOsMeses, setTodosOsMeses] = useState(false);
   const evolucao = (() => {
     const pagamentos = despesas
       .flatMap((d) => d.payments ?? [])
@@ -606,6 +608,7 @@ function AlertasEGraficos({
               itens={fatiasPorCategoria}
               tom={2}
               moeda
+              limite={5}
               aoClicar={aoEscolherCategoria}
             />
           </Bloco>
@@ -614,7 +617,22 @@ function AlertasEGraficos({
             {evolucao.length === 0 ? (
               <Vazio>Nenhum pagamento lançado ainda.</Vazio>
             ) : (
-              <BarrasCategoria itens={evolucao} formatar={reais} />
+              <>
+                {/* Os meses mais recentes primeiro na tela; o acumulado só
+                    cresce, então o maior valor (e a escala) continua visível. */}
+                <BarrasCategoria
+                  itens={todosOsMeses ? evolucao : evolucao.slice(-MESES_VISIVEIS)}
+                  formatar={reais}
+                />
+                {evolucao.length > MESES_VISIVEIS && (
+                  <BotaoVerTodas
+                    aberto={todosOsMeses}
+                    total={evolucao.length}
+                    rotulo="Ver todos os meses"
+                    aoAlternar={() => setTodosOsMeses((t) => !t)}
+                  />
+                )}
+              </>
             )}
           </Bloco>
         </div>
