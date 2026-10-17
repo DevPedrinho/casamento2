@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Great_Vibes } from "next/font/google";
 import { CASAMENTO } from "@/lib/config";
+import type { Genero } from "@/lib/tipos";
 import { ACAO_FICHA } from "@/components/Ficha";
 
 /**
@@ -46,9 +47,10 @@ const COR = {
 
 /** Só arquivos do próprio site: imagem de outra origem "suja" o canvas. */
 const ARTE = {
-  monograma: "/img/monograma-dp.png",
+  monograma: "/img/convite/monograma-card.webp",
   igreja: "/img/convite/igreja-interior.webp",
   lavanda: "/img/convite/ramo-lavanda.webp",
+  coracao: "/img/convite/coracao.webp",
 };
 
 function carregar(src: string): Promise<HTMLImageElement> {
@@ -147,45 +149,80 @@ function pintarCapela(ctx: CanvasRenderingContext2D, igreja: HTMLImageElement) {
 
   // Some da esquerda para a direita…
   c.globalCompositeOperation = "destination-in";
-  const lateral = c.createLinearGradient(x, 0, x + largura * 0.55, 0);
+  // Curva suave (não linear): o desenho nasce do papel, sem borda de bloco.
+  const lateral = c.createLinearGradient(x, 0, x + largura * 0.85, 0);
   lateral.addColorStop(0, "rgba(0,0,0,0)");
+  lateral.addColorStop(0.2, "rgba(0,0,0,0.04)");
+  lateral.addColorStop(0.4, "rgba(0,0,0,0.16)");
+  lateral.addColorStop(0.6, "rgba(0,0,0,0.42)");
+  lateral.addColorStop(0.8, "rgba(0,0,0,0.75)");
   lateral.addColorStop(1, "rgba(0,0,0,1)");
   c.fillStyle = lateral;
   c.fillRect(0, 0, LARGURA, ALTURA);
   // …e suaviza no alto e embaixo, para não bater na moldura.
   const vertical = c.createLinearGradient(0, 0, 0, ALTURA);
-  vertical.addColorStop(0, "rgba(0,0,0,0.25)");
-  vertical.addColorStop(0.18, "rgba(0,0,0,1)");
-  vertical.addColorStop(0.85, "rgba(0,0,0,1)");
-  vertical.addColorStop(1, "rgba(0,0,0,0.35)");
+  vertical.addColorStop(0, "rgba(0,0,0,0)");
+  vertical.addColorStop(0.25, "rgba(0,0,0,1)");
+  vertical.addColorStop(0.78, "rgba(0,0,0,1)");
+  vertical.addColorStop(1, "rgba(0,0,0,0.1)");
   c.fillStyle = vertical;
   c.fillRect(0, 0, LARGURA, ALTURA);
 
   // "multiply": o branco do desenho vira papel, o traço fica como lápis.
   ctx.save();
   ctx.globalCompositeOperation = "multiply";
-  ctx.globalAlpha = 0.45;
+  ctx.globalAlpha = 0.3;
   ctx.drawImage(camada, 0, 0);
   ctx.restore();
 }
 
-/** Ramos de lavanda subindo do canto inferior esquerdo. */
-function pintarLavanda(ctx: CanvasRenderingContext2D, lavanda: HTMLImageElement) {
+/**
+ * Moldura lateral de lavanda: uma haste fina descendo pela esquerda, com
+ * raminhos pequenos brotando ora para um lado, ora para o outro.
+ */
+function pintarMolduraLavanda(ctx: CanvasRenderingContext2D, lavanda: HTMLImageElement) {
   const proporcao = lavanda.width / lavanda.height;
+  const topo = 150;
+  const base = 880;
+  const xDaHaste = (y: number) => 118 + Math.sin(((y - topo) / (base - topo)) * Math.PI * 2) * 12;
 
-  // Um ramo de trás, menor e mais claro, deitado para a esquerda.
+  // A haste.
   ctx.save();
-  ctx.globalAlpha = 0.55;
-  ctx.translate(150, ALTURA + 20);
-  ctx.rotate(-0.32);
-  ctx.drawImage(lavanda, -40, -620, 620 * proporcao, 620);
+  ctx.strokeStyle = COR.oliva;
+  ctx.globalAlpha = 0.45;
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  for (let y = base; y >= topo; y -= 6) {
+    if (y === base) ctx.moveTo(xDaHaste(y), y);
+    else ctx.lineTo(xDaHaste(y), y);
+  }
+  ctx.stroke();
   ctx.restore();
 
-  // O ramo principal.
+  // Os raminhos: maiores no meio, menores nas pontas.
+  const quantos = 9;
+  for (let i = 0; i < quantos; i++) {
+    const t = i / (quantos - 1);
+    const y = base - 20 - t * (base - topo - 40);
+    const lado = i % 2 === 0 ? 1 : -1;
+    const altura = 112 - Math.abs(t - 0.5) * 70;
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    ctx.translate(xDaHaste(y), y);
+    ctx.scale(lado, 1);
+    ctx.rotate(-0.18);
+    // A base do ramo (canto de baixo à esquerda da arte) fica presa na haste.
+    ctx.drawImage(lavanda, -4, -altura + 4, altura * proporcao, altura);
+    ctx.restore();
+  }
+
+  // Um raminho fechando o alto da haste, apontando para cima.
   ctx.save();
-  ctx.globalAlpha = 0.95;
-  const altura = 680;
-  ctx.drawImage(lavanda, -30, ALTURA - altura + 30, altura * proporcao, altura);
+  ctx.globalAlpha = 0.92;
+  ctx.translate(xDaHaste(topo), topo + 6);
+  ctx.rotate(-0.6);
+  ctx.drawImage(lavanda, -4, -70, 70 * proporcao, 70);
   ctx.restore();
 }
 
@@ -211,7 +248,36 @@ function fioComCoracao(ctx: CanvasRenderingContext2D, y: number) {
   ctx.fill();
 }
 
-async function desenharCard(nome: string): Promise<Blob> {
+/** Separador entre os noivos e a data: o coração da identidade entre fios. */
+function separadorComCoracao(ctx: CanvasRenderingContext2D, coracao: HTMLImageElement, y: number) {
+  const altura = 26;
+  const largura = (coracao.width / coracao.height) * altura;
+  ctx.drawImage(coracao, CENTRO - largura / 2, y - altura / 2, largura, altura);
+
+  ctx.save();
+  ctx.strokeStyle = COR.terra;
+  ctx.globalAlpha = 0.4;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(CENTRO - 150, y);
+  ctx.lineTo(CENTRO - 30, y);
+  ctx.moveTo(CENTRO + 30, y);
+  ctx.lineTo(CENTRO + 150, y);
+  ctx.stroke();
+  ctx.restore();
+
+  // Um pontinho lilás em cada ponta dos fios.
+  ctx.save();
+  ctx.fillStyle = COR.lavandaClaro;
+  for (const x of [CENTRO - 162, CENTRO + 162]) {
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> {
   const { titulo, corpo } = fontesDoSite();
   const cursiva = manuscrita.style.fontFamily;
   // A lista traz também a fonte reserva; a conferência é só da cursiva.
@@ -231,10 +297,11 @@ async function desenharCard(nome: string): Promise<Blob> {
     ? (px: number) => `400 ${px}px ${cursiva}`
     : (px: number) => `italic 400 ${px}px ${titulo}`;
 
-  const [monograma, igreja, lavanda] = await Promise.all([
+  const [monograma, igreja, lavanda, coracao] = await Promise.all([
     carregar(ARTE.monograma),
     carregar(ARTE.igreja),
     carregar(ARTE.lavanda),
+    carregar(ARTE.coracao),
   ]);
 
   const canvas = document.createElement("canvas");
@@ -246,7 +313,7 @@ async function desenharCard(nome: string): Promise<Blob> {
 
   pintarPapel(ctx);
   pintarCapela(ctx, igreja);
-  pintarLavanda(ctx, lavanda);
+  pintarMolduraLavanda(ctx, lavanda);
 
   // Moldura fina em lavanda.
   ctx.save();
@@ -260,9 +327,9 @@ async function desenharCard(nome: string): Promise<Blob> {
   ctx.restore();
 
   // Monograma no alto, presente sem mandar.
-  const alturaMono = 150;
+  const alturaMono = 170;
   const larguraMono = (monograma.width / monograma.height) * alturaMono;
-  ctx.drawImage(monograma, CENTRO - larguraMono / 2, 62, larguraMono, alturaMono);
+  ctx.drawImage(monograma, CENTRO - larguraMono / 2, 46, larguraMono, alturaMono);
 
   ctx.textBaseline = "alphabetic";
 
@@ -276,7 +343,8 @@ async function desenharCard(nome: string): Promise<Blob> {
 
   // O nome: o maior destaque. Diminui aos poucos até caber na faixa —
   // na largura e na altura de verdade das letras (laçadas e caudas).
-  ctx.fillStyle = COR.lavanda;
+  // Oliva para homem; lilás para mulher (e quando o cadastro não diz).
+  ctx.fillStyle = genero === "masculino" ? COR.oliva : COR.lavanda;
   ctx.textAlign = "center";
   const caixa = NOME_BASE - NOME_TOPO;
   let tamanho = 190;
@@ -300,14 +368,7 @@ async function desenharCard(nome: string): Promise<Blob> {
   ctx.font = `500 66px ${titulo}`;
   espacado(ctx, `${CASAMENTO.noiva} & ${CASAMENTO.noivo}`.toUpperCase(), 722, 9);
 
-  // Um raminho miúdo de lavanda, deitado, entre os nomes e a data.
-  const prop = lavanda.width / lavanda.height;
-  ctx.save();
-  ctx.translate(CENTRO, 782);
-  ctx.rotate(-Math.PI / 2 + 0.95);
-  ctx.globalAlpha = 0.9;
-  ctx.drawImage(lavanda, -(60 * prop) / 2, -30, 60 * prop, 60);
-  ctx.restore();
+  separadorComCoracao(ctx, coracao, 786);
 
   ctx.fillStyle = COR.lavanda;
   ctx.font = `400 32px ${corpo}`;
@@ -320,10 +381,13 @@ async function desenharCard(nome: string): Promise<Blob> {
 
 export function CardConvite({
   nome,
+  genero = null,
   codigo,
 }: {
   /** O primeiro nome, o mesmo da saudação da mensagem. */
   nome: string;
+  /** Do cadastro do convidado: decide a cor do nome no card. */
+  genero?: Genero | null;
   /** Só para dar nome ao arquivo. */
   codigo: string;
 }) {
@@ -335,7 +399,7 @@ export function CardConvite({
   useEffect(() => {
     setUrl(null);
     setErro(null);
-  }, [nome, codigo]);
+  }, [nome, genero, codigo]);
 
   useEffect(() => {
     return () => {
@@ -347,7 +411,7 @@ export function CardConvite({
     setErro(null);
     setGerando(true);
     try {
-      const blob = await desenharCard(nome);
+      const blob = await desenharCard(nome, genero);
       setUrl(URL.createObjectURL(blob));
     } catch {
       setErro("Não deu para gerar o card agora — o envio pela mensagem continua normal.");
