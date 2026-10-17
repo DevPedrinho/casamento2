@@ -49,9 +49,10 @@ const COR = {
 const ARTE = {
   monograma: "/img/convite/monograma-card.webp",
   igreja: "/img/convite/igreja-interior.webp",
-  lavanda: "/img/convite/ramo-lavanda.webp",
   coracao: "/img/convite/coracao.webp",
   moldura: "/img/convite/moldura-aquarela.webp",
+  /** A guirlanda de lavanda da moldura, recortada à parte para entrar nítida. */
+  guirlanda: "/img/convite/guirlanda-aquarela.webp",
 };
 
 function carregar(src: string): Promise<HTMLImageElement> {
@@ -177,58 +178,6 @@ function pintarCapela(ctx: CanvasRenderingContext2D, igreja: HTMLImageElement) {
 }
 
 /**
- * Moldura lateral de lavanda: uma haste fina descendo pela esquerda, com
- * raminhos pequenos brotando ora para um lado, ora para o outro.
- */
-function pintarMolduraLavanda(ctx: CanvasRenderingContext2D, lavanda: HTMLImageElement) {
-  const proporcao = lavanda.width / lavanda.height;
-  const topo = 150;
-  const base = 880;
-  const xDaHaste = (y: number) => 118 + Math.sin(((y - topo) / (base - topo)) * Math.PI * 2) * 12;
-
-  // A haste.
-  ctx.save();
-  ctx.strokeStyle = COR.oliva;
-  ctx.globalAlpha = 0.45;
-  ctx.lineWidth = 1.6;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  for (let y = base; y >= topo; y -= 6) {
-    if (y === base) ctx.moveTo(xDaHaste(y), y);
-    else ctx.lineTo(xDaHaste(y), y);
-  }
-  ctx.stroke();
-  ctx.restore();
-
-  // Os raminhos: maiores no meio, menores nas pontas.
-  // Bem juntinhos: os raminhos se tocam e a haste vira uma guirlanda só.
-  const quantos = 22;
-  for (let i = 0; i < quantos; i++) {
-    const t = i / (quantos - 1);
-    const y = base - 20 - t * (base - topo - 40);
-    const lado = i % 2 === 0 ? 1 : -1;
-    const altura = 112 - Math.abs(t - 0.5) * 70;
-    ctx.save();
-    ctx.globalAlpha = 0.92;
-    ctx.translate(xDaHaste(y), y);
-    ctx.scale(lado, 1);
-    // Inclinações levemente diferentes, para não parecer carimbo.
-    ctx.rotate(-0.12 - (i % 3) * 0.06);
-    // A base do ramo (canto de baixo à esquerda da arte) fica presa na haste.
-    ctx.drawImage(lavanda, -4, -altura + 4, altura * proporcao, altura);
-    ctx.restore();
-  }
-
-  // Um raminho fechando o alto da haste, apontando para cima.
-  ctx.save();
-  ctx.globalAlpha = 0.92;
-  ctx.translate(xDaHaste(topo), topo + 6);
-  ctx.rotate(-0.6);
-  ctx.drawImage(lavanda, -4, -70, 70 * proporcao, 70);
-  ctx.restore();
-}
-
-/**
  * Acabamento em aquarela (arte de 1500x1000, centro transparente): as
  * manchas lilás e o brilho dourado entram bem leves, só nas beiradas; o
  * buquê do canto inferior esquerdo entra nítido, como arremate da
@@ -343,12 +292,12 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
     ? (px: number) => `400 ${px}px ${cursiva}`
     : (px: number) => `italic 400 ${px}px ${titulo}`;
 
-  const [monograma, igreja, lavanda, coracao, moldura] = await Promise.all([
+  const [monograma, igreja, coracao, moldura, guirlanda] = await Promise.all([
     carregar(ARTE.monograma),
     carregar(ARTE.igreja),
-    carregar(ARTE.lavanda),
     carregar(ARTE.coracao),
     carregar(ARTE.moldura),
+    carregar(ARTE.guirlanda),
   ]);
 
   const canvas = document.createElement("canvas");
@@ -361,7 +310,6 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
   pintarPapel(ctx);
   pintarCapela(ctx, igreja);
   pintarMolduraAquarela(ctx, moldura);
-  pintarMolduraLavanda(ctx, lavanda);
 
   // Moldura fina em lavanda.
   ctx.save();
@@ -374,7 +322,11 @@ async function desenharCard(nome: string, genero: Genero | null): Promise<Blob> 
   ctx.strokeRect(40, 40, LARGURA - 80, ALTURA - 80);
   ctx.restore();
 
-  // O buquê passa por cima da moldura, como um arremate de canto.
+  // Guirlanda e buquê passam por cima da moldura, como arremate da lateral.
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.drawImage(guirlanda, 0, 0, LARGURA, ALTURA);
+  ctx.restore();
   pintarBuque(ctx, moldura);
 
   // Monograma no alto, presente sem mandar.
