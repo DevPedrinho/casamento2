@@ -38,7 +38,7 @@ const ABAS: { chave: AbaDaFicha; rotulo: string }[] = [
 const VAZIO = {
   full_name: "", group_id: "", side: "", relationship: "", relationship_kind: "",
   ceremony_role: "", is_featured: false,
-  attends: "", gender: "", age: "", phone: "", whatsapp: "", email: "",
+  attends: "", gender: "", age: "", phone: "", email: "",
   invite_status: "nao_contatado" as StatusConvite, companions_planned: "0",
   table_id: "", favor_type: "", dietary_notes: "", notes: "",
   last_contact_at: "", next_action: "", next_action_at: "", invite_name: "",
@@ -78,7 +78,6 @@ export function FichaConvidado({
           gender: convidado.gender ?? "",
           age: convidado.age?.toString() ?? "",
           phone: convidado.phone ?? "",
-          whatsapp: convidado.whatsapp ?? "",
           email: convidado.email ?? "",
           invite_status: convidado.invite_status,
           companions_planned: convidado.companions_planned.toString(),
@@ -139,7 +138,8 @@ export function FichaConvidado({
       gender: form.gender || null,
       age: idade,
       phone: form.phone.trim() || null,
-      whatsapp: form.whatsapp.trim() || form.phone.trim() || null,
+      // Um número só: o campo "Telefone / WhatsApp" vale para os dois.
+      whatsapp: form.phone.trim() || null,
       email: form.email.trim() || null,
       invite_status: form.invite_status,
       companions_planned: Number(form.companions_planned) || 0,

@@ -38,7 +38,7 @@ export function FilaDeConvites({
   const [copiado, setCopiado] = useState(false);
   const [mostrarTodosSemFone, setMostrarTodosSemFone] = useState(false);
 
-  const telefoneDe = (c: ConvidadoCompleto) => telefones[c.id] ?? c.whatsapp ?? c.phone ?? null;
+  const telefoneDe = (c: ConvidadoCompleto) => telefones[c.id] ?? c.phone ?? c.whatsapp ?? null;
 
   const semCodigo = convidados.filter((c) => !c.access_code && temAcessoAoSite(c)).length;
   const semAcesso = convidados.filter((c) => !temAcessoAoSite(c)).length;
@@ -101,7 +101,7 @@ export function FilaDeConvites({
     if (!linkWhatsApp(valor, "x")) return;
     setSalvandoFone(c.id);
     const supabase = criarClienteNavegador();
-    await supabase.from("guests").update({ phone: valor }).eq("id", c.id);
+    await supabase.from("guests").update({ phone: valor, whatsapp: valor }).eq("id", c.id);
     setTelefones((t) => ({ ...t, [c.id]: valor }));
     setSalvandoFone(null);
   }

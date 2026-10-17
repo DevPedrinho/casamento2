@@ -62,7 +62,7 @@ export function DetalheConvidado({
   aoMarcar: (enviado: boolean) => void;
 }) {
   const c = convidado;
-  const telefone = c.whatsapp ?? c.phone;
+  const telefone = c.phone ?? c.whatsapp;
   const zap = c.access_code ? linkWhatsApp(telefone, mensagemDoConvite(c.full_name, c.access_code)) : null;
   const [linkCopiado, setLinkCopiado] = useState(false);
 
