@@ -12,7 +12,8 @@ import {
 import { diasAte, formatarData } from "@/lib/formato";
 import { formatarCodigo } from "@/lib/codigo";
 import { urlDoSite } from "@/lib/storage";
-import { enderecoDoSite, linkDoConvite, linkWhatsApp, mensagemDoConvite } from "@/lib/convite";
+import { enderecoDoSite, linkDoConvite, linkWhatsApp, mensagemDoConvite, primeiroNome } from "@/lib/convite";
+import { CardConvite } from "./CardConvite";
 import { Avatar } from "@/components/Avatar";
 import { Botao } from "@/components/Botao";
 import { Selo } from "@/components/painel";
@@ -147,6 +148,11 @@ export function DetalheConvidado({
                 ver convite
               </a>
             </div>
+            <CardConvite
+              nome={primeiroNome(c.full_name)}
+              mensagem={mensagemDoConvite(c.full_name, c.access_code)}
+              codigo={c.access_code}
+            />
             <div className="mt-2">
               <LinhaFicha rotulo="Nome no convite" valor={c.invite_name?.trim() || c.full_name} />
               <LinhaFicha
