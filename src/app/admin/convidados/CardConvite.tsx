@@ -10,8 +10,8 @@ import { ACAO_FICHA } from "@/components/Ficha";
  *
  * É só um acessório. O link wa.me (o "mandar no WhatsApp" ao lado) só
  * carrega texto — não há como anexar imagem por ele —, então o card é
- * gerado aqui, no navegador, e sai por "baixar" ou pelo compartilhar do
- * aparelho. Se qualquer coisa falhar, aparece um aviso e o envio pela
+ * gerado aqui, no navegador, e sai por "baixar imagem". Se qualquer
+ * coisa falhar, aparece um aviso e o envio pela
  * mensagem segue como sempre: nada aqui toca no convite, no código ou no
  * banco.
  */
@@ -190,25 +190,19 @@ async function desenharCard(nome: string): Promise<Blob> {
 
 export function CardConvite({
   nome,
-  mensagem,
   codigo,
 }: {
   /** O primeiro nome, o mesmo da saudação da mensagem. */
   nome: string;
-  /** A mensagem pronta, que vai de legenda quando o aparelho compartilha. */
-  mensagem: string;
   /** Só para dar nome ao arquivo. */
   codigo: string;
 }) {
-  const [arquivo, setArquivo] = useState<File | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [podeCompartilhar, setPodeCompartilhar] = useState(false);
 
   // Trocou de convidado: o card anterior não vale mais.
   useEffect(() => {
-    setArquivo(null);
     setUrl(null);
     setErro(null);
   }, [nome, codigo]);
@@ -224,29 +218,11 @@ export function CardConvite({
     setGerando(true);
     try {
       const blob = await desenharCard(nome);
-      const file = new File([blob], `convite-${codigo}.png`, { type: "image/png" });
-      setArquivo(file);
       setUrl(URL.createObjectURL(blob));
-      setPodeCompartilhar(
-        typeof navigator !== "undefined" &&
-          typeof navigator.canShare === "function" &&
-          navigator.canShare({ files: [file] }),
-      );
     } catch {
       setErro("Não deu para gerar o card agora — o envio pela mensagem continua normal.");
     } finally {
       setGerando(false);
-    }
-  }
-
-  async function compartilhar() {
-    if (!arquivo) return;
-    try {
-      await navigator.share({ files: [arquivo], text: mensagem });
-    } catch (e) {
-      // Fechar a folha de compartilhar não é erro.
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      setErro("O aparelho não conseguiu compartilhar a imagem. Baixe o card e envie pelo WhatsApp.");
     }
   }
 
@@ -263,13 +239,8 @@ export function CardConvite({
             alt={`Card do convite de ${nome}`}
             className="w-full max-w-[16rem] rounded-sm border border-terra/20 shadow-sm"
           />
-          <div className="mt-2 flex flex-wrap items-center gap-x-4">
-            {podeCompartilhar && (
-              <button type="button" onClick={compartilhar} className={`${ACAO_FICHA} text-oliva`}>
-                compartilhar card + mensagem
-              </button>
-            )}
-            <a href={url} download={arquivo?.name ?? "convite.png"} className={`${ACAO_FICHA} text-oliva`}>
+          <div className="mt-2">
+            <a href={url} download={`convite-${codigo}.png`} className={`${ACAO_FICHA} text-oliva`}>
               baixar imagem
             </a>
           </div>

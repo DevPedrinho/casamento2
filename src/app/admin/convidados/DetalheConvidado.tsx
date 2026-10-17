@@ -148,11 +148,7 @@ export function DetalheConvidado({
                 ver convite
               </a>
             </div>
-            <CardConvite
-              nome={primeiroNome(c.full_name)}
-              mensagem={mensagemDoConvite(c.full_name, c.access_code)}
-              codigo={c.access_code}
-            />
+            <CardConvite nome={primeiroNome(c.full_name)} codigo={c.access_code} />
             <div className="mt-2">
               <LinhaFicha rotulo="Nome no convite" valor={c.invite_name?.trim() || c.full_name} />
               <LinhaFicha
