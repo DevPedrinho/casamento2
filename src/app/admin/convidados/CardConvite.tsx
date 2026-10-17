@@ -202,7 +202,7 @@ function pintarMolduraLavanda(ctx: CanvasRenderingContext2D, lavanda: HTMLImageE
 
   // Os raminhos: maiores no meio, menores nas pontas.
   // Bem juntinhos: os raminhos se tocam e a haste vira uma guirlanda só.
-  const quantos = 14;
+  const quantos = 22;
   for (let i = 0; i < quantos; i++) {
     const t = i / (quantos - 1);
     const y = base - 20 - t * (base - topo - 40);
@@ -242,6 +242,9 @@ function pintarMolduraAquarela(ctx: CanvasRenderingContext2D, moldura: HTMLImage
   ctx.restore();
 }
 
+/** Quanto o buquê do canto cresce em relação à arte original. */
+const ESCALA_BUQUE = 1.25;
+
 function pintarBuque(ctx: CanvasRenderingContext2D, moldura: HTMLImageElement) {
   // Só o canto do buquê, com borda suave para não aparecer o recorte.
   const camada = document.createElement("canvas");
@@ -249,9 +252,15 @@ function pintarBuque(ctx: CanvasRenderingContext2D, moldura: HTMLImageElement) {
   camada.height = ALTURA;
   const c = camada.getContext("2d");
   if (!c) return;
-  c.drawImage(moldura, 0, 0, LARGURA, ALTURA);
+  // Ampliado a partir do próprio canto, para crescer sem sair do lugar.
+  const escala = ESCALA_BUQUE;
+  c.save();
+  c.translate(0, ALTURA);
+  c.scale(escala, escala);
+  c.drawImage(moldura, 0, -ALTURA, LARGURA, ALTURA);
+  c.restore();
   c.globalCompositeOperation = "destination-in";
-  const canto = c.createRadialGradient(0, ALTURA, 180, 0, ALTURA, 440);
+  const canto = c.createRadialGradient(0, ALTURA, 180 * escala, 0, ALTURA, 440 * escala);
   canto.addColorStop(0, "rgba(0,0,0,1)");
   canto.addColorStop(1, "rgba(0,0,0,0)");
   c.fillStyle = canto;
