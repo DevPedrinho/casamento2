@@ -243,7 +243,7 @@ function pintarMolduraAquarela(ctx: CanvasRenderingContext2D, moldura: HTMLImage
 }
 
 /** Quanto o buquê do canto cresce em relação à arte original. */
-const ESCALA_BUQUE = 1.25;
+const ESCALA_BUQUE = 1;
 
 function pintarBuque(ctx: CanvasRenderingContext2D, moldura: HTMLImageElement) {
   // Só o canto do buquê, com borda suave para não aparecer o recorte.
@@ -260,7 +260,7 @@ function pintarBuque(ctx: CanvasRenderingContext2D, moldura: HTMLImageElement) {
   c.drawImage(moldura, 0, -ALTURA, LARGURA, ALTURA);
   c.restore();
   c.globalCompositeOperation = "destination-in";
-  const canto = c.createRadialGradient(0, ALTURA, 180 * escala, 0, ALTURA, 440 * escala);
+  const canto = c.createRadialGradient(0, ALTURA, 300 * escala, 0, ALTURA, 600 * escala);
   canto.addColorStop(0, "rgba(0,0,0,1)");
   canto.addColorStop(1, "rgba(0,0,0,0)");
   c.fillStyle = canto;
