@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type DragEvent, type FormEvent } from "react";
 import {
-  CATEGORIAS_FORNECEDOR,
   ETAPAS_FUNIL,
   ROTULOS_FORNECEDOR,
   type Despesa,
@@ -328,11 +327,8 @@ export function Fornecedores({
               </div>
               <div>
                 <Rotulo htmlFor="f-cat">Categoria</Rotulo>
-                <select id="f-cat" className="campo" value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                  <option value="">—</option>
-                  {CATEGORIAS_FORNECEDOR.map((c) => <option key={c}>{c}</option>)}
-                </select>
+                <input id="f-cat" className="campo" value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })} />
               </div>
               <div>
                 <Rotulo htmlFor="f-status">Etapa</Rotulo>
