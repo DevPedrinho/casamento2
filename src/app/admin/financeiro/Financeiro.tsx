@@ -34,6 +34,7 @@ export function Financeiro({
   orcamentoTotal,
   categoriaInicial,
   fornecedorInicial,
+  despesaInicial,
 }: {
   despesas: Despesa[];
   fornecedores: Fornecedor[];
@@ -42,6 +43,8 @@ export function Financeiro({
   categoriaInicial?: string;
   /** Fornecedor a isolar, quando o clique veio da ficha dele. */
   fornecedorInicial?: string;
+  /** Despesa que já chega com a ficha aberta (clique numa despesa da ficha do fornecedor). */
+  despesaInicial?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
@@ -55,7 +58,7 @@ export function Financeiro({
   const [salvando, setSalvando] = useState(false);
   /** A despesa aberta na ficha. Guardamos o id, não o objeto: quando a
    *  lista recarrega depois de um pagamento, a ficha lê a versão nova. */
-  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [detalheId, setDetalheId] = useState<string | null>(despesaInicial ?? null);
   const detalhe = despesas.find((d) => d.id === detalheId) ?? null;
 
   // Quando se chega pela ficha de um fornecedor, a tela mostra só o que é

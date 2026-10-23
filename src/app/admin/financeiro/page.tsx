@@ -13,6 +13,7 @@ export default async function FinanceiroPage({
   const params = await searchParams;
   const categoria = typeof params.categoria === "string" ? params.categoria : undefined;
   const fornecedor = typeof params.fornecedor === "string" ? params.fornecedor : undefined;
+  const despesa = typeof params.despesa === "string" ? params.despesa : undefined;
 
   const [{ data: despesas }, { data: fornecedores }, { data: config }] = await Promise.all([
     supabase
@@ -31,6 +32,7 @@ export default async function FinanceiroPage({
       orcamentoTotal={config?.budget_total_cents ?? 0}
       categoriaInicial={categoria}
       fornecedorInicial={fornecedor}
+      despesaInicial={despesa}
     />
   );
 }

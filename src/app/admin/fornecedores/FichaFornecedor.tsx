@@ -3,7 +3,9 @@
 import Link from "next/link";
 import {
   ETAPAS_FUNIL,
+  ROTULOS_DESPESA,
   ROTULOS_FORNECEDOR,
+  type Despesa,
   type Fornecedor,
   type StatusFornecedor,
 } from "@/lib/tipos";
@@ -12,6 +14,7 @@ import type { ContaDoFornecedor } from "@/lib/contasDoFornecedor";
 import { Botao } from "@/components/Botao";
 import { Progresso, Selo } from "@/components/painel";
 import { ACAO_FICHA, CartaoFicha, Ficha, LinhaFicha, NumeroFicha } from "@/components/Ficha";
+import { statusReal, TOM_DESPESA, totalPago, valorDeReferencia } from "../financeiro/despesa";
 
 export const TOM_ETAPA: Record<StatusFornecedor, "neutro" | "oliva" | "lavanda" | "apagado"> = {
   prospecto: "neutro",
@@ -215,11 +218,84 @@ export function FichaFornecedor({
         )}
       </CartaoFicha>
 
+      {/* ---------- Cada despesa ligada a ele, como no financeiro ---------- */}
+      {conta.despesas.length > 0 && (
+        <CartaoFicha titulo={`Despesas vinculadas (${conta.despesas.length})`}>
+          <ul className="space-y-2.5">
+            {[...conta.despesas]
+              .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
+              .map((d) => (
+                <DespesaDoFornecedor key={d.id} despesa={d} fornecedorId={f.id} />
+              ))}
+          </ul>
+        </CartaoFicha>
+      )}
+
       {f.notes && (
         <CartaoFicha titulo="Observações">
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-terra">{f.notes}</p>
         </CartaoFicha>
       )}
     </Ficha>
+  );
+}
+
+/**
+ * Uma despesa do fornecedor, resumida como no cartão do financeiro:
+ * situação, valor, quanto já foi e o vencimento. O toque abre a própria
+ * despesa no financeiro.
+ */
+function DespesaDoFornecedor({ despesa: d, fornecedorId }: { despesa: Despesa; fornecedorId: string }) {
+  const pago = totalPago(d);
+  const referencia = valorDeReferencia(d);
+  const falta = Math.max(0, referencia - pago);
+  const quitado = referencia > 0 && falta === 0;
+  const situacao = statusReal(d);
+  const dias = diasAte(d.due_date);
+  const vencendo = !quitado && dias !== null && dias <= 30;
+
+  return (
+    <li>
+      <Link
+        href={`/admin/financeiro?fornecedor=${fornecedorId}&despesa=${d.id}`}
+        className="block rounded-sm border border-terra/20 bg-creme p-3.5 transition-colors hover:border-oliva/40 focus-visible:border-oliva"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="titulo-serif text-base leading-snug text-oliva">{d.description}</p>
+            <p className="mt-0.5 text-xs text-terra/85">{d.category}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="titulo-serif text-base text-oliva tabular-nums lining-nums">{reais(referencia)}</p>
+            <p className="text-xs text-terra">{d.contracted_cents === null ? "previsto" : "contratado"}</p>
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <Selo tom={TOM_DESPESA[situacao]}>{ROTULOS_DESPESA[situacao]}</Selo>
+          {!quitado && pago > 0 && <Selo tom="lavanda">parcial</Selo>}
+          {d.installments > 1 && (
+            <Selo>
+              {(d.payments ?? []).length}/{d.installments} parcelas
+            </Selo>
+          )}
+        </div>
+        {referencia > 0 && (
+          <div className="mt-2.5">
+            <Progresso atual={pago} total={referencia} tom={quitado ? "oliva" : "lavanda"} />
+          </div>
+        )}
+        <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-xs">
+          <span className="text-terra tabular-nums lining-nums">
+            {quitado ? "Quitada" : pago > 0 ? `Pago ${reais(pago)} · falta ${reais(falta)}` : "Nada pago ainda"}
+          </span>
+          {d.due_date && (
+            <span className={vencendo ? "font-medium text-red-800" : "text-terra"}>
+              Vence em {formatarData(d.due_date)}
+              {!quitado && dias !== null && dias >= 0 ? ` (${dias}d)` : ""}
+            </span>
+          )}
+        </div>
+      </Link>
+    </li>
   );
 }
