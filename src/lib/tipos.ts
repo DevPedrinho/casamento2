@@ -224,6 +224,8 @@ export type Despesa = {
   payment_method: string | null;
   installments: number;
   payments: Pagamento[];
+  /** Quando foi cadastrada (para "despesas recentes"). */
+  created_at?: string;
 };
 
 /** Convidado com o RSVP já achatado, como o painel consome. */

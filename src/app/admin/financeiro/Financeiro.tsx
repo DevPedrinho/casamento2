@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { ROTULOS_DESPESA, type Despesa, type Fornecedor, type StatusDespesa } from "@/lib/tipos";
-import { diasAte, formatarData, paraCampo, paraCentavos, reais } from "@/lib/formato";
+import { diasAte, formatarData, paraCampo, paraCentavos, reais, tempoRelativo } from "@/lib/formato";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
 import { Botao } from "@/components/Botao";
 import { Aviso, Rotulo } from "@/components/CartaoForm";
@@ -566,11 +566,19 @@ function AlertasEGraficos({
     }));
   })();
 
-  if (atrasadas.length === 0 && proximas.length === 0 && porCategoria.length === 0) return null;
+  // As últimas cadastradas, da mais nova para a mais antiga.
+  const recentes = despesas
+    .filter((d) => d.created_at)
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+    .slice(0, 10);
+
+  if (atrasadas.length === 0 && proximas.length === 0 && porCategoria.length === 0 && recentes.length === 0) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">
-      {(atrasadas.length > 0 || proximas.length > 0) && (
+      {(atrasadas.length > 0 || proximas.length > 0 || recentes.length > 0) && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {atrasadas.length > 0 && (
             <CartaoAlerta
@@ -598,6 +606,8 @@ function AlertasEGraficos({
               aoAbrirTodas={aoAbrirTodas}
             />
           )}
+
+          {recentes.length > 0 && <DespesasRecentes itens={recentes} aoAbrir={aoAbrirDespesa} />}
         </div>
       )}
 
@@ -639,6 +649,50 @@ function AlertasEGraficos({
             )}
           </Bloco>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** As despesas cadastradas por último; cada uma abre a própria ficha. */
+function DespesasRecentes({
+  itens,
+  aoAbrir,
+}: {
+  itens: Despesa[];
+  aoAbrir: (d: Despesa) => void;
+}) {
+  const LIMITE = 5;
+  const [todas, setTodas] = useState(false);
+  const visiveis = todas ? itens : itens.slice(0, LIMITE);
+
+  return (
+    <div className="rounded-sm border border-terra/20 bg-creme px-4 py-4 sm:px-6 sm:py-5">
+      <p className="titulo-serif text-lg text-oliva">Despesas recentes</p>
+      <ul className="mt-2 space-y-0.5">
+        {visiveis.map((d) => (
+          <li key={d.id}>
+            <button
+              type="button"
+              onClick={() => aoAbrir(d)}
+              aria-label={`Abrir ${d.description}`}
+              className="-mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-sm px-2 py-1 text-left text-sm text-terra transition-colors hover:bg-oliva/5 focus-visible:bg-oliva/5"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-oliva">{d.description}</span>
+                <span className="block text-xs text-terra/80">
+                  {d.category} · {d.created_at ? tempoRelativo(d.created_at) : ""}
+                </span>
+              </span>
+              <span className="shrink-0 font-medium tabular-nums lining-nums text-oliva">
+                {reais(valorDeReferencia(d))}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {itens.length > LIMITE && (
+        <BotaoVerTodas aberto={todas} total={itens.length} rotulo="Ver as últimas" aoAlternar={() => setTodas((t) => !t)} />
       )}
     </div>
   );
