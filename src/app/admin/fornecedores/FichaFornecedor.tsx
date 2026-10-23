@@ -149,7 +149,11 @@ export function FichaFornecedor({
       {/* ---------- Valores ---------- */}
       <CartaoFicha titulo="Valores">
         <LinhaFicha rotulo="Orçamento recebido" valor={f.quoted_cents !== null ? reais(f.quoted_cents) : "—"} />
-        <LinhaFicha rotulo="Valor fechado" valor={f.agreed_cents !== null ? reais(f.agreed_cents) : "ainda não fechou"} />
+        <LinhaFicha
+          rotulo="Valor fechado"
+          valor={f.agreed_cents !== null ? reais(f.agreed_cents) : "ainda não fechou"}
+          detalhe={conta.despesas.length > 0 ? "soma das despesas no financeiro" : undefined}
+        />
         {f.rating !== null && <LinhaFicha rotulo="Avaliação" valor={"★".repeat(f.rating) + "☆".repeat(5 - f.rating)} />}
         {contrato && (
           <p className="mt-1">

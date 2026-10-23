@@ -94,6 +94,10 @@ export function Fornecedores({
 
   /** O que o financeiro sabe de cada um: contratado, pago e os lançamentos. */
   const contas = useMemo(() => contasPorFornecedor(despesas), [despesas]);
+  // Com despesas no financeiro, o valor fechado é a soma delas — o banco
+  // mantém isso sozinho, então o campo não se edita à mão.
+  const contaEmEdicao = editando ? contas.get(editando) : undefined;
+  const fechadoPelasDespesas = Boolean(contaEmEdicao && contaEmEdicao.despesas.length > 0);
 
   const resumo = useMemo(() => {
     const contratados = fornecedores.filter((f) => f.status === "contratado");
@@ -192,7 +196,7 @@ export function Fornecedores({
       instagram: form.instagram.trim().replace(/^@/, "") || null,
       website: form.website.trim() || null,
       quoted_cents: paraCentavos(form.quoted),
-      agreed_cents: paraCentavos(form.agreed),
+      ...(fechadoPelasDespesas ? {} : { agreed_cents: paraCentavos(form.agreed) }),
       next_action: form.next_action.trim() || null,
       next_action_at: form.next_action_at || null,
       notes: form.notes.trim() || null,
@@ -387,11 +391,16 @@ export function Fornecedores({
               </div>
               <div>
                 <Rotulo htmlFor="f-fech">Valor fechado (R$)</Rotulo>
-                <input id="f-fech" inputMode="decimal" className="campo" placeholder="Só quando contratar" value={form.agreed} onChange={(e) => setForm({ ...form, agreed: e.target.value })} />
+                {fechadoPelasDespesas && contaEmEdicao ? (
+                  <input id="f-fech" className="campo bg-creme-escuro/40 text-terra" readOnly value={reais(contaEmEdicao.contratado)} />
+                ) : (
+                  <input id="f-fech" inputMode="decimal" className="campo" placeholder="Só quando contratar" value={form.agreed} onChange={(e) => setForm({ ...form, agreed: e.target.value })} />
+                )}
               </div>
               <p className="self-end text-xs leading-relaxed text-terra/90">
-                O quanto já foi pago não se digita aqui — ele é somado dos
-                lançamentos do financeiro, e por isso nunca fica desencontrado.
+                {fechadoPelasDespesas
+                  ? "O valor fechado é a soma das despesas deste fornecedor no financeiro — muda sozinho quando elas mudam."
+                  : "O quanto já foi pago não se digita aqui — ele é somado dos lançamentos do financeiro, e por isso nunca fica desencontrado."}
               </p>
             </div>
 
