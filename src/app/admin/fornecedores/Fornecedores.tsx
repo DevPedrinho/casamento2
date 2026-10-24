@@ -776,37 +776,42 @@ function CartaoFornecedor({
   const quitado = conta.despesas.length > 0 && conta.saldo === 0;
   const valor = f.agreed_cents ?? f.quoted_cents;
 
+  // Todo cartão tem as mesmas faixas (nome, valor, barra, próximo passo),
+  // preenchidas ou não: assim ficam todos do mesmo tamanho e alinhados.
   return (
-    <li>
+    <li className="h-full">
       <button
         type="button"
         onClick={aoAbrir}
         aria-label={`Abrir ${f.name}`}
-        className="block w-full rounded-sm border border-terra/20 bg-creme p-4 text-left transition-colors hover:border-oliva/40 focus-visible:border-oliva sm:p-5"
+        className="flex h-full w-full flex-col rounded-sm border border-terra/20 bg-creme p-4 text-left transition-colors hover:border-oliva/40 focus-visible:border-oliva sm:p-5"
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 flex-1">
-            <h4 className="titulo-serif text-lg leading-snug text-oliva">{f.name}</h4>
+            <h4 className="titulo-serif truncate text-lg leading-snug text-oliva" title={f.name}>{f.name}</h4>
             <p className="mt-1 truncate text-sm text-terra">
               {[f.category, f.contact_name ?? f.company].filter(Boolean).join(" · ")}
             </p>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <div className="mt-1.5 flex flex-nowrap items-center gap-2 overflow-hidden">
               <Selo tom={TOM_ETAPA[f.status]}>{ROTULOS_FORNECEDOR[f.status]}</Selo>
               {quitado && <Selo tom="oliva">quitado</Selo>}
               {semDespesa && <Selo tom="alerta">sem despesa</Selo>}
             </div>
           </div>
 
-          {valor !== null && (
-            <div className="flex items-baseline justify-between gap-3 sm:block sm:shrink-0 sm:text-right">
-              <p className="titulo-serif text-xl text-oliva tabular-nums lining-nums">{reais(valor)}</p>
-              <p className="text-sm text-terra">{f.agreed_cents !== null ? "fechado" : "orçamento"}</p>
-            </div>
-          )}
+          <div className="flex items-baseline justify-between gap-3 sm:block sm:shrink-0 sm:text-right">
+            <p className="titulo-serif text-xl text-oliva tabular-nums lining-nums">
+              {valor !== null ? reais(valor) : "—"}
+            </p>
+            <p className="text-sm text-terra">
+              {valor === null ? "sem valor" : f.agreed_cents !== null ? "fechado" : "orçamento"}
+            </p>
+          </div>
         </div>
 
-        {conta.despesas.length > 0 && (
-          <div className="mt-3">
+        <div className="mt-auto w-full pt-3">
+          {/* Sem despesa, a faixa da barra fica reservada (invisível). */}
+          <div className={conta.despesas.length > 0 ? "" : "invisible"} aria-hidden={conta.despesas.length === 0}>
             <div
               className="h-2 w-full rounded-full bg-terra/15"
               role="progressbar"
@@ -820,18 +825,26 @@ function CartaoFornecedor({
                 style={{ width: `${Math.min(100, Math.round((conta.pago / Math.max(1, conta.contratado)) * 100))}%` }}
               />
             </div>
-            <p className="mt-1.5 text-sm text-terra tabular-nums lining-nums">
+            <p className="mt-1.5 truncate text-sm text-terra tabular-nums lining-nums">
               {quitado ? "Quitado" : `${reais(conta.pago)} pagos · falta ${reais(conta.saldo)}`}
             </p>
           </div>
-        )}
 
-        {f.next_action && (
-          <p className={`mt-2 truncate text-sm ${urgente ? "font-medium text-red-800" : "text-terra"}`}>
-            Próximo: {f.next_action}
-            {f.next_action_at && ` — ${formatarData(f.next_action_at)}`}
+          <p
+            className={`mt-2 truncate text-sm ${f.next_action ? "" : "invisible"} ${urgente ? "font-medium text-red-800" : "text-terra"}`}
+            aria-hidden={!f.next_action}
+            title={f.next_action ?? undefined}
+          >
+            {f.next_action ? (
+              <>
+                Próximo: {f.next_action}
+                {f.next_action_at && ` — ${formatarData(f.next_action_at)}`}
+              </>
+            ) : (
+              "—"
+            )}
           </p>
-        )}
+        </div>
       </button>
     </li>
   );
