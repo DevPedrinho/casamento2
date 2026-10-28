@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { Presente } from "@/lib/tipos";
-import { formatarPreco, linkSeguro } from "@/lib/formato";
+import { formatarPreco, linkSeguro, paraCampo, paraCentavos } from "@/lib/formato";
 import { UploadImagem } from "@/components/UploadImagem";
 import { urlDoSite } from "@/lib/storage";
 import { criarClienteNavegador } from "@/lib/supabase/cliente";
@@ -42,7 +42,7 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
     setForm({
       title: presente.title,
       description: presente.description ?? "",
-      preco: presente.price_cents === null ? "" : (presente.price_cents / 100).toString(),
+      preco: paraCampo(presente.price_cents),
       image_path: presente.image_path ?? "",
       gift_url: presente.gift_url,
       category: presente.category,
@@ -64,10 +64,9 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
       setErro("O link do presente precisa ser um endereço válido começando com https://");
       return;
     }
-    const precoNumero = form.preco.trim()
-      ? Number(form.preco.replace(",", "."))
-      : null;
-    if (precoNumero !== null && (Number.isNaN(precoNumero) || precoNumero < 0)) {
+    // Mesma leitura do financeiro: aceita "1.200,00", "1200,00" e "1200.5".
+    const precoCentavos = paraCentavos(form.preco);
+    if (form.preco.trim() && precoCentavos === null) {
       setErro("O preço precisa ser um número (ou deixe em branco para valor livre).");
       return;
     }
@@ -77,7 +76,7 @@ export function PainelPresentes({ presentes }: { presentes: Presente[] }) {
     const dados = {
       title: form.title.trim(),
       description: form.description.trim() || null,
-      price_cents: precoNumero === null ? null : Math.round(precoNumero * 100),
+      price_cents: precoCentavos,
       image_path: form.image_path || null,
       gift_url: form.gift_url.trim(),
       category: form.category.trim() || "Casa",

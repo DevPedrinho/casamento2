@@ -33,17 +33,34 @@ export function formatarDataHora(iso: string): string {
   });
 }
 
-/** Converte "1.234,56" ou "1234.56" em centavos. null quando vazio. */
+/**
+ * Converte o que foi digitado em centavos. null quando vazio ou inválido.
+ *
+ * - Com vírgula, é o jeito brasileiro: ponto separa milhar ("1.234,56").
+ * - Sem vírgula, um único ponto com 1 ou 2 casas depois é decimal
+ *   ("180.8", "1043.23"); qualquer outro ponto é milhar ("1.200").
+ *
+ * Antes o ponto era sempre apagado, e "180.8" virava 1808 — foi assim que
+ * valores com centavos cresciam 10x ou 100x ao editar e salvar.
+ */
 export function paraCentavos(valor: string): number | null {
-  const limpo = valor.trim();
+  const limpo = valor.trim().replace(/^R\$\s*/i, "").replace(/\s/g, "");
   if (!limpo) return null;
-  const numero = Number(limpo.replace(/\./g, "").replace(",", "."));
+  let normal: string;
+  if (limpo.includes(",")) normal = limpo.replace(/\./g, "").replace(",", ".");
+  else if (/^\d+\.\d{1,2}$/.test(limpo)) normal = limpo;
+  else normal = limpo.replace(/\./g, "");
+  const numero = Number(normal);
   return Number.isFinite(numero) && numero >= 0 ? Math.round(numero * 100) : null;
 }
 
-/** Centavos -> texto editável no formulário ("" quando não há valor). */
+/**
+ * Centavos -> texto editável, no padrão brasileiro e sem milhar
+ * ("180,80", "5424,00"; "" quando não há valor). Abrir e salvar sem mexer
+ * devolve exatamente o mesmo valor.
+ */
 export function paraCampo(centavos: number | null | undefined): string {
-  return centavos === null || centavos === undefined ? "" : (centavos / 100).toString();
+  return centavos === null || centavos === undefined ? "" : (centavos / 100).toFixed(2).replace(".", ",");
 }
 
 /** Sempre devolve um valor em reais, mesmo quando é zero. */
