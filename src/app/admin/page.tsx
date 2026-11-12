@@ -132,7 +132,8 @@ export default async function Dashboard() {
         titulo: `${d.description} — ${reais(refDe(d) - pagoDe(d))}`,
         detalhe: pagoDe(d) > 0 ? `${reais(pagoDe(d))} já pagos de ${reais(refDe(d))}` : d.category,
         tipo: "financeiro" as const,
-        href: `/admin/financeiro?categoria=${encodeURIComponent(d.category)}`,
+        // Direto na despesa: a categoria abre e a ficha dela já vem aberta.
+        href: `/admin/financeiro?categoria=${encodeURIComponent(d.category)}&despesa=${d.id}`,
       })),
     ...listaTarefas
       .filter((t) => t.status !== "feito" && t.due_date)
@@ -141,7 +142,7 @@ export default async function Dashboard() {
         titulo: t.title,
         detalhe: [t.category, t.owner].filter(Boolean).join(" · "),
         tipo: "tarefa" as const,
-        href: "/admin/checklist",
+        href: `/admin/checklist?tarefa=${t.id}`,
         alta: t.priority === "alta",
       })),
     ...listaFornecedores
@@ -153,7 +154,7 @@ export default async function Dashboard() {
         titulo: `${f.next_action ?? "Retornar"} — ${f.name}`,
         detalhe: f.category,
         tipo: "fornecedor" as const,
-        href: "/admin/fornecedores",
+        href: `/admin/fornecedores?fornecedor=${f.id}`,
       })),
   ];
   if (conta("nao_contatado") > 0) {

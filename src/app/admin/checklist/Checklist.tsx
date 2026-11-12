@@ -47,11 +47,14 @@ export function Checklist({
   tarefas: doServidor,
   filtroInicial,
   prazoInicial,
+  tarefaInicial,
 }: {
   tarefas: Tarefa[];
   /** Vindos do dashboard pela URL: a lista já abre no recorte do gráfico. */
   filtroInicial?: string;
   prazoInicial?: string;
+  /** Tarefa que já chega com a ficha aberta (clique no "Mês a mês"). */
+  tarefaInicial?: string;
 }) {
   const router = useRouter();
   const [visao, setVisao] = useState<Visao>("lista");
@@ -64,7 +67,7 @@ export function Checklist({
   const [salvandoId, setSalvandoId] = useState<string | null>(null);
   const [formAberto, setFormAberto] = useState(false);
   const [editando, setEditando] = useState<Tarefa | null>(null);
-  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [detalheId, setDetalheId] = useState<string | null>(tarefaInicial ?? null);
   // Movimentos que a tela já mostra enquanto o servidor não responde.
   // Cada um lembra de onde saiu: quando o dado do servidor muda, o registro
   // deixa de valer sozinho, sem precisar limpar nada.

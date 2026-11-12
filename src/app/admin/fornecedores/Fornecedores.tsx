@@ -56,11 +56,14 @@ export function Fornecedores({
   fornecedores,
   despesas,
   etapaInicial,
+  fornecedorInicial,
 }: {
   fornecedores: Fornecedor[];
   despesas: Despesa[];
   /** Vinda do dashboard pela URL: a lista já abre naquela etapa do funil. */
   etapaInicial?: string;
+  /** Fornecedor que já chega com a ficha aberta (clique no "Mês a mês"). */
+  fornecedorInicial?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(VAZIO);
@@ -71,7 +74,7 @@ export function Fornecedores({
   const [etapaVisivel, setEtapaVisivel] = useState<StatusFornecedor | "todas">(() =>
     ETAPAS_FUNIL.includes(etapaInicial as StatusFornecedor) ? (etapaInicial as StatusFornecedor) : "todas",
   );
-  const [detalheId, setDetalheId] = useState<string | null>(null);
+  const [detalheId, setDetalheId] = useState<string | null>(fornecedorInicial ?? null);
   const detalhe = fornecedores.find((f) => f.id === detalheId) ?? null;
   const [visao, setVisao] = useState<Visao>("lista");
   /** Recorte ligado pelo indicador "Retornar em 7 dias". */

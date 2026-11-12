@@ -29,6 +29,7 @@ export default async function ChecklistPage({
       tarefas={tarefas}
       filtroInicial={texto(params.filtro)}
       prazoInicial={texto(params.prazo)}
+      tarefaInicial={texto(params.tarefa)}
     />
   );
 }

@@ -12,6 +12,7 @@ export default async function FornecedoresPage({
   const supabase = await criarClienteServidor();
   const params = await searchParams;
   const etapa = typeof params.etapa === "string" ? params.etapa : undefined;
+  const fornecedor = typeof params.fornecedor === "string" ? params.fornecedor : undefined;
 
   // As despesas vêm junto porque é delas que sai o quanto cada fornecedor já
   // recebeu. O número não é digitado na ficha: é a soma dos pagamentos.
@@ -29,6 +30,7 @@ export default async function FornecedoresPage({
       fornecedores={(fornecedores ?? []) as Fornecedor[]}
       despesas={(despesas ?? []) as Despesa[]}
       etapaInicial={etapa}
+      fornecedorInicial={fornecedor}
     />
   );
 }
