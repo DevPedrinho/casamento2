@@ -17,7 +17,7 @@ import {
   ROTULOS_TAREFA,
 } from "@/lib/tipos";
 import { CASAMENTO, DATA_CASAMENTO } from "@/lib/config";
-import { diasAte, reais } from "@/lib/formato";
+import { diasAte, formatarData, reais } from "@/lib/formato";
 import { contaNoTotal, ehDeColo, ehNoivo, vagasPorTitular } from "@/lib/idade";
 import { AnelCompacto, Bloco } from "@/components/painel";
 import { faseDoMes, MesAMes, type ItemDoMes } from "./MesAMes";
@@ -30,7 +30,7 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   const supabase = await criarClienteServidor();
 
-  const [convidados, tarefas, despesas, fornecedores, posts, comentarios, denuncias, config, locais] =
+  const [convidados, tarefas, despesas, fornecedores, posts, comentarios, denuncias, config, locais, site] =
     await Promise.all([
       supabase.from("guests").select(
         `id, full_name, invite_status, companions_planned, group_id, invited_by, next_action,
@@ -44,6 +44,7 @@ export default async function Dashboard() {
       supabase.from("post_reports").select("id", { count: "exact", head: true }),
       supabase.from("wedding_settings").select("budget_total_cents").eq("id", true).maybeSingle(),
       supabase.from("event_venues").select("*").order("sort_order"),
+      supabase.from("site_settings").select("invites_send_date").maybeSingle(),
     ]);
 
   // Acompanhante já é cadastro próprio; criança de colo e os noivos ficam fora das contas.
@@ -158,10 +159,15 @@ export default async function Dashboard() {
       })),
   ];
   if (conta("nao_contatado") > 0) {
+    // Com a data de envio definida em Configurações, a pendência cai nesse
+    // dia (e só vira "vencido" se passar); sem ela, fica no mês corrente.
+    const envio = (site.data as { invites_send_date: string | null } | null)?.invites_send_date ?? null;
     itensDoMes.push({
-      data: null,
+      data: envio,
       titulo: `Enviar o convite: ${conta("nao_contatado")} convidados sem contato`,
-      detalhe: "Nenhum foi contatado ainda",
+      detalhe: envio
+        ? `Envio planejado para ${formatarData(envio)}`
+        : "Sem data de envio — defina em Configurações › Confirmação de presença",
       tipo: "convites",
       href: "/admin/convidados?status=nao_contatado",
     });

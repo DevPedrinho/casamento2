@@ -357,7 +357,9 @@ export function GerenciadorConvidados({
     router.refresh();
   }
 
-  /** Marca (ou desmarca) que o código já foi entregue. */
+  /** Marca (ou desmarca) que o código já foi entregue. Ao marcar, quem
+   *  ainda estava "não contatado" passa a "convite enviado" — como faz a
+   *  fila de convites; senão a pendência do Mês a mês não diminuía. */
   async function marcarEnviado(ids: string[], enviado: boolean) {
     if (ids.length === 0) return;
     const supabase = criarClienteNavegador();
@@ -365,6 +367,13 @@ export function GerenciadorConvidados({
       .from("guests")
       .update({ code_sent_at: enviado ? new Date().toISOString() : null })
       .in("id", ids);
+    if (enviado) {
+      await supabase
+        .from("guests")
+        .update({ invite_status: "convite_enviado", last_contact_at: new Date().toISOString().slice(0, 10) })
+        .in("id", ids)
+        .eq("invite_status", "nao_contatado");
+    }
     router.refresh();
   }
 

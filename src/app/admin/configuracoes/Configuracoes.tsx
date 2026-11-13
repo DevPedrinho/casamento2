@@ -103,7 +103,7 @@ export function Configuracoes({
 
   const NOIVOS: Campo[] = ["bride_name", "groom_name", "motto", "hashtag", "tagline"];
   const QUANDO: Campo[] = ["wedding_at", "dress_code"];
-  const CONFIRMACAO: Campo[] = ["rsvp_deadline", "companion_rules"];
+  const CONFIRMACAO: Campo[] = ["invites_send_date", "rsvp_deadline", "companion_rules"];
   const CONTATO: Campo[] = ["contact_email", "contact_whatsapp", "instagram_url"];
   const PALETA: Campo[] = CORES.map((c) => c.campo);
   const TEXTOS_SITE: Campo[] = ["texts"];
@@ -211,11 +211,20 @@ export function Configuracoes({
       <SecaoSalvavel
         id="confirmacao"
         titulo="Confirmação de presença"
-        descricao="Até quando vocês aceitam resposta e o recado que o convidado lê antes de responder."
+        descricao="Quando os convites saem, até quando vocês aceitam resposta e o recado que o convidado lê antes de responder."
         sujo={mudou(CONFIRMACAO)}
         aoSalvar={salvarCampos(CONFIRMACAO)}
       >
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
+            <RotuloConfig htmlFor="envio">Data de envio dos convites</RotuloConfig>
+            <input id="envio" type="date" className="campo" value={form.invites_send_date ?? ""}
+              onChange={(e) => set("invites_send_date", e.target.value || null)} />
+            <Ajuda>
+              No Mês a mês, a pendência &quot;Enviar o convite&quot; aparece neste dia; se a
+              data passar com convidados ainda sem contato, ela fica como vencida.
+            </Ajuda>
+          </div>
           <div>
             <RotuloConfig htmlFor="prazo">Prazo para confirmar</RotuloConfig>
             <input id="prazo" type="date" className="campo" value={form.rsvp_deadline ?? ""}

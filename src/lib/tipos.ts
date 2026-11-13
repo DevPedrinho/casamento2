@@ -615,6 +615,8 @@ export type ConfiguracoesSite = {
   instagram_url: string | null;
   hashtag: string | null;
   rsvp_deadline: string | null;
+  /** Quando os noivos pretendem enviar os convites (pendência do Mês a mês). */
+  invites_send_date?: string | null;
   companion_rules: string | null;
   logo_path: string | null;
   monogram_path: string | null;
